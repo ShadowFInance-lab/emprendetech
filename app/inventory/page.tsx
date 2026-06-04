@@ -1,0 +1,161 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { Plus, Search, Package, AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import InventoryTable from '@/components/inventory/InventoryTable'
+
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; category?: string; status?: string }
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: store } = await supabase
+    .from('stores')
+    .select('id, low_stock_alert')
+    .eq('owner_id', user.id)
+    .single()
+
+  if (!store) redirect('/onboarding')
+
+  // ─── Construir query con filtros ─────────────────────────
+  let query = supabase
+    .from('products')
+    .select('*, categories(name), product_images(url, is_primary)')
+    .eq('store_id', store.id)
+    .order('created_at', { ascending: false })
+
+  if (searchParams.q) {
+    query = query.ilike('name', `%${searchParams.q}%`)
+  }
+  if (searchParams.category && searchParams.category !== 'all') {
+    query = query.eq('category_id', searchParams.category)
+  }
+  if (searchParams.status === 'active') query = query.eq('is_active', true)
+  if (searchParams.status === 'inactive') query = query.eq('is_active', false)
+  if (searchParams.status === 'low_stock') {
+    query = query.lte('stock', store.low_stock_alert).gt('stock', 0)
+  }
+  if (searchParams.status === 'out_of_stock') query = query.eq('stock', 0)
+
+  const { data: products } = await query
+
+  // ─── Categorías para el filtro ───────────────────────────
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name')
+    .eq('store_id', store.id)
+    .eq('is_active', true)
+    .order('name')
+
+  // ─── Conteos para badges ─────────────────────────────────
+  const { count: totalCount } = await supabase
+    .from('products').select('*', { count: 'exact', head: true }).eq('store_id', store.id)
+  const { count: lowCount } = await supabase
+    .from('products').select('*', { count: 'exact', head: true })
+    .eq('store_id', store.id).lte('stock', store.low_stock_alert).gt('stock', 0)
+  const { count: outCount } = await supabase
+    .from('products').select('*', { count: 'exact', head: true })
+    .eq('store_id', store.id).eq('stock', 0)
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Inventario</h1>
+          <p className="text-gray-500 text-sm mt-1">{totalCount ?? 0} productos en total</p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/inventory/categories">
+            <Button variant="outline" size="sm">Categorías</Button>
+          </Link>
+          <Link href="/inventory/new">
+            <Button size="sm">
+              <Plus className="mr-1.5 h-4 w-4" /> Nuevo producto
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Badges de estado rápido */}
+      <div className="flex flex-wrap gap-2">
+        <Link href="/inventory">
+          <Badge variant={!searchParams.status ? 'default' : 'secondary'} className="cursor-pointer">
+            Todos ({totalCount ?? 0})
+          </Badge>
+        </Link>
+        <Link href="/inventory?status=low_stock">
+          <Badge className={`cursor-pointer ${searchParams.status === 'low_stock' ? 'bg-amber-500' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}>
+            <AlertTriangle size={12} className="mr-1" /> Stock bajo ({lowCount ?? 0})
+          </Badge>
+        </Link>
+        <Link href="/inventory?status=out_of_stock">
+          <Badge className={`cursor-pointer ${searchParams.status === 'out_of_stock' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+            Agotados ({outCount ?? 0})
+          </Badge>
+        </Link>
+      </div>
+
+      {/* Barra de búsqueda y filtros */}
+      <form className="flex gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-48">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            name="q"
+            defaultValue={searchParams.q}
+            placeholder="Buscar por nombre..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <select
+          name="category"
+          defaultValue={searchParams.category}
+          className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">Todas las categorías</option>
+          {categories?.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
+        <Button type="submit" size="sm" variant="secondary">Buscar</Button>
+        {(searchParams.q || searchParams.category) && (
+          <Link href="/inventory">
+            <Button type="button" size="sm" variant="ghost">Limpiar</Button>
+          </Link>
+        )}
+      </form>
+
+      {/* Tabla de productos con selección múltiple + ofertas masivas */}
+      {products && products.length > 0 ? (
+        <InventoryTable products={products as never} lowStockThreshold={store.low_stock_alert} />
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-16 text-center">
+          <Package size={40} className="text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700">
+            {searchParams.q || searchParams.category
+              ? 'No se encontraron productos'
+              : 'Aún no tienes productos'}
+          </h3>
+          <p className="text-gray-500 text-sm mt-2 mb-6">
+            {searchParams.q || searchParams.category
+              ? 'Intenta con otros filtros de búsqueda'
+              : 'Agrega tu primer producto para comenzar a vender'}
+          </p>
+          {!searchParams.q && !searchParams.category && (
+            <Link href="/inventory/new">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Agregar primer producto
+              </Button>
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
