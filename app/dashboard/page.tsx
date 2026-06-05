@@ -6,6 +6,8 @@ import { TrendingUp, ShoppingBag, DollarSign, AlertTriangle, Package, Zap } from
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import SalesChart from '@/components/dashboard/SalesChart'
+import DailySalesExport from '@/components/dashboard/DailySalesExport'
+import type { ExportSale } from '@/lib/utils/salesExport'
 import { getSalesChartData } from '@/lib/actions/dashboard'
 import { getMeteredUsage } from '@/lib/actions/subscriptions'
 
@@ -16,7 +18,7 @@ export default async function DashboardPage() {
 
   const { data: store } = await supabase
     .from('stores')
-    .select('id, name, slug, low_stock_alert')
+    .select('id, name, slug, low_stock_alert, currency')
     .eq('owner_id', user.id)
     .single()
 
@@ -107,6 +109,39 @@ export default async function DashboardPage() {
     .from('profiles').select('plan').eq('id', user.id).single()
   const vipUsage = profilePlan?.plan === 'vip_plus' ? await getMeteredUsage() : null
   const vipPct = vipUsage ? Math.min(100, (vipUsage.salesThisMonth / vipUsage.included) * 100) : 0
+  const isPaid = (profilePlan?.plan ?? 'free') !== 'free'
+
+  // ─── Ventas del día detalladas (para exportar PDF/Excel) ──
+  const { data: salesTodayDetailed } = await supabase
+    .from('sales')
+    .select('folio, total, payment_method, created_at, customers(name), sale_items(product_name, quantity, unit_price, subtotal)')
+    .eq('store_id', store.id)
+    .eq('status', 'completed')
+    .gte('created_at', todayStart)
+    .order('created_at', { ascending: false })
+
+  type RawSale = {
+    folio: string; total: number; payment_method: string; created_at: string
+    customers: { name: string } | { name: string }[] | null
+    sale_items: { product_name: string; quantity: number; unit_price: number; subtotal: number }[] | null
+  }
+  const exportSales: ExportSale[] = (salesTodayDetailed as RawSale[] | null ?? []).map(s => {
+    const cust = Array.isArray(s.customers) ? s.customers[0] : s.customers
+    return {
+      folio: s.folio,
+      created_at: s.created_at,
+      total: Number(s.total),
+      payment_method: s.payment_method,
+      customer_name: cust?.name ?? null,
+      items: (s.sale_items ?? []).map(it => ({
+        product_name: it.product_name,
+        quantity: it.quantity,
+        unit_price: Number(it.unit_price),
+        subtotal: Number(it.subtotal),
+      })),
+    }
+  })
+  const todayLabel = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')
 
   const hasNoSales = (salesMonth?.length ?? 0) === 0 && (salesWeek?.length ?? 0) === 0 && (salesToday?.length ?? 0) === 0
 
@@ -168,6 +203,21 @@ export default async function DashboardPage() {
         </a>
       </div>
 
+      {/* Publicidad ligera (solo plan Gratis) */}
+      {!isPaid && (
+        <Link
+          href="/subscription"
+          className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 px-4 py-2.5 text-sm text-amber-800 hover:from-amber-100 hover:to-orange-100 transition-all"
+        >
+          <span className="text-base">✨</span>
+          <span className="flex-1">
+            <span className="font-semibold">Plan Gratis</span> — mejora a un plan de pago para
+            quitar anuncios, descargar reportes y personalizar tu catálogo.
+          </span>
+          <span className="font-semibold underline whitespace-nowrap">Ver planes →</span>
+        </Link>
+      )}
+
       {/* Estado vacío motivador */}
       {hasNoSales && (
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 p-8 sm:p-10 text-white shadow-xl">
@@ -209,6 +259,15 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Ventas del día + descarga PDF/Excel */}
+      <DailySalesExport
+        sales={exportSales}
+        isPaid={isPaid}
+        storeName={store.name}
+        currency={store.currency ?? 'MXN'}
+        dateLabel={todayLabel}
+      />
 
       {/* Contador VIP Plus (ventas medidas del mes) */}
       {vipUsage && (

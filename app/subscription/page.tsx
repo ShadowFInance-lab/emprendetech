@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { CreditCard, CheckCircle2, AlertCircle, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
 import { isMercadoPagoConfigured } from '@/lib/mercadopago/client'
 import { getMeteredUsage } from '@/lib/actions/subscriptions'
@@ -11,10 +10,17 @@ import UpgradeButton from '@/components/subscription/UpgradeButton'
 import type { Plan } from '@/lib/types'
 
 const PLAN_FEATURES: Record<Plan, string[]> = {
-  free: ['100 productos', 'Catálogo público', '1 skin', 'POS básico', 'Con anuncios'],
-  emprendedor: ['5,000 productos', 'Sin anuncios', '2 skins', 'Exportar PDF/Excel', 'Reportes completos'],
+  free: ['100 productos', 'Catálogo público', '5 paletas básicas', 'POS básico', 'Con anuncios ligeros'],
+  emprendedor: ['5,000 productos', 'Sin anuncios', 'Personaliza 3 tonos', 'Exportar PDF/Excel', 'Reportes completos'],
   negocio: ['Productos ilimitados', 'Todo de Emprendedor', 'Usuarios adicionales', 'Dominio propio', 'Respaldos'],
   vip_plus: ['Todo ilimitado', 'Pago único $1,599', '1,000 ventas/mes incluidas', 'Solo $0.50 por venta extra (con Mercado Pago)'],
+}
+
+const PLAN_STYLE: Record<Plan, { bar: string; chip: string; icon: string }> = {
+  free:        { bar: 'from-gray-300 to-gray-400',      chip: 'bg-gray-100 text-gray-600',     icon: '🆓' },
+  emprendedor: { bar: 'from-blue-500 to-indigo-500',    chip: 'bg-blue-50 text-blue-700',      icon: '🚀' },
+  negocio:     { bar: 'from-purple-500 to-fuchsia-500', chip: 'bg-purple-50 text-purple-700',  icon: '🏢' },
+  vip_plus:    { bar: 'from-amber-400 to-yellow-500',   chip: 'bg-amber-50 text-amber-700',    icon: '👑' },
 }
 
 export default async function SubscriptionPage({
@@ -138,29 +144,18 @@ export default async function SubscriptionPage({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2.5 text-sm text-gray-700">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-            <span><strong>Pago único de $1,599 MXN.</strong> No es mensualidad: pagas una sola vez.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-            <span><strong>Incluye 1,000 ventas por mes</strong> sin ningún costo adicional.</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-            <span>
-              Si en un mes superas las 1,000 ventas, cada venta adicional cuesta solo
-              <strong> $0.50 MXN</strong>. El contador se reinicia cada mes.
-            </span>
-          </div>
-          <div className="flex items-start gap-2">
-            <AlertCircle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-            <span>
-              Ese cargo de $0.50 <strong>solo aplica a ventas cobradas con Mercado Pago</strong> directo
-              desde la app. Las ventas en efectivo, tarjeta o transferencia que registras tú
-              <strong> no cuentan</strong> para el cobro extra.
-            </span>
-          </div>
+          {[
+            <><strong>Pago único de $1,599 MXN</strong> (no es mensual).</>,
+            <>Incluye las <strong>primeras 1,000 ventas por mes gratis</strong>.</>,
+            <>Si superas las 1,000 ventas en un mes, cada venta adicional cuesta solo <strong>$0.50 MXN</strong> (solo si usas Mercado Pago directo desde la app).</>,
+            <>El contador <strong>se reinicia cada mes</strong>.</>,
+            <>Solo aplica al plan <strong>VIP Plus</strong>.</>,
+          ].map((txt, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
+              <span>{txt}</span>
+            </div>
+          ))}
           <div className="mt-1 rounded-xl bg-white border border-amber-100 px-3.5 py-2.5 text-[13px] text-gray-600">
             <span className="font-semibold text-gray-800">Ejemplo:</span> si haces 1,200 ventas con
             Mercado Pago en un mes → 1,000 incluidas + 200 extra × $0.50 =
@@ -170,34 +165,59 @@ export default async function SubscriptionPage({
       </Card>
 
       {/* Planes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {(Object.keys(PLAN_LIMITS) as Plan[]).map(planId => {
           const plan = PLAN_LIMITS[planId]
           const isCurrent = planId === currentPlan
+          const style = PLAN_STYLE[planId]
+          const isPopular = planId === 'vip_plus'
           return (
-            <Card key={planId} className={`border-0 shadow-sm ${isCurrent ? 'ring-2 ring-blue-500' : ''}`}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{plan.label}</CardTitle>
-                  {isCurrent && <Badge className="bg-blue-100 text-blue-700">Actual</Badge>}
+            <div
+              key={planId}
+              className={`relative rounded-2xl bg-white border overflow-hidden transition-all hover:shadow-lg ${
+                isCurrent ? 'border-transparent ring-2 ring-blue-500' : isPopular ? 'border-amber-200' : 'border-gray-100'
+              }`}
+            >
+              {/* Barra de acento superior */}
+              <div className={`h-1.5 bg-gradient-to-r ${style.bar}`} />
+
+              {isPopular && !isCurrent && (
+                <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+                  ⭐ MEJOR VALOR
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{plan.price_label}</p>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {PLAN_FEATURES[planId].map((feature, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                    <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
-                    {feature}
-                  </div>
-                ))}
+              )}
+              {isCurrent && (
+                <div className="absolute top-3 right-3 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
+                  TU PLAN
+                </div>
+              )}
+
+              <div className="p-5">
+                <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${style.chip}`}>
+                  {style.icon} {plan.label}
+                </div>
+                <p className="text-3xl font-extrabold text-gray-900 mt-3 tracking-tight">{plan.price_label}</p>
+                {planId === 'vip_plus' && <p className="text-xs text-amber-600 font-medium mt-0.5">Pago único · para siempre</p>}
+
+                <div className="space-y-2 mt-4">
+                  {PLAN_FEATURES[planId].map((feature, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                      <CheckCircle2 size={15} className="text-green-500 flex-shrink-0 mt-0.5" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
 
                 {!isCurrent && planId !== 'free' && mpConfigured && (
                   <div className="pt-4">
-                    <UpgradeButton plan={planId} label={`Cambiar a ${plan.label}`} />
+                    <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} />
                   </div>
                 )}
-              </CardContent>
-            </Card>
+                {isCurrent && (
+                  <p className="text-center text-xs text-gray-400 pt-4">Estás en este plan</p>
+                )}
+              </div>
+            </div>
           )
         })}
       </div>

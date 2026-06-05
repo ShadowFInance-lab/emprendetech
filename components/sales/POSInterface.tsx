@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, Loader2,
-  Package, X, CheckCircle2, Banknote, CreditCard, ArrowLeftRight, UserCheck,
+  Package, X, CheckCircle2, Banknote, CreditCard, ArrowLeftRight, UserCheck, Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,6 +29,7 @@ const PAYMENT_METHODS = [
   { id: 'cash', label: 'Efectivo', icon: Banknote },
   { id: 'card', label: 'Tarjeta', icon: CreditCard },
   { id: 'transfer', label: 'Transferencia', icon: ArrowLeftRight },
+  { id: 'mercadopago', label: 'Mercado Pago', icon: Wallet },
 ] as const
 
 interface PresetCustomer {
@@ -49,7 +50,7 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
 
   // Checkout fields
   const [discount, setDiscount] = useState('0')
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer' | 'mercadopago'>('cash')
   const [customerName, setCustomerName] = useState(presetCustomer?.name ?? '')
   const [customerPhone, setCustomerPhone] = useState(presetCustomer?.phone ?? '')
 
@@ -309,7 +310,7 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
             )}
 
             {/* Método de pago */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {PAYMENT_METHODS.map(method => (
                 <button
                   key={method.id}

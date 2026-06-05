@@ -17,7 +17,7 @@ const CartItemSchema = z.object({
 const CreateSaleSchema = z.object({
   items: z.array(CartItemSchema).min(1, 'Agrega al menos un producto'),
   discount_amt: z.number().min(0).default(0),
-  payment_method: z.enum(['cash', 'card', 'transfer', 'other']).default('cash'),
+  payment_method: z.enum(['cash', 'card', 'transfer', 'mercadopago', 'other']).default('cash'),
   customer_id: z.string().uuid().optional(), // cliente existente (venta directa desde su ficha)
   customer_name: z.string().optional(),
   customer_phone: z.string().optional(),

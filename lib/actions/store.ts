@@ -87,7 +87,7 @@ export async function updateStoreAction(
     'name', 'description', 'tagline', 'whatsapp',
     'facebook', 'instagram', 'tiktok',
     'skin', 'primary_color', 'secondary_color', 'button_color',
-    'font_family', 'product_order', 'show_prices',
+    'font_family', 'product_order', 'currency', 'show_prices',
   ]
 
   fields.forEach(field => {

@@ -14,6 +14,9 @@ const LANGS = [
   { code: 'en', label: 'English', flag: '🇺🇸' },
   { code: 'pt', label: 'Português', flag: '🇧🇷' },
   { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'it', label: 'Italiano', flag: '🇮🇹' },
+  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'zh-CN', label: '中文', flag: '🇨🇳' },
 ]
 
 declare global {
@@ -36,7 +39,7 @@ export default function LanguageSwitcher() {
     window.googleTranslateElementInit = () => {
       if (window.google?.translate) {
         new window.google.translate.TranslateElement(
-          { pageLanguage: 'es', includedLanguages: 'en,pt,fr,es', autoDisplay: false },
+          { pageLanguage: 'es', includedLanguages: 'en,pt,fr,it,de,zh-CN,es', autoDisplay: false },
           'google_translate_element'
         )
       }

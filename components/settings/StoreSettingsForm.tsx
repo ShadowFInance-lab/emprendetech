@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { updateStoreAction, uploadStoreImage } from '@/lib/actions/store'
 import { getPlanLimits } from '@/lib/constants/plans'
+import { SUPPORTED_CURRENCIES } from '@/lib/utils/format'
 import type { Store, Plan } from '@/lib/types'
 import { Lock, Share2, MessageCircle } from 'lucide-react'
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
@@ -69,6 +70,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [primaryColor, setPrimaryColor] = useState(store.primary_color)
   const [secondaryColor, setSecondaryColor] = useState(store.secondary_color)
   const [buttonColor, setButtonColor] = useState(store.button_color)
+  const [currency, setCurrency] = useState(store.currency ?? 'MXN')
 
   // Redes: qué tarjetas están abiertas (las ya conectadas inician abiertas)
   const s = store as unknown as Record<string, string | null>
@@ -88,6 +90,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('primary_color', primaryColor)
     formData.set('secondary_color', secondaryColor)
     formData.set('button_color', buttonColor)
+    formData.set('currency', currency)
 
     startTransition(async () => {
       const result = await updateStoreAction(store.id, formData)
@@ -100,11 +103,19 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   }
 
   async function handleImageUpload(file: File, type: 'logo' | 'banner') {
+    // Validación clara ANTES de subir
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!validTypes.includes(file.type)) {
+      toast.error('Formato no válido. Usa JPG, PNG o WebP.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen pesa más de 5MB. Usa una más liviana.')
+      return
+    }
+
     if (type === 'logo') setUploadingLogo(true)
     else setUploadingBanner(true)
-
-    const formData = new FormData()
-    formData.set('file', file)
 
     const result = await uploadStoreImage(store.id, file, type)
     if (result.success && result.url) {
@@ -179,6 +190,21 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="currency">Moneda</Label>
+                <select
+                  id="currency"
+                  value={currency}
+                  onChange={e => setCurrency(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                >
+                  {SUPPORTED_CURRENCIES.map(c => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400">Se usa para mostrar los precios en tu catálogo y ventas.</p>
+              </div>
+
               <p className="text-xs text-gray-400">
                 📱 El WhatsApp y tus redes se configuran en la pestaña <strong>Redes Sociales</strong>.
               </p>
@@ -369,7 +395,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               <p className="text-xs text-gray-400">
                 {isPaidPlan
                   ? 'Elige una paleta o personaliza tus 3 tonos (principal, secundario y botones).'
-                  : 'El plan Gratis incluye 3 paletas básicas. Personalizar tus propios 3 tonos es para planes de pago.'}
+                  : 'El plan Gratis incluye 5 paletas básicas. Personalizar tus propios 3 tonos es para planes de pago.'}
               </p>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -377,7 +403,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {COLOR_PALETTES.map((palette, idx) => {
                   const isActive = primaryColor === palette.p && buttonColor === palette.b
-                  const isLocked = !isPaidPlan && idx >= 3
+                  const isLocked = !isPaidPlan && idx >= 5
                   return (
                     <button
                       key={palette.name}

@@ -40,6 +40,7 @@ export interface Store {
   button_color: string
   font_family: string
   product_order: string
+  currency: string
   low_stock_alert: number
   show_prices: boolean
   catalog_active: boolean

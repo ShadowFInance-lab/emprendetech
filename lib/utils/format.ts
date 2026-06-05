@@ -1,11 +1,31 @@
-// ─── Formato de moneda (MXN) ─────────────────────────────────
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
+// ─── Formato de moneda (MXN por defecto, configurable) ───────
+// locale por moneda para que el símbolo salga correcto
+const CURRENCY_LOCALE: Record<string, string> = {
+  MXN: 'es-MX', USD: 'en-US', EUR: 'es-ES', COP: 'es-CO',
+  ARS: 'es-AR', CLP: 'es-CL', PEN: 'es-PE', GTQ: 'es-GT',
+  BRL: 'pt-BR',
+}
+
+export function formatCurrency(amount: number, currency = 'MXN'): string {
+  const code = (currency || 'MXN').toUpperCase()
+  return new Intl.NumberFormat(CURRENCY_LOCALE[code] ?? 'es-MX', {
     style: 'currency',
-    currency: 'MXN',
+    currency: code,
     minimumFractionDigits: 2,
   }).format(amount)
 }
+
+export const SUPPORTED_CURRENCIES = [
+  { code: 'MXN', label: 'Peso mexicano (MXN)' },
+  { code: 'USD', label: 'Dólar (USD)' },
+  { code: 'EUR', label: 'Euro (EUR)' },
+  { code: 'COP', label: 'Peso colombiano (COP)' },
+  { code: 'ARS', label: 'Peso argentino (ARS)' },
+  { code: 'CLP', label: 'Peso chileno (CLP)' },
+  { code: 'PEN', label: 'Sol peruano (PEN)' },
+  { code: 'GTQ', label: 'Quetzal (GTQ)' },
+  { code: 'BRL', label: 'Real (BRL)' },
+]
 
 // ─── Formato de fecha ────────────────────────────────────────
 export function formatDate(dateStr: string, opts?: Intl.DateTimeFormatOptions): string {

@@ -13,7 +13,7 @@ import { logoutAction } from '@/lib/actions/auth'
 import type { Store as StoreType, Profile } from '@/lib/types'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Ganancias', icon: LayoutDashboard },
   { href: '/inventory', label: 'Inventario', icon: Package },
   { href: '/sales', label: 'Ventas', icon: ShoppingCart },
   { href: '/customers', label: 'Clientes', icon: Users },

@@ -11,6 +11,7 @@ export interface Reminder {
   customer_id: string | null
   title: string
   due_date: string | null
+  due_time: string | null
   done: boolean
   created_at: string
 }
@@ -19,6 +20,7 @@ const ReminderSchema = z.object({
   customer_id: z.string().uuid().optional(),
   title: z.string().min(1, 'Escribe el recordatorio').max(200),
   due_date: z.string().optional(),
+  due_time: z.string().optional(),
 })
 
 // Si la migración 008 no se ha corrido, la tabla no existe (código 42P01)
@@ -58,6 +60,7 @@ export async function createReminderAction(input: {
   customer_id?: string
   title: string
   due_date?: string
+  due_time?: string
 }): Promise<ActionResult> {
   const supabase = await createClient()
   const storeId = await getStoreId(supabase)
@@ -71,6 +74,7 @@ export async function createReminderAction(input: {
     customer_id: parsed.data.customer_id || null,
     title: parsed.data.title,
     due_date: parsed.data.due_date || null,
+    due_time: parsed.data.due_time || null,
   })
 
   if (error) {

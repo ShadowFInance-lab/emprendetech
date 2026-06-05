@@ -23,6 +23,7 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
   const [reminders, setReminders] = useState<Reminder[]>(initialReminders)
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [dueTime, setDueTime] = useState('')
   const [isPending, startTransition] = useTransition()
 
   function add() {
@@ -35,6 +36,7 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
         customer_id: customerId,
         title: title.trim(),
         due_date: dueDate || undefined,
+        due_time: dueTime || undefined,
       })
       if (result.success) {
         // Optimista: agregar a la lista (se confirma al refrescar)
@@ -45,6 +47,7 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
             customer_id: customerId,
             title: title.trim(),
             due_date: dueDate || null,
+            due_time: dueTime || null,
             done: false,
             created_at: new Date().toISOString(),
           },
@@ -52,6 +55,7 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
         ])
         setTitle('')
         setDueDate('')
+        setDueTime('')
         toast.success('Recordatorio agregado')
       } else {
         toast.error(result.error ?? 'Error al guardar')
@@ -126,7 +130,15 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
                 type="date"
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
-                className="sm:w-40"
+                className="sm:w-36"
+                title="Fecha de entrega"
+              />
+              <Input
+                type="time"
+                value={dueTime}
+                onChange={e => setDueTime(e.target.value)}
+                className="sm:w-28"
+                title="Hora (alarma)"
               />
               <Button type="button" onClick={add} disabled={isPending} className="gap-1.5">
                 {isPending ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
@@ -160,13 +172,14 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
                         <p className={`text-sm ${r.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                           {r.title}
                         </p>
-                        {d && (
+                        {(d || r.due_time) && (
                           <span
                             className={`inline-flex items-center gap-1 text-[11px] font-medium ${
-                              r.done ? 'text-gray-300' : d.urgent ? 'text-red-500' : 'text-gray-400'
+                              r.done ? 'text-gray-300' : d?.urgent ? 'text-red-500' : 'text-gray-400'
                             }`}
                           >
-                            <CalendarClock size={11} /> {d.label}
+                            <CalendarClock size={11} />
+                            {d ? d.label : 'Sin fecha'}{r.due_time ? ` · ${r.due_time.slice(0, 5)}` : ''}
                           </span>
                         )}
                       </div>
