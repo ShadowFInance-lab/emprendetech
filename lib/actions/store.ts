@@ -147,33 +147,63 @@ export async function getUserStore() {
 }
 
 // ─── Upload de imagen (logo/banner) ─────────────────────────
+// Recibe FormData (patrón confiable de Server Actions, igual que el de
+// productos). Pasar un File como argumento posicional puede llegar vacío
+// al servidor — por eso fallaba la subida de logo/banner.
 export async function uploadStoreImage(
   storeId: string,
-  file: File,
-  type: 'logo' | 'banner'
+  formData: FormData
 ): Promise<ActionResult & { url?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'No autenticado' }
 
-  const ext = file.name.split('.').pop()
-  const path = `stores/${storeId}/${type}.${ext}`
+  // Verificar propiedad de la tienda
+  const { data: store } = await supabase
+    .from('stores').select('id').eq('id', storeId).eq('owner_id', user.id).single()
+  if (!store) return { success: false, error: 'Tienda no encontrada' }
+
+  const type = formData.get('type') as 'logo' | 'banner'
+  const file = formData.get('file') as File
+  if (!file || !file.size) return { success: false, error: 'No se recibió la imagen' }
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!validTypes.includes(file.type)) {
+    return { success: false, error: 'Formato no válido. Usa JPG, PNG o WebP.' }
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { success: false, error: 'La imagen supera 5MB.' }
+  }
+
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+  // nombre único para evitar caché viejo del navegador/CDN
+  const path = `stores/${storeId}/${type}-${Date.now()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from('public-assets')
-    .upload(path, file, { upsert: true })
+    .upload(path, file, { upsert: true, contentType: file.type })
 
-  if (uploadError) return { success: false, error: 'Error al subir la imagen' }
+  if (uploadError) {
+    return {
+      success: false,
+      error: `No se pudo subir. Verifica que exista el bucket "public-assets" en Supabase Storage (migración 004). Detalle: ${uploadError.message}`,
+    }
+  }
 
   const { data: { publicUrl } } = supabase.storage
     .from('public-assets')
     .getPublicUrl(path)
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('stores')
     .update({ [`${type}_url`]: publicUrl })
     .eq('id', storeId)
+    .eq('owner_id', user.id)
+
+  if (updateError) return { success: false, error: 'Se subió la imagen pero no se guardó el enlace.' }
 
   revalidatePath('/settings')
+  const { data: storeRow } = await supabase.from('stores').select('slug').eq('id', storeId).single()
+  if (storeRow?.slug) revalidatePath(`/catalog/${storeRow.slug}`)
   return { success: true, url: publicUrl }
 }

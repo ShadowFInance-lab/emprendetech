@@ -117,7 +117,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     if (type === 'logo') setUploadingLogo(true)
     else setUploadingBanner(true)
 
-    const result = await uploadStoreImage(store.id, file, type)
+    const fd = new FormData()
+    fd.set('file', file)
+    fd.set('type', type)
+    const result = await uploadStoreImage(store.id, fd)
     if (result.success && result.url) {
       if (type === 'logo') setLogoUrl(result.url)
       else setBannerUrl(result.url)
@@ -131,20 +134,31 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-24">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-24 max-w-3xl">
+      {/* Encabezado */}
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-lg shadow-slate-500/20">
+          <StoreIcon size={22} className="text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-tight">Configuración</h1>
+          <p className="text-gray-500 text-sm">Personaliza tu tienda, diseño y redes sociales</p>
+        </div>
+      </div>
+
       <Tabs defaultValue="general">
-        <TabsList className="inline-flex h-auto gap-1 bg-gray-100/80 p-1.5 rounded-2xl">
+        <TabsList className="grid grid-cols-3 w-full h-auto gap-1.5 bg-gray-100 p-1.5 rounded-2xl">
           <TabsTrigger value="general"
-            className="rounded-xl px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5">
-            <StoreIcon size={15} /> General
+            className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 gap-1.5">
+            <StoreIcon size={16} /> General
           </TabsTrigger>
           <TabsTrigger value="design"
-            className="rounded-xl px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5">
-            <Palette size={15} /> Diseño
+            className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 gap-1.5">
+            <Palette size={16} /> Diseño
           </TabsTrigger>
           <TabsTrigger value="social"
-            className="rounded-xl px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5">
-            <Share2 size={15} /> Redes
+            className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 gap-1.5">
+            <Share2 size={16} /> Redes
           </TabsTrigger>
         </TabsList>
 

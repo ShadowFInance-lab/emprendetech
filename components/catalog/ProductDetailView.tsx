@@ -186,11 +186,11 @@ export default function ProductDetailView({ store, product, related }: Props) {
                 <div className="flex items-baseline gap-3 flex-wrap">
                   <p className={`font-bold ${isMinimalista ? 'text-2xl' : 'text-3xl'} ${product.compare_at_price ? 'text-red-600' : ''}`}
                     style={!isMinimalista && !product.compare_at_price ? { color: primary } : {}}>
-                    {formatCurrency(product.sale_price)}
+                    {formatCurrency(product.sale_price, store.currency)}
                   </p>
                   {product.compare_at_price && (
                     <>
-                      <p className="text-lg text-gray-400 line-through">{formatCurrency(product.compare_at_price)}</p>
+                      <p className="text-lg text-gray-400 line-through">{formatCurrency(product.compare_at_price, store.currency)}</p>
                       <span className="text-xs font-bold text-white bg-red-500 px-2 py-1 rounded-full">
                         -{Math.round((1 - product.sale_price / product.compare_at_price) * 100)}%
                       </span>
@@ -296,7 +296,7 @@ export default function ProductDetailView({ store, product, related }: Props) {
                     </p>
                     {store.show_prices && (
                       <p className="text-xs text-gray-500 font-sans mt-0.5">
-                        {formatCurrency(relProduct.sale_price)}
+                        {formatCurrency(relProduct.sale_price, store.currency)}
                       </p>
                     )}
                   </Link>

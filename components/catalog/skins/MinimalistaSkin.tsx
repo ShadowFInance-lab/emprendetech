@@ -225,11 +225,11 @@ export default function MinimalistaSkin({
                     <p className="text-sm font-sans mt-1">
                       {product.compare_at_price ? (
                         <>
-                          <span className="text-red-600 font-medium">{formatCurrency(product.sale_price)}</span>
-                          <span className="text-gray-400 line-through ml-2 text-xs">{formatCurrency(product.compare_at_price)}</span>
+                          <span className="text-red-600 font-medium">{formatCurrency(product.sale_price, store.currency)}</span>
+                          <span className="text-gray-400 line-through ml-2 text-xs">{formatCurrency(product.compare_at_price, store.currency)}</span>
                         </>
                       ) : (
-                        <span className="text-gray-500">{formatCurrency(product.sale_price)}</span>
+                        <span className="text-gray-500">{formatCurrency(product.sale_price, store.currency)}</span>
                       )}
                     </p>
                   )}

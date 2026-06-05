@@ -80,7 +80,10 @@ export default function OnboardingPage() {
       // Subir logo si se eligió
       const storeId = (result.data as { storeId?: string })?.storeId
       if (storeId && logoFile) {
-        await uploadStoreImage(storeId, logoFile, 'logo')
+        const fd = new FormData()
+        fd.set('file', logoFile)
+        fd.set('type', 'logo')
+        await uploadStoreImage(storeId, fd)
       }
       router.push('/dashboard')
       router.refresh()
