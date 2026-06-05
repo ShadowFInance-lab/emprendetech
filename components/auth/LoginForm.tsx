@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { loginAction } from '@/lib/actions/auth'
 import SocialAuthButtons from './SocialAuthButtons'
+import { APP_VERSION } from '@/lib/constants/version'
 
 interface LoginFormProps {
   redirectTo?: string
@@ -127,13 +128,14 @@ export default function LoginForm({ redirectTo, showResetSuccess, oauthError }: 
         </div>
       </CardContent>
 
-      <CardFooter className="justify-center">
+      <CardFooter className="flex-col gap-2 justify-center">
         <p className="text-sm text-gray-600">
           ¿No tienes cuenta?{' '}
           <Link href="/register" className="text-blue-600 font-medium hover:underline">
             Regístrate gratis
           </Link>
         </p>
+        <p className="text-[10px] text-gray-300">EmprendeTech {APP_VERSION}</p>
       </CardFooter>
     </Card>
   )

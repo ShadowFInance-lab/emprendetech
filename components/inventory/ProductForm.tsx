@@ -3,11 +3,12 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Loader2, Save, Trash2, ScanLine, ImagePlus, Tag, Package } from 'lucide-react'
+import {
+  Loader2, Save, Trash2, ScanLine, ImagePlus, Tag, Package, Sparkles, Box,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import ImageUploader from './ImageUploader'
@@ -26,12 +27,26 @@ interface ProductFormProps {
   storeId?: string
 }
 
+/* Encabezado de sección con chip de icono de color */
+function SectionHeader({ icon, color, title, hint }: {
+  icon: React.ReactNode; color: string; title: string; hint?: string
+}) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>{icon}</div>
+      <div>
+        <h3 className="font-semibold text-gray-900 text-[15px] leading-tight">{title}</h3>
+        {hint && <p className="text-xs text-gray-400">{hint}</p>}
+      </div>
+    </div>
+  )
+}
+
 export default function ProductForm({ product, categories }: ProductFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Campos del formulario
   const [name, setName] = useState(product?.name ?? '')
   const [description, setDescription] = useState(product?.description ?? '')
   const [sku, setSku] = useState(product?.sku ?? '')
@@ -44,7 +59,6 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
   const [isNew, setIsNew] = useState(product?.is_new ?? true)
   const [isActive, setIsActive] = useState(product?.is_active ?? true)
 
-  // Fotos pendientes (solo en creación) + escáner
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [photoProgress, setPhotoProgress] = useState<{ done: number; total: number } | null>(null)
   const [scannerOpen, setScannerOpen] = useState(false)
@@ -63,7 +77,6 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
     formData.set('category_id', categoryId)
 
     startTransition(async () => {
-      // ─── Edición ───────────────────────────────────────────
       if (isEditing) {
         const result = await updateProductAction(product.id, formData)
         if (result.success) toast.success('Producto actualizado')
@@ -71,7 +84,6 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
         return
       }
 
-      // ─── Creación ──────────────────────────────────────────
       const result = await createProductAction(formData)
       if (!result.success || !('id' in result) || !result.id) {
         toast.error(result.error ?? 'Error al crear el producto')
@@ -79,7 +91,6 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
       }
       const newId = result.id
 
-      // Subir las fotos elegidas durante la creación
       if (pendingFiles.length > 0) {
         setPhotoProgress({ done: 0, total: pendingFiles.length })
         for (let i = 0; i < pendingFiles.length; i++) {
@@ -112,140 +123,152 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
     ? `Subiendo fotos (${photoProgress.done}/${photoProgress.total})…`
     : isEditing ? 'Guardar cambios' : 'Crear producto'
 
+  const inputCls = 'h-11 rounded-xl'
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-28 max-w-5xl">
-      {/* Header con breadcrumb */}
-      <div>
+    <form onSubmit={handleSubmit} className="pb-28">
+      {/* ─── Encabezado ─────────────────────────────────── */}
+      <div className="mb-6">
         <button type="button" onClick={() => router.push('/inventory')}
-          className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1 mb-2">
-          ← Inventario
+          className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1 mb-3 transition-colors">
+          ← Volver a Inventario
         </button>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-          {isEditing ? product.name : 'Nuevo producto'}
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {isEditing ? 'Edita los datos y guarda los cambios' : 'Agrega fotos, precio y stock para publicarlo en tu catálogo'}
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+            <Box size={22} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-tight">
+              {isEditing ? product.name : 'Nuevo producto'}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {isEditing ? 'Edita los datos y guarda los cambios' : 'Agrega fotos, precio y stock para publicarlo'}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ─── Columna izquierda ─────────────────────────── */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* ─── Columna principal ─────────────────────────── */}
+        <div className="lg:col-span-2 space-y-5">
 
-          {/* FOTOS — ahora también al crear (lo primero, lo más importante) */}
-          <Card className="border-0 shadow-sm ring-1 ring-blue-100">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ImagePlus size={17} className="text-blue-600" /> Fotos del producto
-                <span className="text-xs font-normal text-gray-400 ml-1">La primera es la principal</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isEditing ? (
-                <ImageUploader productId={product.id} initialImages={product.product_images ?? []} maxImages={10} />
-              ) : (
-                <ImageUploader maxImages={10} onPendingFilesChange={setPendingFiles} />
-              )}
-            </CardContent>
-          </Card>
+          {/* FOTOS — hero */}
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+            <SectionHeader
+              icon={<ImagePlus size={18} className="text-white" />}
+              color="bg-gradient-to-br from-pink-500 to-rose-500"
+              title="Fotos del producto"
+              hint="Una buena foto vende más. La primera será la principal."
+            />
+            {isEditing ? (
+              <ImageUploader productId={product.id} initialImages={product.product_images ?? []} maxImages={10} />
+            ) : (
+              <ImageUploader maxImages={10} onPendingFilesChange={setPendingFiles} />
+            )}
+          </div>
 
-          {/* Información básica */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Package size={17} className="text-gray-400" /> Información básica
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+          {/* INFORMACIÓN */}
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+            <SectionHeader
+              icon={<Package size={18} className="text-white" />}
+              color="bg-gradient-to-br from-blue-500 to-indigo-500"
+              title="Información del producto"
+            />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
                 <Label htmlFor="name">Nombre del producto *</Label>
                 <Input id="name" name="name" value={name} onChange={e => setName(e.target.value)}
-                  placeholder="Ej: Playera Básica, Collar Plata 925" required />
+                  placeholder="Ej: Playera Básica, Collar Plata 925" required className={inputCls} />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="description">Descripción</Label>
                 <textarea id="description" name="description" value={description}
                   onChange={e => setDescription(e.target.value)}
-                  placeholder="Describe el producto: material, colores, medidas..."
+                  placeholder="Material, colores, medidas, detalles…"
                   rows={4}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
+                  className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 resize-none" />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="sku">SKU (código interno)</Label>
-                  <Input id="sku" name="sku" value={sku} onChange={e => setSku(e.target.value)}
-                    placeholder="Ej: PB-ROJ-XL" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="barcode">Código de barras</Label>
-                  <div className="flex gap-2">
-                    <Input id="barcode" name="barcode" value={barcode}
-                      onChange={e => setBarcode(e.target.value)} placeholder="Ej: 7501234567890"
-                      inputMode="numeric" />
-                    <Button type="button" variant="outline" onClick={() => setScannerOpen(true)}
-                      className="flex-shrink-0 gap-1.5 px-3" title="Escanear con la cámara">
-                      <ScanLine size={16} /> <span className="hidden sm:inline">Escanear</span>
-                    </Button>
-                  </div>
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sku">SKU (código interno, opcional)</Label>
+                <Input id="sku" name="sku" value={sku} onChange={e => setSku(e.target.value)}
+                  placeholder="Ej: PB-ROJ-XL" className={inputCls} />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Precios */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Tag size={17} className="text-gray-400" /> Precios e inventario
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-3 sm:gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cost_price">Costo (MXN)</Label>
+              {/* Código de barras + ESCÁNER prominente */}
+              <div className="space-y-1.5">
+                <Label htmlFor="barcode">Código de barras</Label>
+                <Input id="barcode" name="barcode" value={barcode}
+                  onChange={e => setBarcode(e.target.value)} placeholder="Escríbelo o escanéalo con la cámara"
+                  inputMode="numeric" className={inputCls} />
+                <button
+                  type="button"
+                  onClick={() => setScannerOpen(true)}
+                  className="w-full mt-1 flex items-center justify-center gap-2.5 py-3 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/60 text-indigo-700 font-semibold text-sm hover:bg-indigo-100 hover:border-indigo-300 transition-all active:scale-[0.99]"
+                >
+                  <ScanLine size={19} /> Escanear código de barras con la cámara
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* PRECIOS */}
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+            <SectionHeader
+              icon={<Tag size={18} className="text-white" />}
+              color="bg-gradient-to-br from-emerald-500 to-green-500"
+              title="Precios e inventario"
+            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cost_price">Costo</Label>
                   <Input id="cost_price" name="cost_price" type="number" step="0.01" min="0"
-                    value={costPrice} onChange={e => setCostPrice(e.target.value)} placeholder="0.00" />
+                    value={costPrice} onChange={e => setCostPrice(e.target.value)} placeholder="0.00" className={inputCls} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sale_price">Precio venta (MXN) *</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sale_price">Precio venta *</Label>
                   <Input id="sale_price" name="sale_price" type="number" step="0.01" min="0.01"
-                    value={salePrice} onChange={e => setSalePrice(e.target.value)} placeholder="0.00" required />
+                    value={salePrice} onChange={e => setSalePrice(e.target.value)} placeholder="0.00" required className={inputCls} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stock">Stock inicial</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="stock">Stock</Label>
                   <Input id="stock" name="stock" type="number" step="1" min="0"
-                    value={stock} onChange={e => setStock(e.target.value)} placeholder="0" />
+                    value={stock} onChange={e => setStock(e.target.value)} placeholder="0" className={inputCls} />
                 </div>
               </div>
 
               {margin > 0 && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-100">
+                  <Sparkles size={16} className="text-green-600 flex-shrink-0" />
                   <div className="text-sm text-green-700">
-                    <span className="font-semibold">Margen: {margin.toFixed(1)}%</span>
+                    <span className="font-semibold">Margen {margin.toFixed(1)}%</span>
                     <span className="text-green-600 ml-2">
-                      Ganancia por venta: ${(parseFloat(salePrice) - parseFloat(costPrice)).toFixed(2)} MXN
+                      · Ganas ${(parseFloat(salePrice) - parseFloat(costPrice)).toFixed(2)} por venta
                     </span>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        {/* ─── Columna derecha ───────────────────────────── */}
-        <div className="space-y-4">
+        {/* ─── Columna lateral ───────────────────────────── */}
+        <div className="space-y-5">
           {/* Estado */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3"><CardTitle className="text-base">Estado</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+            <h3 className="font-semibold text-gray-900 text-[15px] mb-3">Visibilidad</h3>
+            <div className="space-y-2.5">
               {[
                 { checked: isActive, set: setIsActive, title: 'Activo', desc: 'Visible en el catálogo' },
-                { checked: isFeatured, set: setIsFeatured, title: 'Destacado', desc: 'Aparece primero en el catálogo' },
+                { checked: isFeatured, set: setIsFeatured, title: 'Destacado', desc: 'Aparece primero' },
                 { checked: isNew, set: setIsNew, title: 'Nuevo', desc: 'Muestra badge "Nuevo"' },
               ].map(({ checked, set, title, desc }) => (
-                <label key={title} className="flex items-center gap-3 cursor-pointer">
+                <label key={title}
+                  className={`flex items-center gap-3 cursor-pointer rounded-xl border p-2.5 transition-all ${
+                    checked ? 'border-blue-200 bg-blue-50/50' : 'border-gray-100 hover:border-gray-200'
+                  }`}>
                   <input type="checkbox" checked={checked} onChange={e => set(e.target.checked)}
                     className="w-4 h-4 rounded border-gray-300 text-blue-600" />
                   <div>
@@ -254,38 +277,36 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
                   </div>
                 </label>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Categoría */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3"><CardTitle className="text-base">Categoría</CardTitle></CardHeader>
-            <CardContent>
-              <Select value={categoryId || 'none'}
-                onValueChange={(v: string | null) => setCategoryId(!v || v === 'none' ? '' : v)}>
-                <SelectTrigger><SelectValue placeholder="Sin categoría" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin categoría</SelectItem>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {categories.length === 0 && (
-                <p className="text-xs text-gray-400 mt-2">
-                  <a href="/inventory/categories" className="text-blue-600 hover:underline">Crea categorías</a>{' '}
-                  para organizar tus productos
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+            <h3 className="font-semibold text-gray-900 text-[15px] mb-3">Categoría</h3>
+            <Select value={categoryId || 'none'}
+              onValueChange={(v: string | null) => setCategoryId(!v || v === 'none' ? '' : v)}>
+              <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Sin categoría" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin categoría</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {categories.length === 0 && (
+              <p className="text-xs text-gray-400 mt-2">
+                <a href="/inventory/categories" className="text-blue-600 hover:underline">Crea categorías</a>{' '}
+                para organizar tus productos
+              </p>
+            )}
+          </div>
 
-          {/* Stats (solo edición) */}
+          {/* Stats (edición) */}
           {isEditing && (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-3"><CardTitle className="text-base">Estadísticas</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
+            <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+              <h3 className="font-semibold text-gray-900 text-[15px] mb-3">Estadísticas</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-500">Stock actual</span>
                   <Badge className={stock === '0' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}>
                     {product.stock} uds
@@ -295,8 +316,8 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
                   <span className="text-gray-500">Total vendido</span>
                   <span className="font-medium">{product.total_sold} uds</span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>
