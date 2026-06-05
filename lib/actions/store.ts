@@ -115,11 +115,20 @@ export async function updateStoreAction(
     }
   }
 
-  const { error } = await supabase
+  let { error } = await supabase
     .from('stores')
     .update(updates)
     .eq('id', storeId)
     .eq('owner_id', user.id)
+
+  // Si la columna 'currency' aún no existe (migración 009 pendiente),
+  // reintenta sin ella para no romper el guardado de toda la configuración.
+  if (error && (error.code === '42703' || /currency/i.test(error.message)) && 'currency' in updates) {
+    delete updates.currency
+    const retry = await supabase
+      .from('stores').update(updates).eq('id', storeId).eq('owner_id', user.id)
+    error = retry.error
+  }
 
   if (error) return { success: false, error: 'Error al guardar los cambios' }
 
