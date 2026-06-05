@@ -130,6 +130,45 @@ export default async function SubscriptionPage({
         </div>
       )}
 
+      {/* Explicador claro de VIP Plus (cómo funciona el cobro) */}
+      <Card className="border-0 shadow-sm ring-1 ring-amber-200 bg-gradient-to-br from-amber-50/70 to-yellow-50/40">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Zap size={17} className="text-amber-500" /> ¿Cómo funciona el cobro de VIP Plus?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2.5 text-sm text-gray-700">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
+            <span><strong>Pago único de $1,599 MXN.</strong> No es mensualidad: pagas una sola vez.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
+            <span><strong>Incluye 1,000 ventas por mes</strong> sin ningún costo adicional.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
+            <span>
+              Si en un mes superas las 1,000 ventas, cada venta adicional cuesta solo
+              <strong> $0.50 MXN</strong>. El contador se reinicia cada mes.
+            </span>
+          </div>
+          <div className="flex items-start gap-2">
+            <AlertCircle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <span>
+              Ese cargo de $0.50 <strong>solo aplica a ventas cobradas con Mercado Pago</strong> directo
+              desde la app. Las ventas en efectivo, tarjeta o transferencia que registras tú
+              <strong> no cuentan</strong> para el cobro extra.
+            </span>
+          </div>
+          <div className="mt-1 rounded-xl bg-white border border-amber-100 px-3.5 py-2.5 text-[13px] text-gray-600">
+            <span className="font-semibold text-gray-800">Ejemplo:</span> si haces 1,200 ventas con
+            Mercado Pago en un mes → 1,000 incluidas + 200 extra × $0.50 =
+            <strong className="text-amber-700"> $100 MXN</strong> ese mes. Nada más.
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Planes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {(Object.keys(PLAN_LIMITS) as Plan[]).map(planId => {

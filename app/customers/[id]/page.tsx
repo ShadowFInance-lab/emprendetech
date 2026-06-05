@@ -7,6 +7,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDateTime } from '@/lib/utils/format'
+import { getReminders } from '@/lib/actions/reminders'
+import RemindersCard from '@/components/customers/RemindersCard'
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -38,6 +40,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
   const totalSpent = completedSales.reduce((a: number, s: { total: number }) => a + Number(s.total), 0)
   const avgTicket = completedSales.length > 0 ? totalSpent / completedSales.length : 0
 
+  // Recordatorios de entrega (resiliente si falta la migración 008)
+  const { reminders, missingTable } = await getReminders(customer.id)
+
   const initials = customer.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
 
   return (
@@ -66,15 +71,23 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
                 {customer.address && <span className="flex items-center gap-1"><MapPin size={13} /> {customer.address}</span>}
               </div>
             </div>
-            {customer.phone && (
-              <a
-                href={`https://wa.me/${customer.phone.replace(/[^0-9]/g, '')}`}
-                target="_blank" rel="noopener noreferrer"
-                className="bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all hover:scale-105 flex items-center gap-2"
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/sales/new?customer=${customer.id}`}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all hover:scale-105 flex items-center gap-2"
               >
-                💬 WhatsApp
-              </a>
-            )}
+                <ShoppingBag size={15} /> Registrar venta
+              </Link>
+              {customer.phone && (
+                <a
+                  href={`https://wa.me/${customer.phone.replace(/[^0-9]/g, '')}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all hover:scale-105 flex items-center gap-2"
+                >
+                  💬 WhatsApp
+                </a>
+              )}
+            </div>
           </div>
 
           {customer.notes && (
@@ -104,6 +117,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
           </Card>
         ))}
       </div>
+
+      {/* Recordatorios de entrega */}
+      <RemindersCard customerId={customer.id} initialReminders={reminders} missingTable={missingTable} />
 
       {/* Historial de compras */}
       <Card className="border-0 shadow-sm">

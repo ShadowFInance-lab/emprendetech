@@ -18,6 +18,7 @@ const CreateSaleSchema = z.object({
   items: z.array(CartItemSchema).min(1, 'Agrega al menos un producto'),
   discount_amt: z.number().min(0).default(0),
   payment_method: z.enum(['cash', 'card', 'transfer', 'other']).default('cash'),
+  customer_id: z.string().uuid().optional(), // cliente existente (venta directa desde su ficha)
   customer_name: z.string().optional(),
   customer_phone: z.string().optional(),
   notes: z.string().optional(),
@@ -45,7 +46,7 @@ export async function createSaleAction(input: CreateSaleInput): Promise<ActionRe
     return { success: false, error: parsed.error.issues[0].message }
   }
 
-  const { items, discount_amt, payment_method, customer_name, customer_phone, notes } = parsed.data
+  const { items, discount_amt, payment_method, customer_id, customer_name, customer_phone, notes } = parsed.data
 
   // ─── Verificar stock disponible ANTES de vender ──────────
   for (const item of items) {
@@ -73,9 +74,15 @@ export async function createSaleAction(input: CreateSaleInput): Promise<ActionRe
   const totalCost = items.reduce((sum, i) => sum + i.unit_cost * i.quantity, 0)
   const profit = total - totalCost
 
-  // ─── Crear cliente si se proporcionó ─────────────────────
+  // ─── Resolver cliente ────────────────────────────────────
   let customerId: string | null = null
-  if (customer_name && customer_name.trim()) {
+  if (customer_id) {
+    // Venta directa desde la ficha de un cliente existente (verificar que es suyo)
+    const { data: existing } = await supabase
+      .from('customers').select('id').eq('id', customer_id).eq('store_id', store.id).single()
+    customerId = existing?.id ?? null
+  } else if (customer_name && customer_name.trim()) {
+    // Cliente nuevo capturado en el POS
     const { data: customer } = await supabase
       .from('customers')
       .insert({
@@ -135,6 +142,10 @@ export async function createSaleAction(input: CreateSaleInput): Promise<ActionRe
   revalidatePath('/sales')
   revalidatePath('/dashboard')
   revalidatePath('/inventory')
+  if (customerId) {
+    revalidatePath('/customers')
+    revalidatePath(`/customers/${customerId}`)
+  }
 
   return { success: true, saleId: sale.id, folio: sale.folio }
 }

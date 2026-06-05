@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, Loader2,
-  Package, X, CheckCircle2, Banknote, CreditCard, ArrowLeftRight,
+  Package, X, CheckCircle2, Banknote, CreditCard, ArrowLeftRight, UserCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,7 +31,13 @@ const PAYMENT_METHODS = [
   { id: 'transfer', label: 'Transferencia', icon: ArrowLeftRight },
 ] as const
 
-export default function POSInterface() {
+interface PresetCustomer {
+  id: string
+  name: string
+  phone: string | null
+}
+
+export default function POSInterface({ presetCustomer }: { presetCustomer?: PresetCustomer }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -44,8 +50,8 @@ export default function POSInterface() {
   // Checkout fields
   const [discount, setDiscount] = useState('0')
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
-  const [customerName, setCustomerName] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
+  const [customerName, setCustomerName] = useState(presetCustomer?.name ?? '')
+  const [customerPhone, setCustomerPhone] = useState(presetCustomer?.phone ?? '')
 
   // ─── Buscar productos (con debounce) ─────────────────────
   const search = useCallback(async (q: string) => {
@@ -81,6 +87,7 @@ export default function POSInterface() {
         })),
         discount_amt: discountNum,
         payment_method: paymentMethod,
+        customer_id: presetCustomer?.id,
         customer_name: customerName || undefined,
         customer_phone: customerPhone || undefined,
       })
@@ -89,10 +96,14 @@ export default function POSInterface() {
         toast.success(`Venta registrada: ${result.folio}`)
         clear()
         setDiscount('0')
+        // Venta directa a un cliente → volver a su ficha para ver el historial
+        if (presetCustomer) {
+          router.push(`/customers/${presetCustomer.id}`)
+          return
+        }
         setCustomerName('')
         setCustomerPhone('')
-        // Refrescar lista de productos (stock actualizado)
-        search(query)
+        search(query) // refrescar stock
         router.refresh()
       } else {
         toast.error(result.error ?? 'Error al registrar la venta')
@@ -267,26 +278,35 @@ export default function POSInterface() {
         {/* Checkout */}
         {items.length > 0 && (
           <div className="border-t border-gray-100 p-4 space-y-3">
-            {/* Cliente (opcional) */}
-            <details className="text-sm">
-              <summary className="cursor-pointer text-gray-500 hover:text-gray-700 text-xs font-medium">
-                + Agregar cliente (opcional)
-              </summary>
-              <div className="mt-2 space-y-2">
-                <Input
-                  value={customerName}
-                  onChange={e => setCustomerName(e.target.value)}
-                  placeholder="Nombre del cliente"
-                  className="h-8 text-sm"
-                />
-                <Input
-                  value={customerPhone}
-                  onChange={e => setCustomerPhone(e.target.value)}
-                  placeholder="Teléfono"
-                  className="h-8 text-sm"
-                />
+            {/* Cliente */}
+            {presetCustomer ? (
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5 text-sm">
+                <UserCheck size={16} className="text-blue-600 flex-shrink-0" />
+                <span className="text-blue-800">
+                  Venta para <span className="font-semibold">{presetCustomer.name}</span>
+                </span>
               </div>
-            </details>
+            ) : (
+              <details className="text-sm">
+                <summary className="cursor-pointer text-gray-500 hover:text-gray-700 text-xs font-medium">
+                  + Agregar cliente (opcional)
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <Input
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    placeholder="Nombre del cliente"
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value)}
+                    placeholder="Teléfono"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </details>
+            )}
 
             {/* Método de pago */}
             <div className="grid grid-cols-3 gap-2">

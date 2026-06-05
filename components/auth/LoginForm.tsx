@@ -13,13 +13,18 @@ import SocialAuthButtons from './SocialAuthButtons'
 interface LoginFormProps {
   redirectTo?: string
   showResetSuccess?: boolean // muestra toast si true
+  oauthError?: boolean // viene de /login?error=oauth
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function LoginForm({ redirectTo, showResetSuccess }: LoginFormProps) {
+export default function LoginForm({ redirectTo, showResetSuccess, oauthError }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    oauthError
+      ? 'No se pudo iniciar sesión con Google/Facebook (puede que aún no estén activados). Entra con tu correo y contraseña.'
+      : null
+  )
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

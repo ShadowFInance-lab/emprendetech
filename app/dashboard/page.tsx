@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency } from '@/lib/utils/format'
-import { TrendingUp, ShoppingBag, DollarSign, AlertTriangle, Package } from 'lucide-react'
+import Link from 'next/link'
+import { TrendingUp, ShoppingBag, DollarSign, AlertTriangle, Package, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import SalesChart from '@/components/dashboard/SalesChart'
 import { getSalesChartData } from '@/lib/actions/dashboard'
+import { getMeteredUsage } from '@/lib/actions/subscriptions'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -99,6 +101,12 @@ export default async function DashboardPage() {
 
   // ─── Datos de la gráfica de ventas (30 días) ─────────────
   const chartData = await getSalesChartData(30)
+
+  // ─── Uso VIP Plus (contador de ventas medidas) ───────────
+  const { data: profilePlan } = await supabase
+    .from('profiles').select('plan').eq('id', user.id).single()
+  const vipUsage = profilePlan?.plan === 'vip_plus' ? await getMeteredUsage() : null
+  const vipPct = vipUsage ? Math.min(100, (vipUsage.salesThisMonth / vipUsage.included) * 100) : 0
 
   const hasNoSales = (salesMonth?.length ?? 0) === 0 && (salesWeek?.length ?? 0) === 0 && (salesToday?.length ?? 0) === 0
 
@@ -201,6 +209,38 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Contador VIP Plus (ventas medidas del mes) */}
+      {vipUsage && (
+        <Link href="/subscription" className="block">
+          <Card className="border-0 shadow-sm ring-1 ring-amber-200 hover:ring-amber-300 transition-all">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Zap size={16} className="text-amber-500" /> VIP Plus · ventas de este mes
+                </p>
+                <span className="text-sm text-gray-500">
+                  {vipUsage.salesThisMonth.toLocaleString()} / {vipUsage.included.toLocaleString()} incluidas
+                </span>
+              </div>
+              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${vipUsage.extraSales > 0 ? 'bg-amber-500' : 'bg-green-500'}`}
+                  style={{ width: `${vipPct}%` }}
+                />
+              </div>
+              {vipUsage.extraSales > 0 ? (
+                <p className="text-xs text-amber-700 mt-2">
+                  {vipUsage.extraSales.toLocaleString()} ventas extra × {formatCurrency(vipUsage.feePerSale)} ={' '}
+                  <strong>{formatCurrency(vipUsage.amountDue)}</strong> este mes (solo ventas con Mercado Pago)
+                </p>
+              ) : (
+                <p className="text-xs text-green-600 mt-2">✓ Dentro de tus 1,000 ventas incluidas. Sin cargos extra.</p>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Gráfica de ventas 30 días */}
       <Card className="border-0 shadow-sm">

@@ -14,6 +14,7 @@ import { getPlanLimits } from '@/lib/constants/plans'
 import type { Store, Plan } from '@/lib/types'
 import { Lock, Share2, MessageCircle } from 'lucide-react'
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
+import ShareCatalog from './ShareCatalog'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -68,6 +69,15 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [primaryColor, setPrimaryColor] = useState(store.primary_color)
   const [secondaryColor, setSecondaryColor] = useState(store.secondary_color)
   const [buttonColor, setButtonColor] = useState(store.button_color)
+
+  // Redes: qué tarjetas están abiertas (las ya conectadas inician abiertas)
+  const s = store as unknown as Record<string, string | null>
+  const [openSocial, setOpenSocial] = useState<Record<string, boolean>>({
+    whatsapp: !!s.whatsapp,
+    instagram: !!s.instagram,
+    facebook: !!s.facebook,
+    tiktok: !!s.tiktok,
+  })
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -134,37 +144,19 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               <CardTitle className="text-base">Información de la tienda</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre de la tienda *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    defaultValue={store.name}
-                    required
-                    placeholder="Mi Tienda"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>URL del catálogo</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={`emprendeia.com/catalog/${store.slug}`}
-                      readOnly
-                      className="bg-gray-50 text-gray-500 text-xs"
-                    />
-                    <a
-                      href={`/catalog/${store.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button type="button" variant="outline" size="sm" className="flex-shrink-0">
-                        <ExternalLink size={14} />
-                      </Button>
-                    </a>
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre de la tienda *</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  defaultValue={store.name}
+                  required
+                  placeholder="Mi Tienda"
+                />
               </div>
+
+              {/* Compartir catálogo: copiar link, compartir, ver */}
+              <ShareCatalog slug={store.slug} storeName={store.name} />
 
               <div className="space-y-2">
                 <Label htmlFor="tagline">Tagline (frase)</Label>
@@ -375,7 +367,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             <CardHeader className="pb-4">
               <CardTitle className="text-base">Paleta de colores</CardTitle>
               <p className="text-xs text-gray-400">
-                Elige el estilo de tu catálogo. {isPaidPlan ? 'Tienes todas las paletas + colores personalizables.' : 'El plan Gratis incluye 3 paletas básicas.'}
+                {isPaidPlan
+                  ? 'Elige una paleta o personaliza tus 3 tonos (principal, secundario y botones).'
+                  : 'El plan Gratis incluye 3 paletas básicas. Personalizar tus propios 3 tonos es para planes de pago.'}
               </p>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -411,15 +405,15 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
 
               {!isPaidPlan && (
                 <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5 text-xs text-amber-700 flex items-center gap-2">
-                  <Lock size={13} /> Desbloquea las 10 paletas + colores personalizados con un plan de pago.
+                  <Lock size={13} /> Desbloquea las 10 paletas y elige tus propios 3 tonos con un plan de pago (Emprendedor, Negocio o VIP Plus).
                 </div>
               )}
 
-              {/* Colores personalizables — solo planes de pago */}
+              {/* Colores personalizables (3 tonos) — solo planes de pago */}
               {isPaidPlan && (
                 <details className="group">
                   <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1.5">
-                    <Palette size={14} /> Personalizar colores
+                    <Palette size={14} /> Personaliza tus 3 tonos (principal, secundario y botones)
                   </summary>
                   <div className="grid grid-cols-3 gap-3 mt-3">
                     {[
@@ -480,45 +474,62 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               <CardTitle className="text-base flex items-center gap-2">
                 <Share2 size={16} /> Conecta tus redes
               </CardTitle>
-              <p className="text-xs text-gray-400">Aparecerán como botones en tu catálogo. Pega el enlace de tu perfil para conectar.</p>
+              <p className="text-xs text-gray-400">Toca un botón para conectar. Aparecerán como accesos directos grandes en tu catálogo público.</p>
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { name: 'whatsapp', label: 'WhatsApp', placeholder: '+52 55 1234 5678', type: 'tel',
-                  icon: <MessageCircle size={24} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
-                { name: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/tu_tienda', type: 'url',
-                  icon: <InstagramIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
-                { name: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/tu_tienda', type: 'url',
-                  icon: <FacebookIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
-                { name: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@tu_tienda', type: 'url',
-                  icon: <TikTokIcon size={22} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
-              ].map(({ name, label, placeholder, type, icon, bg }) => {
-                const connected = !!((store as unknown as Record<string, string | null>)[name])
+                { name: 'whatsapp', label: 'WhatsApp', cta: 'Conectar con WhatsApp', placeholder: '+52 55 1234 5678', type: 'tel',
+                  help: 'Tu número con lada (los clientes te escribirán aquí).',
+                  icon: <MessageCircle size={26} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
+                { name: 'instagram', label: 'Instagram', cta: 'Conectar con Instagram', placeholder: 'https://instagram.com/tu_tienda', type: 'url',
+                  help: 'Pega el enlace de tu perfil de Instagram.',
+                  icon: <InstagramIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
+                { name: 'facebook', label: 'Facebook', cta: 'Conectar con Facebook', placeholder: 'https://facebook.com/tu_tienda', type: 'url',
+                  help: 'Pega el enlace de tu página de Facebook.',
+                  icon: <FacebookIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
+                { name: 'tiktok', label: 'TikTok', cta: 'Conectar con TikTok', placeholder: 'https://tiktok.com/@tu_tienda', type: 'url',
+                  help: 'Pega el enlace de tu perfil de TikTok.',
+                  icon: <TikTokIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
+              ].map(({ name, label, cta, placeholder, type, help, icon, bg }) => {
+                const connected = !!s[name]
+                const isOpen = openSocial[name]
                 return (
-                  <div key={name} className="rounded-2xl border border-gray-100 p-3.5 hover:shadow-sm transition-all">
-                    <div className="flex items-center gap-3 mb-2.5">
-                      <div className={`w-12 h-12 rounded-2xl ${bg} flex items-center justify-center flex-shrink-0 shadow-md`}>
+                  <div key={name} className="rounded-2xl border border-gray-100 overflow-hidden">
+                    {/* Botón grande de conectar */}
+                    <button
+                      type="button"
+                      onClick={() => setOpenSocial(prev => ({ ...prev, [name]: !prev[name] }))}
+                      className={`w-full flex items-center gap-3.5 ${bg} px-4 py-3.5 text-left transition-all hover:brightness-105`}
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
                         {icon}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900 text-sm">{label}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-white text-[15px] leading-tight">
+                          {connected ? label : cta}
+                        </p>
                         {connected ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
-                            <Check size={12} /> Conectado
+                          <span className="inline-flex items-center gap-1 text-xs text-white/90 font-medium">
+                            <Check size={12} /> Conectado · toca para editar
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400">Sin conectar</span>
+                          <span className="text-xs text-white/80">Toca para agregar tu enlace</span>
                         )}
                       </div>
+                    </button>
+
+                    {/* Campo (montado siempre para que el form lo envíe; se oculta al colapsar) */}
+                    <div className={isOpen ? 'p-3.5 bg-white space-y-1.5' : 'hidden'}>
+                      <Input
+                        id={name}
+                        name={name}
+                        type={type}
+                        defaultValue={s[name] ?? ''}
+                        placeholder={placeholder}
+                        className="h-11"
+                      />
+                      <p className="text-[11px] text-gray-400">{help}</p>
                     </div>
-                    <Input
-                      id={name}
-                      name={name}
-                      type={type}
-                      defaultValue={(store as unknown as Record<string, string | null>)[name] ?? ''}
-                      placeholder={placeholder}
-                      className="h-10"
-                    />
                   </div>
                 )
               })}

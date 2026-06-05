@@ -14,6 +14,7 @@ export default function SocialAuthButtons() {
   const [loading, setLoading] = useState<'google' | 'facebook' | null>(null)
 
   async function signInWith(provider: 'google' | 'facebook') {
+    const label = provider === 'google' ? 'Google' : 'Facebook'
     setLoading(provider)
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithOAuth({
@@ -23,7 +24,13 @@ export default function SocialAuthButtons() {
       },
     })
     if (error) {
-      toast.error(`No se pudo conectar con ${provider}. ¿Está habilitado en Supabase?`)
+      const notEnabled = /not enabled|unsupported provider|provider is not enabled/i.test(error.message)
+      toast.error(
+        notEnabled
+          ? `El inicio de sesión con ${label} aún no está activado. Por ahora entra con tu correo y contraseña.`
+          : `No se pudo conectar con ${label}. Intenta de nuevo en un momento.`,
+        { duration: 6000 }
+      )
       setLoading(null)
     }
     // Si no hay error, el navegador redirige al proveedor.
