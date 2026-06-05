@@ -156,11 +156,6 @@ export default async function SubscriptionPage({
               <span>{txt}</span>
             </div>
           ))}
-          <div className="mt-1 rounded-xl bg-white border border-amber-100 px-3.5 py-2.5 text-[13px] text-gray-600">
-            <span className="font-semibold text-gray-800">Ejemplo:</span> si haces 1,200 ventas con
-            Mercado Pago en un mes → 1,000 incluidas + 200 extra × $0.50 =
-            <strong className="text-amber-700"> $100 MXN</strong> ese mes. Nada más.
-          </div>
         </CardContent>
       </Card>
 

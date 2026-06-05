@@ -182,6 +182,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   defaultValue={store.name}
                   required
                   placeholder="Mi Tienda"
+                  className="h-11 rounded-xl"
                 />
               </div>
 
@@ -195,6 +196,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   name="tagline"
                   defaultValue={store.tagline ?? ''}
                   placeholder="Ej: Joyería artesanal en plata"
+                  className="h-11 rounded-xl"
                 />
               </div>
 
