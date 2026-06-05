@@ -164,9 +164,14 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
 
         {/* ─── TAB GENERAL ────────────────────────────────── */}
         <TabsContent value="general" className="space-y-4 mt-4">
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base">Información de la tienda</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                  <StoreIcon size={16} className="text-white" />
+                </span>
+                Información de la tienda
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -226,9 +231,14 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </Card>
 
           {/* Imágenes */}
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base">Logo y Banner</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                  <Upload size={15} className="text-white" />
+                </span>
+                Logo y Banner
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Logo */}

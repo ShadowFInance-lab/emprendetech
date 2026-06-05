@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { FileSpreadsheet, FileText, Lock, Loader2, CalendarDays } from 'lucide-react'
@@ -15,8 +15,12 @@ interface Props {
   dateLabel: string
 }
 
+const AUTO_KEY = 'et_autodownload_enabled'
+const LAST_KEY = 'et_autodownload_last'
+
 export default function DailySalesExport({ sales, isPaid, storeName, currency, dateLabel }: Props) {
   const [busy, setBusy] = useState<'excel' | 'pdf' | null>(null)
+  const [auto, setAuto] = useState(false)
   const total = sales.reduce((a, s) => a + Number(s.total), 0)
 
   async function run(kind: 'excel' | 'pdf') {
@@ -34,6 +38,27 @@ export default function DailySalesExport({ sales, isPaid, storeName, currency, d
       toast.error('No se pudo generar el archivo. Intenta de nuevo.')
     }
     setBusy(null)
+  }
+
+  // Cargar preferencia + descarga automática diaria (una vez al día)
+  useEffect(() => {
+    if (!isPaid) return
+    const enabled = localStorage.getItem(AUTO_KEY) === '1'
+    setAuto(enabled)
+    if (enabled && sales.length > 0 && localStorage.getItem(LAST_KEY) !== dateLabel) {
+      localStorage.setItem(LAST_KEY, dateLabel)
+      // best-effort: algunos navegadores requieren gesto del usuario
+      exportSalesToExcel(sales, { storeName, currency, dateLabel })
+        .then(() => toast.success('Descarga automática del reporte de hoy'))
+        .catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function toggleAuto(v: boolean) {
+    setAuto(v)
+    localStorage.setItem(AUTO_KEY, v ? '1' : '0')
+    toast.success(v ? 'Descarga automática activada' : 'Descarga automática desactivada')
   }
 
   return (
@@ -83,9 +108,20 @@ export default function DailySalesExport({ sales, isPaid, storeName, currency, d
       </div>
 
       {isPaid && (
-        <p className="text-[11px] text-gray-400 mt-3">
-          El reporte incluye cada venta con sus productos detallados, método de pago y cliente.
-        </p>
+        <div className="mt-3 flex items-center justify-between gap-3 flex-wrap border-t border-gray-50 pt-3">
+          <p className="text-[11px] text-gray-400">
+            El reporte incluye cada venta con sus productos detallados, método de pago y cliente.
+          </p>
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600 select-none">
+            <input
+              type="checkbox"
+              checked={auto}
+              onChange={e => toggleAuto(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-blue-600"
+            />
+            Descargar automáticamente cada día
+          </label>
+        </div>
       )}
     </div>
   )
