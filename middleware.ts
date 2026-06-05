@@ -14,9 +14,19 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
+  // ─── Blindaje: si faltan las variables de entorno (ej: deploy sin
+  // configurar), NO tumbamos toda la app con 500. Dejamos pasar el
+  // request para que al menos las páginas públicas carguen.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnon) {
+    console.error('⚠️ Faltan NEXT_PUBLIC_SUPABASE_URL / ANON_KEY en el entorno')
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnon,
     {
       cookies: {
         getAll() {
@@ -35,8 +45,14 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refrescar sesión (IMPORTANTE: no remover esto)
-  const { data: { user } } = await supabase.auth.getUser()
+  // Refrescar sesión (IMPORTANTE: no remover esto). Resiliente a errores de red.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  try {
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+  } catch (e) {
+    console.error('Middleware: error al obtener sesión', e)
+  }
 
   const pathname = request.nextUrl.pathname
 
