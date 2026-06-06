@@ -272,6 +272,7 @@ export default async function DashboardPage() {
         today={reportToday}
         week={reportWeek}
         month={reportMonth}
+        isPaid={isPaid}
         storeName={store.name}
         currency={store.currency ?? 'MXN'}
         dateLabel={todayLabel}

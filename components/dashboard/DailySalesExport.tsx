@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
-import { FileSpreadsheet, FileText, Loader2, BarChart3 } from 'lucide-react'
+import { FileSpreadsheet, FileText, Loader2, BarChart3, Lock } from 'lucide-react'
 import { exportSalesToExcel, exportSalesToPDF, type ExportSale } from '@/lib/utils/salesExport'
 import { formatCurrency } from '@/lib/utils/format'
 
@@ -12,6 +13,7 @@ interface Props {
   today: ExportSale[]
   week: ExportSale[]
   month: ExportSale[]
+  isPaid: boolean
   storeName: string
   currency: string
   dateLabel: string
@@ -21,7 +23,7 @@ const RANGE_LABEL: Record<RangeKey, string> = { today: 'Hoy', week: 'Esta semana
 const AUTO_KEY = 'et_autodownload_enabled'
 const LAST_KEY = 'et_autodownload_last'
 
-export default function DailySalesExport({ today, week, month, storeName, currency, dateLabel }: Props) {
+export default function DailySalesExport({ today, week, month, isPaid, storeName, currency, dateLabel }: Props) {
   const [range, setRange] = useState<RangeKey>('today')
   const [busy, setBusy] = useState<'excel' | 'pdf' | null>(null)
   const [auto, setAuto] = useState(false)
@@ -46,8 +48,9 @@ export default function DailySalesExport({ today, week, month, storeName, curren
     setBusy(null)
   }
 
-  // Descarga automática del reporte de HOY (una vez al día)
+  // Descarga automática del reporte de HOY (una vez al día) — solo planes de pago
   useEffect(() => {
+    if (!isPaid) return
     const enabled = localStorage.getItem(AUTO_KEY) === '1'
     setAuto(enabled)
     if (enabled && today.length > 0 && localStorage.getItem(LAST_KEY) !== dateLabel) {
@@ -99,23 +102,32 @@ export default function DailySalesExport({ today, week, month, storeName, curren
           <span className="text-gray-400"> · {sales.length} venta{sales.length === 1 ? '' : 's'} en {RANGE_LABEL[range].toLowerCase()}</span>
         </p>
 
-        <div className="flex gap-2">
-          <button type="button" onClick={() => run('excel')} disabled={busy !== null}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:bg-green-100 transition-all disabled:opacity-60">
-            {busy === 'excel' ? <Loader2 size={15} className="animate-spin" /> : <FileSpreadsheet size={15} />} Excel
-          </button>
-          <button type="button" onClick={() => run('pdf')} disabled={busy !== null}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-semibold hover:bg-red-100 transition-all disabled:opacity-60">
-            {busy === 'pdf' ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />} PDF
-          </button>
-        </div>
+        {isPaid ? (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => run('excel')} disabled={busy !== null}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:bg-green-100 transition-all disabled:opacity-60">
+              {busy === 'excel' ? <Loader2 size={15} className="animate-spin" /> : <FileSpreadsheet size={15} />} Excel
+            </button>
+            <button type="button" onClick={() => run('pdf')} disabled={busy !== null}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-semibold hover:bg-red-100 transition-all disabled:opacity-60">
+              {busy === 'pdf' ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />} PDF
+            </button>
+          </div>
+        ) : (
+          <Link href="/subscription"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold hover:bg-amber-100 transition-all">
+            <Lock size={14} /> Descargar Excel/PDF (plan de pago)
+          </Link>
+        )}
       </div>
 
-      <label className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2 cursor-pointer text-xs text-gray-600 select-none">
-        <input type="checkbox" checked={auto} onChange={e => toggleAuto(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-300 text-blue-600" />
-        Descargar el reporte de hoy automáticamente cada día
-      </label>
+      {isPaid && (
+        <label className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2 cursor-pointer text-xs text-gray-600 select-none">
+          <input type="checkbox" checked={auto} onChange={e => toggleAuto(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+          Descargar el reporte de hoy automáticamente cada día
+        </label>
+      )}
     </div>
   )
 }

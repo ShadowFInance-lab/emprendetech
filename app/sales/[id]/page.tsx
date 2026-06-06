@@ -8,7 +8,7 @@ import { formatCurrency, formatDateTime } from '@/lib/utils/format'
 import CancelSaleButton from '@/components/sales/CancelSaleButton'
 
 const PAYMENT_LABELS: Record<string, string> = {
-  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', other: 'Otro',
+  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mercadopago: 'Mercado Pago', other: 'Otro',
 }
 
 export default async function SaleDetailPage({ params }: { params: { id: string } }) {
@@ -17,8 +17,9 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
   if (!user) redirect('/login')
 
   const { data: store } = await supabase
-    .from('stores').select('id').eq('owner_id', user.id).single()
+    .from('stores').select('*').eq('owner_id', user.id).single()
   if (!store) redirect('/onboarding')
+  const hasPin = !!(store as { sales_pin?: string | null }).sales_pin
 
   const { data: sale } = await supabase
     .from('sales')
@@ -46,7 +47,7 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
             </Badge>
           </div>
         </div>
-        {isCompleted && <CancelSaleButton saleId={sale.id} />}
+        {isCompleted && <CancelSaleButton saleId={sale.id} hasPin={hasPin} />}
       </div>
 
       {/* Info de la venta */}

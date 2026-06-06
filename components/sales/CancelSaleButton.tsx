@@ -7,15 +7,22 @@ import { XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cancelSaleAction } from '@/lib/actions/sales'
 
-export default function CancelSaleButton({ saleId }: { saleId: string }) {
+export default function CancelSaleButton({ saleId, hasPin = false }: { saleId: string; hasPin?: boolean }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   function handleCancel() {
     if (!confirm('¿Cancelar esta venta? El stock de los productos será devuelto al inventario.')) return
 
+    let pin: string | undefined
+    if (hasPin) {
+      const entered = window.prompt('Ingresa el PIN de seguridad para cancelar la venta:')
+      if (entered === null) return // el usuario canceló el prompt
+      pin = entered
+    }
+
     startTransition(async () => {
-      const result = await cancelSaleAction(saleId)
+      const result = await cancelSaleAction(saleId, pin)
       if (result.success) {
         toast.success('Venta cancelada. Stock devuelto.')
         router.refresh()

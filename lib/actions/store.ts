@@ -87,7 +87,7 @@ export async function updateStoreAction(
     'name', 'description', 'tagline', 'whatsapp',
     'facebook', 'instagram', 'tiktok',
     'skin', 'primary_color', 'secondary_color', 'button_color',
-    'font_family', 'product_order', 'currency', 'show_prices',
+    'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices',
   ]
 
   fields.forEach(field => {
@@ -121,10 +121,11 @@ export async function updateStoreAction(
     .eq('id', storeId)
     .eq('owner_id', user.id)
 
-  // Si la columna 'currency' aún no existe (migración 009 pendiente),
-  // reintenta sin ella para no romper el guardado de toda la configuración.
-  if (error && (error.code === '42703' || /currency/i.test(error.message)) && 'currency' in updates) {
+  // Si alguna columna nueva aún no existe (migración pendiente: currency 009,
+  // sales_pin 011), reintenta sin ellas para no romper el guardado completo.
+  if (error && error.code === '42703') {
     delete updates.currency
+    delete updates.sales_pin
     const retry = await supabase
       .from('stores').update(updates).eq('id', storeId).eq('owner_id', user.id)
     error = retry.error

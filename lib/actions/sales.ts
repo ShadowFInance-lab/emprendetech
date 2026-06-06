@@ -151,14 +151,24 @@ export async function createSaleAction(input: CreateSaleInput): Promise<ActionRe
 }
 
 // ─── Cancelar venta (devuelve stock vía trigger) ─────────────
-export async function cancelSaleAction(saleId: string): Promise<ActionResult> {
+// Opcionalmente protegida por un PIN de seguridad de la tienda (anti-robo).
+export async function cancelSaleAction(saleId: string, pin?: string): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'No autenticado' }
 
+  // select('*') para leer sales_pin sin fallar si la migración 011 no se corrió
   const { data: store } = await supabase
-    .from('stores').select('id').eq('owner_id', user.id).single()
+    .from('stores').select('*').eq('owner_id', user.id).single()
   if (!store) return { success: false, error: 'Tienda no encontrada' }
+
+  // Verificación de PIN (si la tienda tiene uno configurado)
+  const storePin = (store as { sales_pin?: string | null }).sales_pin
+  if (storePin && storePin.trim()) {
+    if (!pin || pin.trim() !== storePin.trim()) {
+      return { success: false, error: 'PIN incorrecto. La venta no se canceló.' }
+    }
+  }
 
   // El trigger handle_sale_cancel() devuelve el stock automáticamente
   const { error } = await supabase

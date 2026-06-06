@@ -226,6 +226,25 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 <p className="text-[11px] text-gray-400">Se usa para mostrar los precios en tu catálogo y ventas.</p>
               </div>
 
+              {/* PIN de seguridad para cancelar ventas (anti-robo) */}
+              <div className="space-y-1.5">
+                <Label htmlFor="sales_pin">PIN de seguridad para cancelar ventas (opcional)</Label>
+                <Input
+                  id="sales_pin"
+                  name="sales_pin"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  defaultValue={s.sales_pin ?? ''}
+                  placeholder="Ej: 1234"
+                  autoComplete="off"
+                  className="h-11 rounded-xl max-w-[200px]"
+                />
+                <p className="text-[11px] text-gray-400">
+                  Si lo configuras, se pedirá este PIN para cancelar una venta (evita cancelaciones no autorizadas de empleados). Déjalo vacío para no usarlo.
+                </p>
+              </div>
+
               <p className="text-xs text-gray-400">
                 📱 El WhatsApp y tus redes se configuran en la pestaña <strong>Redes Sociales</strong>.
               </p>

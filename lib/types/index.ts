@@ -41,6 +41,7 @@ export interface Store {
   font_family: string
   product_order: string
   currency: string
+  sales_pin: string | null
   low_stock_alert: number
   show_prices: boolean
   catalog_active: boolean
