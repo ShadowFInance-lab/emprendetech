@@ -325,10 +325,13 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         {/* ─── TAB DISEÑO ─────────────────────────────────── */}
         <TabsContent value="design" className="space-y-4 mt-4">
           {/* Skin */}
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Palette size={16} /> Estilo del catálogo
+              <CardTitle className="text-base flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                  <Palette size={15} className="text-white" />
+                </span>
+                Estilo del catálogo
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -415,9 +418,14 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </Card>
 
           {/* Colores — paletas bonitas (10), gating por plan */}
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base">Paleta de colores</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                  <Palette size={15} className="text-white" />
+                </span>
+                Paleta de colores
+              </CardTitle>
               <p className="text-xs text-gray-400">
                 {isPaidPlan
                   ? 'Elige una paleta o personaliza tus 3 tonos (principal, secundario y botones).'
@@ -521,10 +529,13 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
 
         {/* ─── TAB REDES SOCIALES ──────────────────────────── */}
         <TabsContent value="social" className="space-y-4 mt-4">
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Share2 size={16} /> Conecta tus redes
+              <CardTitle className="text-base flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                  <Share2 size={15} className="text-white" />
+                </span>
+                Conecta tus redes
               </CardTitle>
               <p className="text-xs text-gray-400">Toca un botón para conectar. Aparecerán como accesos directos grandes en tu catálogo público.</p>
             </CardHeader>
