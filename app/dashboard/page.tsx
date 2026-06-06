@@ -111,21 +111,25 @@ export default async function DashboardPage() {
   const vipPct = vipUsage ? Math.min(100, (vipUsage.salesThisMonth / vipUsage.included) * 100) : 0
   const isPaid = (profilePlan?.plan ?? 'free') !== 'free'
 
-  // ─── Ventas del día detalladas (para exportar PDF/Excel) ──
-  const { data: salesTodayDetailed } = await supabase
+  // ─── Ventas detalladas (para exportar PDF/Excel por rango) ──
+  // Una sola query desde la fecha más temprana (semana o inicio de mes),
+  // luego se filtra en Hoy / Semana / Mes.
+  const earliestStart = weekStart < monthStart ? weekStart : monthStart
+  const { data: detailedRaw } = await supabase
     .from('sales')
     .select('folio, total, payment_method, created_at, customers(name), sale_items(product_name, quantity, unit_price, subtotal)')
     .eq('store_id', store.id)
     .eq('status', 'completed')
-    .gte('created_at', todayStart)
+    .gte('created_at', earliestStart)
     .order('created_at', { ascending: false })
+    .limit(1000)
 
   type RawSale = {
     folio: string; total: number; payment_method: string; created_at: string
     customers: { name: string } | { name: string }[] | null
     sale_items: { product_name: string; quantity: number; unit_price: number; subtotal: number }[] | null
   }
-  const exportSales: ExportSale[] = (salesTodayDetailed as RawSale[] | null ?? []).map(s => {
+  const allDetailed: ExportSale[] = (detailedRaw as RawSale[] | null ?? []).map(s => {
     const cust = Array.isArray(s.customers) ? s.customers[0] : s.customers
     return {
       folio: s.folio,
@@ -141,6 +145,9 @@ export default async function DashboardPage() {
       })),
     }
   })
+  const reportToday = allDetailed.filter(s => s.created_at >= todayStart)
+  const reportWeek = allDetailed.filter(s => s.created_at >= weekStart)
+  const reportMonth = allDetailed.filter(s => s.created_at >= monthStart)
   const todayLabel = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')
 
   const hasNoSales = (salesMonth?.length ?? 0) === 0 && (salesWeek?.length ?? 0) === 0 && (salesToday?.length ?? 0) === 0
@@ -260,9 +267,11 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Ventas del día + descarga PDF/Excel */}
+      {/* Reportes de ventas (Hoy / Semana / Mes) + descarga PDF/Excel */}
       <DailySalesExport
-        sales={exportSales}
+        today={reportToday}
+        week={reportWeek}
+        month={reportMonth}
         isPaid={isPaid}
         storeName={store.name}
         currency={store.currency ?? 'MXN'}

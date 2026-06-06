@@ -9,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import ImageUploader from './ImageUploader'
 import BarcodeScanner from './BarcodeScanner'
@@ -280,19 +279,19 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
             </div>
           </div>
 
-          {/* Categoría */}
+          {/* Categoría — select nativo (legible, sin el bug del UUID) */}
           <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
             <h3 className="font-semibold text-gray-900 text-[15px] mb-3">Categoría</h3>
-            <Select value={categoryId || 'none'}
-              onValueChange={(v: string | null) => setCategoryId(!v || v === 'none' ? '' : v)}>
-              <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Sin categoría" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin categoría</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={categoryId}
+              onChange={e => setCategoryId(e.target.value)}
+              className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+            >
+              <option value="">Sin categoría</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
             {categories.length === 0 && (
               <p className="text-xs text-gray-400 mt-2">
                 <a href="/inventory/categories" className="text-blue-600 hover:underline">Crea categorías</a>{' '}
