@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { FileSpreadsheet, FileText, Loader2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDateTime } from '@/lib/utils/format'
 
@@ -16,7 +17,7 @@ export interface ExportSaleRow {
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
-  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', other: 'Otro',
+  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mercadopago: 'Mercado Pago', other: 'Otro',
 }
 const STATUS_LABELS: Record<string, string> = {
   completed: 'Completada', cancelled: 'Cancelada', refunded: 'Reembolsada',
@@ -25,9 +26,10 @@ const STATUS_LABELS: Record<string, string> = {
 interface Props {
   sales: ExportSaleRow[]
   storeName: string
+  isPaid?: boolean
 }
 
-export default function ExportSalesButtons({ sales, storeName }: Props) {
+export default function ExportSalesButtons({ sales, storeName, isPaid = false }: Props) {
   const [loading, setLoading] = useState<'excel' | 'pdf' | null>(null)
 
   const rows = sales.map(s => ({
@@ -97,6 +99,18 @@ export default function ExportSalesButtons({ sales, storeName }: Props) {
   }
 
   if (sales.length === 0) return null
+
+  // Exportar es función de planes de pago
+  if (!isPaid) {
+    return (
+      <Link
+        href="/subscription"
+        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium hover:bg-amber-100 transition-all"
+      >
+        <Lock size={14} /> Exportar (plan de pago)
+      </Link>
+    )
+  }
 
   return (
     <div className="flex gap-2">

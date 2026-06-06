@@ -17,6 +17,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Efectivo',
   card: 'Tarjeta',
   transfer: 'Transferencia',
+  mercadopago: 'Mercado Pago',
   other: 'Otro',
 }
 
@@ -28,6 +29,10 @@ export default async function SalesPage() {
   const { data: store } = await supabase
     .from('stores').select('id, name').eq('owner_id', user.id).single()
   if (!store) redirect('/onboarding')
+
+  // Exportar es función de planes de pago
+  const { data: profile } = await supabase.from('profiles').select('plan').eq('id', user.id).single()
+  const isPaid = (profile?.plan ?? 'free') !== 'free'
 
   // Ventas con cliente
   const { data: sales } = await supabase
@@ -63,6 +68,7 @@ export default async function SalesPage() {
         <div className="flex items-center gap-2">
           <ExportSalesButtons
             storeName={store.name}
+            isPaid={isPaid}
             sales={(sales ?? []).map((s: {
               folio: string; created_at: string; total: number; profit: number
               status: string; payment_method: string; customers: { name: string } | null
