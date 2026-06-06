@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { updateStoreAction, uploadStoreImage } from '@/lib/actions/store'
 import { getPlanLimits } from '@/lib/constants/plans'
@@ -207,20 +206,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         ))}
       </div>
 
-      <Tabs defaultValue="general">
-        <TabsList className="grid grid-cols-2 w-full h-auto gap-1.5 bg-gray-100 p-1.5 rounded-2xl">
-          <TabsTrigger value="general"
-            className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 gap-1.5">
-            <StoreIcon size={16} /> General
-          </TabsTrigger>
-          <TabsTrigger value="design"
-            className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 gap-1.5">
-            <Palette size={16} /> Diseño
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ─── TAB GENERAL (2 columnas: Info | Logo/Banner) ──── */}
-        <TabsContent value="general" className="mt-4">
+      {/* ─── GENERAL: Información + Logo/Banner ──── */}
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">
+          <StoreIcon size={14} /> General
+        </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader className="pb-4">
@@ -382,10 +371,11 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             </CardContent>
           </Card>
           </div>
-        </TabsContent>
-
-        {/* ─── TAB DISEÑO ─────────────────────────────────── */}
-        <TabsContent value="design" className="space-y-4 mt-4">
+      {/* ─── DISEÑO ─────────────────────────────────── */}
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-3">
+          <Palette size={14} /> Diseño
+        </h2>
+        <div className="space-y-4">
           {/* Skin */}
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader className="pb-4">
@@ -616,9 +606,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-      </Tabs>
+        </div>
 
       {/* Modal de conexión de red social (sin campo de URL inline) */}
       {socialModal && (
