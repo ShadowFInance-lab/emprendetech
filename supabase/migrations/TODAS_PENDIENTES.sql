@@ -70,4 +70,7 @@ ALTER TABLE stores ADD COLUMN IF NOT EXISTS sales_pin TEXT;
 -- ─── 012: Red social YouTube ───────────────────────────────────────────────
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS youtube TEXT;
 
+-- ─── 013: Moneda por producto ──────────────────────────────────────────────
+ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

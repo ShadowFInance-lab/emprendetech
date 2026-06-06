@@ -296,13 +296,13 @@ export default function ModernaSkin({
                         product.compare_at_price ? (
                           <div className="flex items-baseline gap-2">
                             <p className="text-xl font-extrabold tracking-tight text-red-600">
-                              {formatCurrency(product.sale_price, store.currency)}
+                              {formatCurrency(product.sale_price, product.currency || store.currency)}
                             </p>
-                            <p className="text-sm text-gray-400 line-through">{formatCurrency(product.compare_at_price, store.currency)}</p>
+                            <p className="text-sm text-gray-400 line-through">{formatCurrency(product.compare_at_price, product.currency || store.currency)}</p>
                           </div>
                         ) : (
                           <p className="text-xl font-extrabold tracking-tight" style={{ color: primary }}>
-                            {formatCurrency(product.sale_price, store.currency)}
+                            {formatCurrency(product.sale_price, product.currency || store.currency)}
                           </p>
                         )
                       )}

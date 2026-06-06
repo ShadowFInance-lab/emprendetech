@@ -83,6 +83,7 @@ export interface Product {
   cost_price: number
   sale_price: number
   compare_at_price: number | null
+  currency: string | null
   stock: number
   is_featured: boolean
   is_active: boolean

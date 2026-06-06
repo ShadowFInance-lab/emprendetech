@@ -19,6 +19,7 @@ import {
   uploadProductImageAction,
 } from '@/lib/actions/products'
 import type { Product, Category } from '@/lib/types'
+import { SUPPORTED_CURRENCIES } from '@/lib/utils/format'
 
 interface ProductFormProps {
   product?: Product
@@ -53,6 +54,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
   const [costPrice, setCostPrice] = useState(product?.cost_price?.toString() ?? '0')
   const [salePrice, setSalePrice] = useState(product?.sale_price?.toString() ?? '')
   const [stock, setStock] = useState(product?.stock?.toString() ?? '0')
+  const [currency, setCurrency] = useState(product?.currency ?? 'MXN')
   const [categoryId, setCategoryId] = useState<string>(product?.category_id ?? '')
   const [isFeatured, setIsFeatured] = useState(product?.is_featured ?? false)
   const [isNew, setIsNew] = useState(product?.is_new ?? true)
@@ -74,6 +76,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
     formData.set('is_new', isNew.toString())
     formData.set('is_active', isActive.toString())
     formData.set('category_id', categoryId)
+    formData.set('currency', currency)
 
     startTransition(async () => {
       if (isEditing) {
@@ -236,6 +239,21 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
                   <Input id="stock" name="stock" type="number" step="1" min="0"
                     value={stock} onChange={e => setStock(e.target.value)} placeholder="0" className={inputCls} />
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="currency">Moneda de venta</Label>
+                <select
+                  id="currency"
+                  value={currency}
+                  onChange={e => setCurrency(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                >
+                  {SUPPORTED_CURRENCIES.map(c => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400">Cada producto puede venderse en su propia moneda.</p>
               </div>
 
               {margin > 0 && (

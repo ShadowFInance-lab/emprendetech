@@ -21,6 +21,7 @@ const ProductSchema = z.object({
   is_featured: z.coerce.boolean().optional(),
   is_new: z.coerce.boolean().optional(),
   is_active: z.coerce.boolean().optional(),
+  currency: z.string().max(8).optional(),
 })
 
 // ─── Obtener tienda del usuario (incluye slug para revalidar catálogo) ──
@@ -83,6 +84,7 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
     is_featured: formData.get('is_featured') === 'true',
     is_new: formData.get('is_new') !== 'false',
     is_active: formData.get('is_active') !== 'false',
+    currency: (formData.get('currency') as string) || undefined,
   }
 
   const parsed = ProductSchema.safeParse(raw)
@@ -122,6 +124,11 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
 
   if (error || !product) return { success: false, error: 'Error al crear el producto' }
 
+  // Persistir moneda del producto (se ignora si falta la migración 013)
+  if (parsed.data.currency) {
+    await supabase.from('products').update({ currency: parsed.data.currency }).eq('id', product.id)
+  }
+
   revalidateProductPaths(store.slug, product.id)
   return { success: true, id: product.id }
 }
@@ -150,6 +157,7 @@ export async function updateProductAction(
     is_featured: formData.get('is_featured') === 'true',
     is_new: formData.get('is_new') === 'true',
     is_active: formData.get('is_active') !== 'false',
+    currency: (formData.get('currency') as string) || undefined,
   }
 
   const parsed = ProductSchema.safeParse(raw)
@@ -174,6 +182,11 @@ export async function updateProductAction(
     .eq('store_id', store.id) // seguridad: solo productos de su tienda
 
   if (error) return { success: false, error: 'Error al actualizar el producto' }
+
+  // Persistir moneda del producto (se ignora si falta la migración 013)
+  if (parsed.data.currency) {
+    await supabase.from('products').update({ currency: parsed.data.currency }).eq('id', productId).eq('store_id', store.id)
+  }
 
   revalidateProductPaths(store.slug, productId)
   return { success: true }
