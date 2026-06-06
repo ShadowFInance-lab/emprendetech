@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createPublicClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import type { ActionResult } from './auth'
 
@@ -152,23 +152,22 @@ export async function createSaleAction(input: CreateSaleInput): Promise<ActionRe
 
 // ─── Cancelar venta (devuelve stock vía trigger) ─────────────
 // Opcionalmente protegida por un PIN de seguridad de la tienda (anti-robo).
-export async function cancelSaleAction(saleId: string, pin?: string): Promise<ActionResult> {
+export async function cancelSaleAction(saleId: string, password?: string): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'No autenticado' }
+  if (!user.email) return { success: false, error: 'Tu cuenta no tiene correo asociado.' }
 
-  // select('*') para leer sales_pin sin fallar si la migración 011 no se corrió
+  // ─── Anti-robo: exige la CONTRASEÑA del dueño ────────────
+  if (!password) return { success: false, error: 'Ingresa tu contraseña para cancelar la venta.' }
+  // Verificamos con un cliente SIN sesión (no afecta tu sesión actual)
+  const verifier = createPublicClient()
+  const { error: authErr } = await verifier.auth.signInWithPassword({ email: user.email, password })
+  if (authErr) return { success: false, error: 'Contraseña incorrecta. La venta no se canceló.' }
+
   const { data: store } = await supabase
-    .from('stores').select('*').eq('owner_id', user.id).single()
+    .from('stores').select('id').eq('owner_id', user.id).single()
   if (!store) return { success: false, error: 'Tienda no encontrada' }
-
-  // Verificación de PIN (si la tienda tiene uno configurado)
-  const storePin = (store as { sales_pin?: string | null }).sales_pin
-  if (storePin && storePin.trim()) {
-    if (!pin || pin.trim() !== storePin.trim()) {
-      return { success: false, error: 'PIN incorrecto. La venta no se canceló.' }
-    }
-  }
 
   // El trigger handle_sale_cancel() devuelve el stock automáticamente
   const { error } = await supabase
