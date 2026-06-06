@@ -72,14 +72,36 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [buttonColor, setButtonColor] = useState(store.button_color)
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
 
-  // Redes: qué tarjetas están abiertas (las ya conectadas inician abiertas)
+  // Redes: valores actuales + modal de conexión (sin campo de URL inline)
   const s = store as unknown as Record<string, string | null>
-  const [openSocial, setOpenSocial] = useState<Record<string, boolean>>({
-    whatsapp: !!s.whatsapp,
-    instagram: !!s.instagram,
-    facebook: !!s.facebook,
-    tiktok: !!s.tiktok,
+  const [socialVals, setSocialVals] = useState<Record<string, string>>({
+    whatsapp: s.whatsapp ?? '',
+    instagram: s.instagram ?? '',
+    facebook: s.facebook ?? '',
+    tiktok: s.tiktok ?? '',
   })
+  const [socialModal, setSocialModal] = useState<string | null>(null)
+  const [modalValue, setModalValue] = useState('')
+
+  function openSocialModal(name: string) {
+    setModalValue(socialVals[name] ?? '')
+    setSocialModal(name)
+  }
+  function saveSocialModal() {
+    if (socialModal) setSocialVals(prev => ({ ...prev, [socialModal]: modalValue.trim() }))
+    setSocialModal(null)
+  }
+
+  const SOCIALS = [
+    { name: 'whatsapp', label: 'WhatsApp', placeholder: '+52 55 1234 5678', field: 'Número de WhatsApp (con lada)',
+      icon: <MessageCircle size={26} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
+    { name: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/tu_tienda', field: 'Enlace de tu perfil',
+      icon: <InstagramIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
+    { name: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/tu_tienda', field: 'Enlace de tu página',
+      icon: <FacebookIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
+    { name: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@tu_tienda', field: 'Enlace de tu perfil',
+      icon: <TikTokIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
+  ]
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -558,67 +580,84 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </CardTitle>
               <p className="text-xs text-gray-400">Toca un botón para conectar. Aparecerán como accesos directos grandes en tu catálogo público.</p>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { name: 'whatsapp', label: 'WhatsApp', cta: 'Conectar con WhatsApp', placeholder: '+52 55 1234 5678', type: 'tel',
-                  help: 'Tu número con lada (los clientes te escribirán aquí).',
-                  icon: <MessageCircle size={26} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
-                { name: 'instagram', label: 'Instagram', cta: 'Conectar con Instagram', placeholder: 'https://instagram.com/tu_tienda', type: 'url',
-                  help: 'Pega el enlace de tu perfil de Instagram.',
-                  icon: <InstagramIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
-                { name: 'facebook', label: 'Facebook', cta: 'Conectar con Facebook', placeholder: 'https://facebook.com/tu_tienda', type: 'url',
-                  help: 'Pega el enlace de tu página de Facebook.',
-                  icon: <FacebookIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
-                { name: 'tiktok', label: 'TikTok', cta: 'Conectar con TikTok', placeholder: 'https://tiktok.com/@tu_tienda', type: 'url',
-                  help: 'Pega el enlace de tu perfil de TikTok.',
-                  icon: <TikTokIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
-              ].map(({ name, label, cta, placeholder, type, help, icon, bg }) => {
-                const connected = !!s[name]
-                const isOpen = openSocial[name]
-                return (
-                  <div key={name} className="rounded-2xl border border-gray-100 overflow-hidden">
-                    {/* Botón grande de conectar */}
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {SOCIALS.map(soc => {
+                  const connected = !!socialVals[soc.name]
+                  return (
                     <button
+                      key={soc.name}
                       type="button"
-                      onClick={() => setOpenSocial(prev => ({ ...prev, [name]: !prev[name] }))}
-                      className={`w-full flex items-center gap-3.5 ${bg} px-4 py-3.5 text-left transition-all hover:brightness-105`}
+                      onClick={() => openSocialModal(soc.name)}
+                      className={`w-full flex items-center gap-3.5 ${soc.bg} rounded-2xl px-4 py-4 text-left transition-all hover:brightness-105 active:scale-[0.99]`}
                     >
                       <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                        {icon}
+                        {soc.icon}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-white text-[15px] leading-tight">
-                          {connected ? label : cta}
+                          {connected ? soc.label : `Conectar con ${soc.label}`}
                         </p>
                         {connected ? (
                           <span className="inline-flex items-center gap-1 text-xs text-white/90 font-medium">
                             <Check size={12} /> Conectado · toca para editar
                           </span>
                         ) : (
-                          <span className="text-xs text-white/80">Toca para agregar tu enlace</span>
+                          <span className="text-xs text-white/85">Toca para conectar</span>
                         )}
                       </div>
                     </button>
-
-                    {/* Campo (montado siempre para que el form lo envíe; se oculta al colapsar) */}
-                    <div className={isOpen ? 'p-3.5 bg-white space-y-1.5' : 'hidden'}>
-                      <Input
-                        id={name}
-                        name={name}
-                        type={type}
-                        defaultValue={s[name] ?? ''}
-                        placeholder={placeholder}
-                        className="h-11"
-                      />
-                      <p className="text-[11px] text-gray-400">{help}</p>
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
+              {/* Inputs ocultos: el formulario envía los valores capturados en el modal */}
+              {SOCIALS.map(soc => (
+                <input key={soc.name} type="hidden" name={soc.name} value={socialVals[soc.name]} readOnly />
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de conexión de red social (sin campo de URL inline) */}
+      {socialModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setSocialModal(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            {(() => {
+              const soc = SOCIALS.find(x => x.name === socialModal)
+              if (!soc) return null
+              return (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-2xl ${soc.bg} flex items-center justify-center`}>{soc.icon}</div>
+                    <h3 className="font-bold text-lg text-gray-900">Conectar con {soc.label}</h3>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="social-modal-input">{soc.field}</Label>
+                    <Input id="social-modal-input" autoFocus value={modalValue}
+                      onChange={e => setModalValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveSocialModal() } }}
+                      placeholder={soc.placeholder} className="h-11 rounded-xl" />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    {modalValue ? (
+                      <button type="button" onClick={() => setModalValue('')}
+                        className="text-xs text-red-500 hover:text-red-600">Quitar enlace</button>
+                    ) : <span />}
+                    <div className="flex gap-2">
+                      <Button type="button" variant="ghost" onClick={() => setSocialModal(null)}>Cancelar</Button>
+                      <Button type="button" onClick={saveSocialModal}>Guardar</Button>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-400">Se guardará en tu tienda al pulsar &quot;Guardar cambios&quot; abajo.</p>
+                </>
+              )
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Barra de guardado fija */}
       <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white/90 backdrop-blur border-t border-gray-200 px-4 lg:px-6 py-3 z-30">
