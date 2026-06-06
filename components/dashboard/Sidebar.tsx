@@ -15,7 +15,7 @@ import type { Store as StoreType, Profile } from '@/lib/types'
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Ganancias', icon: LayoutDashboard },
   { href: '/inventory', label: 'Inventario', icon: Package },
-  { href: '/sales', label: 'Ventas', icon: ShoppingCart },
+  { href: '/sales/new', label: 'Ventas', icon: ShoppingCart },
   { href: '/customers', label: 'Clientes', icon: Users },
   { href: '/settings', label: 'Configuración', icon: Settings },
   { href: '/subscription', label: 'Suscripción', icon: CreditCard },

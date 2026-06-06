@@ -14,7 +14,7 @@ import { getPlanLimits } from '@/lib/constants/plans'
 import { SUPPORTED_CURRENCIES } from '@/lib/utils/format'
 import type { Store, Plan } from '@/lib/types'
 import { Lock, Share2, MessageCircle } from 'lucide-react'
-import { InstagramIcon, FacebookIcon, TikTokIcon, YouTubeIcon } from '@/components/catalog/SocialIcons'
+import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
 import ShareCatalog from './ShareCatalog'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
@@ -57,6 +57,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const allowedSkins = getPlanLimits(plan).skins
   const isPaidPlan = plan !== 'free'
   const [isPending, startTransition] = useTransition()
+  const [saved, setSaved] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const logoRef = useRef<HTMLInputElement>(null)
@@ -79,7 +80,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     instagram: s.instagram ?? '',
     facebook: s.facebook ?? '',
     tiktok: s.tiktok ?? '',
-    youtube: s.youtube ?? '',
   })
   const [socialModal, setSocialModal] = useState<string | null>(null)
   const [modalValue, setModalValue] = useState('')
@@ -102,8 +102,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       icon: <FacebookIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
     { name: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@tu_tienda', field: 'Enlace de tu perfil',
       icon: <TikTokIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
-    { name: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@tu_canal', field: 'Enlace de tu canal',
-      icon: <YouTubeIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-red-500 to-red-700' },
   ]
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -121,6 +119,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       const result = await updateStoreAction(store.id, formData)
       if (result.success) {
         toast.success('Configuración guardada')
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2500)
       } else {
         toast.error(result.error ?? 'Error al guardar')
       }
@@ -683,9 +683,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1.5">
             <ExternalLink size={14} /> <span className="hidden sm:inline">Ver mi catálogo</span>
           </a>
-          <Button type="submit" disabled={isPending} className="min-w-40 h-11">
+          <Button type="submit" disabled={isPending}
+            className={`min-w-44 h-11 transition-all hover:scale-[1.02] active:scale-95 ${saved ? 'bg-green-600 hover:bg-green-600' : ''}`}>
             {isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando…</>
+            ) : saved ? (
+              <><Check className="mr-2 h-4 w-4" /> ¡Cambios guardados!</>
             ) : (
               <><Save className="mr-2 h-4 w-4" /> Guardar cambios</>
             )}

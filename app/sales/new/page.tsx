@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, History } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import POSInterface from '@/components/sales/POSInterface'
 
@@ -32,16 +32,26 @@ export default async function NewSalePage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Link href={presetCustomer ? `/customers/${presetCustomer.id}` : '/sales'} className="text-gray-400 hover:text-gray-600">
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Nueva venta</h1>
-          <p className="text-gray-500 text-xs">
-            {presetCustomer ? `Venta para ${presetCustomer.name}` : 'Selecciona productos y registra la venta'}
-          </p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {presetCustomer && (
+            <Link href={`/customers/${presetCustomer.id}`} className="text-gray-400 hover:text-gray-600">
+              <ArrowLeft size={20} />
+            </Link>
+          )}
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Nueva venta</h1>
+            <p className="text-gray-500 text-xs">
+              {presetCustomer ? `Venta para ${presetCustomer.name}` : 'Selecciona productos y registra la venta'}
+            </p>
+          </div>
         </div>
+        <Link
+          href="/sales"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+        >
+          <History size={15} /> Historial
+        </Link>
       </div>
       <POSInterface presetCustomer={presetCustomer} />
     </div>
