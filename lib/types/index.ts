@@ -34,6 +34,7 @@ export interface Store {
   facebook: string | null
   instagram: string | null
   tiktok: string | null
+  youtube: string | null
   skin: Skin
   primary_color: string
   secondary_color: string

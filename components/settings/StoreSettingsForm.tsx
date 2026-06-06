@@ -14,7 +14,7 @@ import { getPlanLimits } from '@/lib/constants/plans'
 import { SUPPORTED_CURRENCIES } from '@/lib/utils/format'
 import type { Store, Plan } from '@/lib/types'
 import { Lock, Share2, MessageCircle } from 'lucide-react'
-import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
+import { InstagramIcon, FacebookIcon, TikTokIcon, YouTubeIcon } from '@/components/catalog/SocialIcons'
 import ShareCatalog from './ShareCatalog'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
@@ -79,6 +79,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     instagram: s.instagram ?? '',
     facebook: s.facebook ?? '',
     tiktok: s.tiktok ?? '',
+    youtube: s.youtube ?? '',
   })
   const [socialModal, setSocialModal] = useState<string | null>(null)
   const [modalValue, setModalValue] = useState('')
@@ -101,6 +102,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       icon: <FacebookIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
     { name: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@tu_tienda', field: 'Enlace de tu perfil',
       icon: <TikTokIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
+    { name: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@tu_canal', field: 'Enlace de tu canal',
+      icon: <YouTubeIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-red-500 to-red-700' },
   ]
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -168,8 +171,44 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         </div>
       </div>
 
+      {/* Redes sociales — fila de tarjetas ARRIBA (como la referencia) */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+        <div className="flex items-center gap-2.5 mb-3">
+          <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+            <Share2 size={15} className="text-white" />
+          </span>
+          <div>
+            <p className="font-semibold text-gray-900 text-[15px] leading-tight">Redes sociales</p>
+            <p className="text-xs text-gray-400">Toca para conectar — aparecerán en tu catálogo público.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          {SOCIALS.map(soc => {
+            const connected = !!socialVals[soc.name]
+            return (
+              <button
+                key={soc.name}
+                type="button"
+                onClick={() => openSocialModal(soc.name)}
+                className="rounded-xl border border-gray-100 bg-white p-3 flex flex-col items-center gap-1.5 hover:shadow-sm hover:border-gray-200 transition-all"
+              >
+                <div className={`w-11 h-11 rounded-2xl ${soc.bg} flex items-center justify-center`}>{soc.icon}</div>
+                <p className="text-xs font-semibold text-gray-900">{soc.label}</p>
+                <span className={`text-[11px] font-medium ${connected ? 'text-green-600' : 'text-blue-600'}`}>
+                  {connected ? '✓ Conectado' : 'Conectar'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        {/* Inputs ocultos: el formulario envía los valores capturados en el modal */}
+        {SOCIALS.map(soc => (
+          <input key={soc.name} type="hidden" name={soc.name} value={socialVals[soc.name]} readOnly />
+        ))}
+      </div>
+
       <Tabs defaultValue="general">
-        <TabsList className="grid grid-cols-3 w-full h-auto gap-1.5 bg-gray-100 p-1.5 rounded-2xl">
+        <TabsList className="grid grid-cols-2 w-full h-auto gap-1.5 bg-gray-100 p-1.5 rounded-2xl">
           <TabsTrigger value="general"
             className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 gap-1.5">
             <StoreIcon size={16} /> General
@@ -177,10 +216,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           <TabsTrigger value="design"
             className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 gap-1.5">
             <Palette size={16} /> Diseño
-          </TabsTrigger>
-          <TabsTrigger value="social"
-            className="rounded-xl px-3 py-2.5 text-sm font-medium text-gray-500 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 gap-1.5">
-            <Share2 size={16} /> Redes
           </TabsTrigger>
         </TabsList>
 
@@ -599,55 +634,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </Card>
         </TabsContent>
 
-        {/* ─── TAB REDES SOCIALES ──────────────────────────── */}
-        <TabsContent value="social" className="space-y-4 mt-4">
-          <Card className="border-0 shadow-sm rounded-2xl">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2.5">
-                <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                  <Share2 size={15} className="text-white" />
-                </span>
-                Conecta tus redes
-              </CardTitle>
-              <p className="text-xs text-gray-400">Toca un botón para conectar. Aparecerán como accesos directos grandes en tu catálogo público.</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {SOCIALS.map(soc => {
-                  const connected = !!socialVals[soc.name]
-                  return (
-                    <button
-                      key={soc.name}
-                      type="button"
-                      onClick={() => openSocialModal(soc.name)}
-                      className={`w-full flex items-center gap-3.5 ${soc.bg} rounded-2xl px-4 py-4 text-left transition-all hover:brightness-105 active:scale-[0.99]`}
-                    >
-                      <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                        {soc.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-white text-[15px] leading-tight">
-                          {connected ? soc.label : `Conectar con ${soc.label}`}
-                        </p>
-                        {connected ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-white/90 font-medium">
-                            <Check size={12} /> Conectado · toca para editar
-                          </span>
-                        ) : (
-                          <span className="text-xs text-white/85">Toca para conectar</span>
-                        )}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-              {/* Inputs ocultos: el formulario envía los valores capturados en el modal */}
-              {SOCIALS.map(soc => (
-                <input key={soc.name} type="hidden" name={soc.name} value={socialVals[soc.name]} readOnly />
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* Modal de conexión de red social (sin campo de URL inline) */}

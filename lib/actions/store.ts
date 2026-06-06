@@ -85,7 +85,7 @@ export async function updateStoreAction(
   const updates: Record<string, unknown> = {}
   const fields = [
     'name', 'description', 'tagline', 'whatsapp',
-    'facebook', 'instagram', 'tiktok',
+    'facebook', 'instagram', 'tiktok', 'youtube',
     'skin', 'primary_color', 'secondary_color', 'button_color',
     'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices',
   ]
@@ -126,6 +126,7 @@ export async function updateStoreAction(
   if (error && error.code === '42703') {
     delete updates.currency
     delete updates.sales_pin
+    delete updates.youtube
     const retry = await supabase
       .from('stores').update(updates).eq('id', storeId).eq('owner_id', user.id)
     error = retry.error
