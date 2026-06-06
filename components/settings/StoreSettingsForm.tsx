@@ -158,7 +158,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-24 max-w-3xl">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-24 max-w-5xl">
       {/* Encabezado */}
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-lg shadow-slate-500/20">
@@ -650,7 +650,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
 
       {/* Barra de guardado fija */}
       <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white/90 backdrop-blur border-t border-gray-200 px-4 lg:px-6 py-3 z-30">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <a href={`/catalog/${store.slug}`} target="_blank" rel="noopener noreferrer"
             className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1.5">
             <ExternalLink size={14} /> <span className="hidden sm:inline">Ver mi catálogo</span>
