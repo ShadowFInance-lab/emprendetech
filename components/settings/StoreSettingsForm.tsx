@@ -184,8 +184,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </TabsTrigger>
         </TabsList>
 
-        {/* ─── TAB GENERAL ────────────────────────────────── */}
-        <TabsContent value="general" className="space-y-4 mt-4">
+        {/* ─── TAB GENERAL (2 columnas: Info | Logo/Banner) ──── */}
+        <TabsContent value="general" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <Card className="border-0 shadow-sm rounded-2xl">
             <CardHeader className="pb-4">
               <CardTitle className="text-base flex items-center gap-2.5">
@@ -361,6 +362,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </div>
             </CardContent>
           </Card>
+          </div>
         </TabsContent>
 
         {/* ─── TAB DISEÑO ─────────────────────────────────── */}
@@ -474,7 +476,36 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </p>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Grid de paletas (tarjetas grandes, sin números) */}
+              {/* Colores principales (presets con nombre, como la referencia) */}
+              <div className="space-y-2">
+                <Label>Colores principales</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { name: 'Azul EmprendeTech', p: '#2563EB', s: '#1E40AF', b: '#16A34A' },
+                    { name: 'Morado EmprendeTech', p: '#7C3AED', s: '#5B21B6', b: '#059669' },
+                    { name: 'Verde EmprendeTech', p: '#059669', s: '#047857', b: '#2563EB' },
+                  ].map(c => {
+                    const active = primaryColor === c.p
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => { setPrimaryColor(c.p); setSecondaryColor(c.s); setButtonColor(c.b) }}
+                        className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left transition-all ${
+                          active ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="w-6 h-6 rounded-full flex-shrink-0 ring-1 ring-black/5"
+                          style={{ background: `linear-gradient(135deg, ${c.p}, ${c.s})` }} />
+                        <span className="text-xs font-medium text-gray-700 leading-tight">{c.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Más paletas */}
+              <Label className="block">Más paletas</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {COLOR_PALETTES.map((palette, idx) => {
                   const isActive = primaryColor === palette.p && buttonColor === palette.b
