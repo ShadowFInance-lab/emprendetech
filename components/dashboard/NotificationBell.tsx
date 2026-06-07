@@ -15,7 +15,13 @@ export default function NotificationBell() {
   // ¿Ya llegó su fecha/hora? (se evalúa con la hora LOCAL del usuario)
   function isDue(r: DueReminder) {
     if (!r.due_date) return false
-    const due = new Date(`${r.due_date}T${r.due_time || '23:59'}:00`)
+    // due_time de la BD puede venir como "HH:MM:SS"; normalizamos a "HH:MM"
+    const time = (r.due_time || '23:59').slice(0, 5)
+    const due = new Date(`${r.due_date}T${time}:00`)
+    if (Number.isNaN(due.getTime())) {
+      // fallback: comparar solo por fecha
+      return new Date(`${r.due_date}T23:59:59`).getTime() <= Date.now()
+    }
     return due.getTime() <= Date.now()
   }
   const dueList = active.filter(isDue)
