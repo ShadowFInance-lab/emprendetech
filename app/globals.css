@@ -91,4 +91,16 @@
   html {
     @apply font-sans;
   }
+
+/* ─── Ocultar branding de Google Translate (limpio y profesional) ─── */
+.goog-te-banner-frame.skiptranslate,
+.goog-logo-link,
+.goog-te-gadget-icon,
+#goog-gt-tt,
+.goog-te-balloon-frame { display: none !important; }
+.goog-te-gadget { color: transparent !important; font-size: 0 !important; }
+.goog-te-gadget .goog-te-combo { color: #374151 !important; font-size: 14px !important; }
+body { top: 0 !important; }
+.skiptranslate > iframe { display: none !important; visibility: hidden !important; height: 0 !important; }
+font[style] { background: transparent !important; box-shadow: none !important; }
 }

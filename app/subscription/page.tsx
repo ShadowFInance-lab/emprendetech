@@ -16,11 +16,11 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
   vip_plus: ['Todo ilimitado', 'Pago único $1,599', '1,000 ventas/mes incluidas', 'Solo $0.50 por venta extra (con Mercado Pago)'],
 }
 
-const PLAN_STYLE: Record<Plan, { bar: string; chip: string; icon: string }> = {
-  free:        { bar: 'from-gray-300 to-gray-400',      chip: 'bg-gray-100 text-gray-600',     icon: '🆓' },
-  emprendedor: { bar: 'from-blue-500 to-indigo-500',    chip: 'bg-blue-50 text-blue-700',      icon: '🚀' },
-  negocio:     { bar: 'from-purple-500 to-fuchsia-500', chip: 'bg-purple-50 text-purple-700',  icon: '🏢' },
-  vip_plus:    { bar: 'from-amber-400 to-yellow-500',   chip: 'bg-amber-50 text-amber-700',    icon: '👑' },
+const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
+  free:        { bar: 'from-slate-500 to-slate-700',    icon: '🆓' },
+  emprendedor: { bar: 'from-blue-500 to-indigo-600',    icon: '🚀' },
+  negocio:     { bar: 'from-purple-500 to-fuchsia-600', icon: '🏢' },
+  vip_plus:    { bar: 'from-amber-500 to-orange-600',   icon: '👑' },
 }
 
 export default async function SubscriptionPage({
@@ -169,32 +169,32 @@ export default async function SubscriptionPage({
           return (
             <div
               key={planId}
-              className={`relative rounded-2xl bg-white border overflow-hidden transition-all hover:shadow-lg ${
-                isCurrent ? 'border-transparent ring-2 ring-blue-500' : isPopular ? 'border-amber-200' : 'border-gray-100'
+              className={`relative rounded-2xl bg-white overflow-hidden border transition-all hover:shadow-xl hover:-translate-y-0.5 ${
+                isCurrent ? 'ring-2 ring-blue-500 border-transparent' : isPopular ? 'border-amber-200 shadow-md' : 'border-gray-100'
               }`}
             >
-              {/* Barra de acento superior */}
-              <div className={`h-1.5 bg-gradient-to-r ${style.bar}`} />
-
-              {isPopular && !isCurrent && (
-                <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
-                  ⭐ MEJOR VALOR
-                </div>
-              )}
-              {isCurrent && (
-                <div className="absolute top-3 right-3 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                  TU PLAN
-                </div>
-              )}
-
-              <div className="p-5">
-                <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${style.chip}`}>
+              {/* Encabezado con degradado vibrante */}
+              <div className={`relative bg-gradient-to-br ${style.bar} p-5 text-white`}>
+                {isPopular && !isCurrent && (
+                  <span className="absolute top-3 right-3 bg-white text-amber-600 text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow">
+                    ⭐ MEJOR VALOR
+                  </span>
+                )}
+                {isCurrent && (
+                  <span className="absolute top-3 right-3 bg-white/95 text-blue-700 text-[10px] font-extrabold px-2.5 py-1 rounded-full">
+                    TU PLAN
+                  </span>
+                )}
+                <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur-sm">
                   {style.icon} {plan.label}
                 </div>
-                <p className="text-3xl font-extrabold text-gray-900 mt-3 tracking-tight">{plan.price_label}</p>
-                {planId === 'vip_plus' && <p className="text-xs text-amber-600 font-medium mt-0.5">Pago único · para siempre</p>}
+                <p className="text-3xl font-extrabold mt-3 tracking-tight">{plan.price_label}</p>
+                {planId === 'vip_plus' && <p className="text-xs text-white/90 font-medium mt-0.5">Pago único · para siempre</p>}
+              </div>
 
-                <div className="space-y-2 mt-4">
+              {/* Cuerpo */}
+              <div className="p-5">
+                <div className="space-y-2.5">
                   {PLAN_FEATURES[planId].map((feature, i) => (
                     <div key={i} className="flex items-start gap-2 text-sm text-gray-600">
                       <CheckCircle2 size={15} className="text-green-500 flex-shrink-0 mt-0.5" />

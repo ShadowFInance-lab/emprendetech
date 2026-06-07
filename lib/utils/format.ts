@@ -3,7 +3,7 @@
 const CURRENCY_LOCALE: Record<string, string> = {
   MXN: 'es-MX', USD: 'en-US', EUR: 'es-ES', COP: 'es-CO',
   ARS: 'es-AR', CLP: 'es-CL', PEN: 'es-PE', GTQ: 'es-GT',
-  BRL: 'pt-BR',
+  BRL: 'pt-BR', GBP: 'en-GB', JPY: 'ja-JP', CAD: 'en-CA', CNY: 'zh-CN',
 }
 
 export function formatCurrency(amount: number, currency = 'MXN'): string {
@@ -25,6 +25,10 @@ export const SUPPORTED_CURRENCIES = [
   { code: 'PEN', label: 'Sol peruano (PEN)' },
   { code: 'GTQ', label: 'Quetzal (GTQ)' },
   { code: 'BRL', label: 'Real (BRL)' },
+  { code: 'GBP', label: 'Libra (GBP)' },
+  { code: 'JPY', label: 'Yen (JPY)' },
+  { code: 'CAD', label: 'Dólar canadiense (CAD)' },
+  { code: 'CNY', label: 'Yuan (CNY)' },
 ]
 
 // ─── Formato de fecha ────────────────────────────────────────
