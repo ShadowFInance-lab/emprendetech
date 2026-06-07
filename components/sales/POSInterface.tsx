@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/lib/stores/cart'
 import { searchProductsForPOS, createSaleAction } from '@/lib/actions/sales'
+import { createSalePaymentLink } from '@/lib/actions/subscriptions'
 import { formatCurrency } from '@/lib/utils/format'
 
 type POSProduct = {
@@ -53,6 +54,21 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer' | 'mercadopago'>('cash')
   const [customerName, setCustomerName] = useState(presetCustomer?.name ?? '')
   const [customerPhone, setCustomerPhone] = useState(presetCustomer?.phone ?? '')
+  const [mpLoading, setMpLoading] = useState(false)
+
+  async function handleMercadoPago() {
+    if (items.length === 0) { toast.error('Agrega productos al carrito'); return }
+    setMpLoading(true)
+    const result = await createSalePaymentLink(total, 'Venta en tienda')
+    setMpLoading(false)
+    if (result.success && result.checkoutUrl) {
+      window.open(result.checkoutUrl, '_blank', 'noopener')
+      toast.success('Link de pago abierto. Cuando el cliente pague, pulsa "Cobrar" con método Mercado Pago.')
+      setPaymentMethod('mercadopago')
+    } else {
+      toast.error(result.error ?? 'No se pudo generar el pago')
+    }
+  }
 
   // ─── Buscar productos (con debounce) ─────────────────────
   const search = useCallback(async (q: string) => {
@@ -356,6 +372,17 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
                 <span>{formatCurrency(total)}</span>
               </div>
             </div>
+
+            {/* Pagar con Mercado Pago (genera link/QR para el cliente) */}
+            <button
+              type="button"
+              onClick={handleMercadoPago}
+              disabled={mpLoading || isPending}
+              className="w-full flex items-center justify-center gap-2 h-11 rounded-md font-semibold text-white bg-[#009ee3] hover:bg-[#008fcc] transition-colors disabled:opacity-60"
+            >
+              {mpLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wallet size={18} />}
+              Pagar con Mercado Pago
+            </button>
 
             {/* Botón cobrar */}
             <Button

@@ -162,3 +162,50 @@ export async function activatePlanForUser(userId: string, plan: Plan): Promise<v
 export async function getMercadoPagoStatus(): Promise<{ configured: boolean }> {
   return { configured: isMercadoPagoConfigured() }
 }
+
+/**
+ * Genera un link de pago de Mercado Pago para una venta del POS.
+ * El comercio muestra el link/QR al cliente; al aprobarse, registra la venta
+ * con método "mercadopago".
+ */
+export async function createSalePaymentLink(
+  amount: number,
+  description = 'Venta'
+): Promise<ActionResult & { checkoutUrl?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'No autenticado' }
+  if (!amount || amount <= 0) return { success: false, error: 'Agrega productos al carrito primero' }
+
+  if (!isMercadoPagoConfigured()) {
+    return { success: false, error: 'Mercado Pago no está configurado. Agrega las variables en Vercel.' }
+  }
+  const client = getMercadoPagoClient()
+  if (!client) return { success: false, error: 'Error de configuración de pagos' }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  try {
+    const preference = new Preference(client)
+    const result = await preference.create({
+      body: {
+        items: [{
+          id: 'venta',
+          title: description.slice(0, 120),
+          quantity: 1,
+          unit_price: Math.round(amount * 100) / 100,
+          currency_id: 'MXN',
+        }],
+        back_urls: {
+          success: `${appUrl}/sales`,
+          failure: `${appUrl}/sales/new`,
+          pending: `${appUrl}/sales`,
+        },
+        auto_return: 'approved',
+      },
+    })
+    return { success: true, checkoutUrl: result.init_point }
+  } catch (err) {
+    console.error('Error creando link de pago de venta:', err)
+    return { success: false, error: 'No se pudo generar el link de pago. Intenta de nuevo.' }
+  }
+}
