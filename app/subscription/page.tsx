@@ -170,7 +170,9 @@ export default async function SubscriptionPage({
             <div
               key={planId}
               className={`relative rounded-2xl bg-white overflow-hidden border transition-all hover:shadow-xl hover:-translate-y-0.5 ${
-                isCurrent ? 'ring-2 ring-blue-500 border-transparent' : isPopular ? 'border-amber-200 shadow-md' : 'border-gray-100'
+                isCurrent ? 'ring-2 ring-blue-500 border-transparent'
+                  : isPopular ? 'border-amber-300 shadow-xl ring-1 ring-amber-200 sm:scale-[1.02]'
+                  : 'border-gray-100 shadow-sm'
               }`}
             >
               {/* Encabezado con degradado vibrante */}
@@ -188,8 +190,8 @@ export default async function SubscriptionPage({
                 <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur-sm">
                   {style.icon} {plan.label}
                 </div>
-                <p className="text-3xl font-extrabold mt-3 tracking-tight">{plan.price_label}</p>
-                {planId === 'vip_plus' && <p className="text-xs text-white/90 font-medium mt-0.5">Pago único · para siempre</p>}
+                <p className="text-4xl font-extrabold mt-3 tracking-tight leading-none">{plan.price_label}</p>
+                {planId === 'vip_plus' && <p className="text-xs text-white/90 font-medium mt-1">Pago único · para siempre</p>}
               </div>
 
               {/* Cuerpo */}
@@ -203,13 +205,16 @@ export default async function SubscriptionPage({
                   ))}
                 </div>
 
-                {!isCurrent && planId !== 'free' && mpConfigured && (
+                {!isCurrent && planId !== 'free' && (
                   <div className="pt-4">
                     <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} />
                   </div>
                 )}
+                {!isCurrent && planId === 'free' && (
+                  <p className="text-center text-xs text-gray-400 pt-4">Tu punto de partida</p>
+                )}
                 {isCurrent && (
-                  <p className="text-center text-xs text-gray-400 pt-4">Estás en este plan</p>
+                  <p className="text-center text-xs text-gray-400 pt-4">✓ Estás en este plan</p>
                 )}
               </div>
             </div>
