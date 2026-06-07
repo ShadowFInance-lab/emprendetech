@@ -1,23 +1,13 @@
-import Link from 'next/link'
-import { Bell, ExternalLink } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { ExternalLink } from 'lucide-react'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import NotificationBell from '@/components/dashboard/NotificationBell'
 import type { Store } from '@/lib/types'
 
 interface HeaderProps {
   store: Store
 }
 
-export default async function Header({ store }: HeaderProps) {
-  const supabase = await createClient()
-
-  // Contar alertas no leídas
-  const { count: unreadAlerts } = await supabase
-    .from('alerts')
-    .select('*', { count: 'exact', head: true })
-    .eq('store_id', store.id)
-    .eq('is_read', false)
-
+export default function Header({ store }: HeaderProps) {
   return (
     <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
       {/* Espacio para el botón móvil */}
@@ -33,15 +23,8 @@ export default async function Header({ store }: HeaderProps) {
         {/* Traductor de idioma */}
         <LanguageSwitcher />
 
-        {/* Alertas */}
-        <Link href="/dashboard" className="relative p-2 hover:bg-gray-100 rounded-lg">
-          <Bell size={18} className="text-gray-600" />
-          {unreadAlerts && unreadAlerts > 0 ? (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
-              {unreadAlerts > 9 ? '9+' : unreadAlerts}
-            </span>
-          ) : null}
-        </Link>
+        {/* Campana de notificaciones (recordatorios vencidos) */}
+        <NotificationBell />
 
         {/* Ver catálogo */}
         <a

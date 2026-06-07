@@ -56,6 +56,43 @@ export async function getReminders(customerId?: string): Promise<{ reminders: Re
   return { reminders: (data ?? []) as Reminder[], missingTable: false }
 }
 
+export interface DueReminder {
+  id: string
+  title: string
+  due_date: string | null
+  due_time: string | null
+  customer_id: string | null
+  customer_name: string | null
+}
+
+/** Recordatorios pendientes (no hechos) con fecha — para la campana de notificaciones. */
+export async function getActiveReminders(): Promise<DueReminder[]> {
+  const supabase = await createClient()
+  const storeId = await getStoreId(supabase)
+  if (!storeId) return []
+
+  const { data, error } = await supabase
+    .from('reminders')
+    .select('id, title, due_date, due_time, customer_id, customers(name)')
+    .eq('store_id', storeId)
+    .eq('done', false)
+    .not('due_date', 'is', null)
+    .order('due_date', { ascending: true })
+
+  if (error) return [] // tabla/columna faltante (migración pendiente) → sin notificaciones
+  return (data ?? []).map((r) => {
+    const c = Array.isArray(r.customers) ? r.customers[0] : r.customers
+    return {
+      id: r.id as string,
+      title: r.title as string,
+      due_date: (r.due_date as string) ?? null,
+      due_time: (r.due_time as string) ?? null,
+      customer_id: (r.customer_id as string) ?? null,
+      customer_name: (c as { name?: string } | null)?.name ?? null,
+    }
+  })
+}
+
 export async function createReminderAction(input: {
   customer_id?: string
   title: string
