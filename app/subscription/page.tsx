@@ -187,10 +187,11 @@ export default async function SubscriptionPage({
                     TU PLAN
                   </span>
                 )}
-                <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur-sm">
-                  {style.icon} {plan.label}
+                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl mb-2.5 shadow-inner">
+                  {style.icon}
                 </div>
-                <p className="text-4xl font-extrabold mt-3 tracking-tight leading-none">{plan.price_label}</p>
+                <p className="text-sm font-bold uppercase tracking-wider text-white/90">{plan.label}</p>
+                <p className="text-4xl font-extrabold mt-1 tracking-tight leading-none">{plan.price_label}</p>
                 {planId === 'vip_plus' && <p className="text-xs text-white/90 font-medium mt-1">Pago único · para siempre</p>}
               </div>
 

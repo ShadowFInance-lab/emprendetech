@@ -74,7 +74,7 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
   if (!isMercadoPagoConfigured()) {
     return {
       success: false,
-      error: 'Los pagos aún no están configurados. Contacta al administrador por WhatsApp para activar tu plan.',
+      error: 'Pagos en línea no activos. Si eres el dueño: agrega MERCADOPAGO_ACCESS_TOKEN en Vercel → Environment Variables y haz REDEPLOY (las variables solo aplican a deploys nuevos).',
     }
   }
 
