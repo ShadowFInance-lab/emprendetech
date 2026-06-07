@@ -4,13 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Bell, Check, Clock, CalendarClock } from 'lucide-react'
 import { getActiveReminders, toggleReminderAction, type DueReminder } from '@/lib/actions/reminders'
+import { playNotificationSound, getSavedNotifSound } from '@/lib/utils/notificationSounds'
 
 export default function NotificationBell() {
   const [active, setActive] = useState<DueReminder[]>([])
   const [open, setOpen] = useState(false)
   const [, force] = useState(0) // para recalcular "due" con el tiempo
   const seenRef = useRef<Set<string>>(new Set())
-  const audioRef = useRef<AudioContext | null>(null)
 
   // ¿Ya llegó su fecha/hora? (se evalúa con la hora LOCAL del usuario)
   function isDue(r: DueReminder) {
@@ -28,20 +28,7 @@ export default function NotificationBell() {
   const hasUnseen = dueList.some((r) => !seenRef.current.has(r.id))
 
   const playBeep = useCallback(() => {
-    try {
-      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      const ctx = audioRef.current ?? new Ctx()
-      audioRef.current = ctx
-      if (ctx.state === 'suspended') ctx.resume()
-      const o = ctx.createOscillator()
-      const g = ctx.createGain()
-      o.connect(g); g.connect(ctx.destination)
-      o.type = 'sine'; o.frequency.value = 880
-      g.gain.setValueAtTime(0.0001, ctx.currentTime)
-      g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.04)
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45)
-      o.start(); o.stop(ctx.currentTime + 0.45)
-    } catch { /* el navegador puede bloquear audio sin interacción */ }
+    playNotificationSound(getSavedNotifSound())
   }, [])
 
   const refresh = useCallback(async () => {

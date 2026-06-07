@@ -15,6 +15,7 @@ import type { Store, Plan } from '@/lib/types'
 import { Lock, Share2, MessageCircle } from 'lucide-react'
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
 import ShareCatalog from './ShareCatalog'
+import NotificationSoundPicker from './NotificationSoundPicker'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -371,6 +372,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             </CardContent>
           </Card>
           </div>
+      {/* ─── NOTIFICACIONES ─────────────────────────── */}
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-3">
+          🔔 Notificaciones
+        </h2>
+        <NotificationSoundPicker />
+
       {/* ─── DISEÑO ─────────────────────────────────── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-3">
           <Palette size={14} /> Diseño
