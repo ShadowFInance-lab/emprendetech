@@ -87,23 +87,34 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [socialModal, setSocialModal] = useState<string | null>(null)
   const [modalValue, setModalValue] = useState('')
 
+  function socialPrefix(name: string) {
+    return ({ instagram: 'instagram.com/', facebook: 'facebook.com/', tiktok: 'tiktok.com/@', whatsapp: '' } as Record<string, string>)[name] ?? ''
+  }
   function openSocialModal(name: string) {
-    setModalValue(socialVals[name] ?? '')
+    const prefix = socialPrefix(name)
+    let v = socialVals[name] ?? ''
+    if (prefix && v) v = v.replace(/^https?:\/\//, '').replace(prefix, '').replace(/^@/, '')
+    setModalValue(v)
     setSocialModal(name)
   }
   function saveSocialModal() {
-    if (socialModal) setSocialVals(prev => ({ ...prev, [socialModal]: modalValue.trim() }))
+    if (socialModal) {
+      const prefix = socialPrefix(socialModal)
+      const raw = modalValue.trim().replace(/^@/, '')
+      const value = !raw ? '' : (!prefix || /^https?:\/\//.test(raw)) ? raw : `https://${prefix}${raw}`
+      setSocialVals(prev => ({ ...prev, [socialModal]: value }))
+    }
     setSocialModal(null)
   }
 
   const SOCIALS = [
-    { name: 'whatsapp', label: 'WhatsApp', placeholder: '+52 55 1234 5678', field: 'Número de WhatsApp (con lada)',
+    { name: 'whatsapp', label: 'WhatsApp', prefix: '', placeholder: '55 1234 5678', field: 'Tu número de WhatsApp (con lada)',
       icon: <MessageCircle size={26} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
-    { name: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/tu_tienda', field: 'Enlace de tu perfil',
+    { name: 'instagram', label: 'Instagram', prefix: 'instagram.com/', placeholder: 'tu_tienda', field: 'Tu usuario de Instagram',
       icon: <InstagramIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
-    { name: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/tu_tienda', field: 'Enlace de tu página',
+    { name: 'facebook', label: 'Facebook', prefix: 'facebook.com/', placeholder: 'tu.pagina', field: 'Tu página de Facebook',
       icon: <FacebookIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
-    { name: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@tu_tienda', field: 'Enlace de tu perfil',
+    { name: 'tiktok', label: 'TikTok', prefix: 'tiktok.com/@', placeholder: 'tu_tienda', field: 'Tu usuario de TikTok',
       icon: <TikTokIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
   ]
 
@@ -668,10 +679,23 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="social-modal-input">{soc.field}</Label>
-                    <Input id="social-modal-input" autoFocus value={modalValue}
-                      onChange={e => setModalValue(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveSocialModal() } }}
-                      placeholder={soc.placeholder} className="h-11 rounded-xl" />
+                    <div className="flex items-center rounded-xl border border-input overflow-hidden h-11">
+                      {soc.prefix && (
+                        <span className="px-2.5 h-full flex items-center text-xs text-gray-500 bg-gray-50 border-r border-input whitespace-nowrap">
+                          {soc.prefix}
+                        </span>
+                      )}
+                      <input
+                        id="social-modal-input"
+                        autoFocus
+                        value={modalValue}
+                        onChange={e => setModalValue(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveSocialModal() } }}
+                        placeholder={soc.placeholder}
+                        className="flex-1 h-full px-3 text-sm focus:outline-none bg-transparent"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-400">Solo tu usuario, sin la URL completa.</p>
                   </div>
                   <div className="flex justify-between items-center">
                     {modalValue ? (
