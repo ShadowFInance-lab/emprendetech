@@ -106,7 +106,7 @@ export default function OnboardingPage() {
             <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
               <span className="text-white font-bold text-xl">E</span>
             </div>
-            <span className="text-white text-2xl font-bold tracking-tight">EmprendeTech</span>
+            <span className="text-white text-2xl font-bold tracking-tight">Mercanta Business</span>
           </div>
           <h1 className="text-white text-3xl font-bold">Configura tu tienda</h1>
           <p className="text-blue-200/80 mt-2">3 pasos rápidos y tu catálogo estará listo</p>

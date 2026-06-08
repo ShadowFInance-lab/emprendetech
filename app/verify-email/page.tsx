@@ -34,7 +34,7 @@ export default function VerifyEmailPage({
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
           <h2 className="text-2xl font-bold">¡Email verificado!</h2>
           <p className="text-gray-600">
-            Tu cuenta está activa. Ya puedes iniciar sesión y comenzar a usar EmprendeTech.
+            Tu cuenta está activa. Ya puedes iniciar sesión y comenzar a usar Mercanta Business.
           </p>
           <Link href="/login">
             <Button className="w-full">Iniciar sesión</Button>

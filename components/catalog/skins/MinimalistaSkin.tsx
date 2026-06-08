@@ -297,7 +297,7 @@ export default function MinimalistaSkin({
           </div>
           <span>
             Catálogo con{' '}
-            <a href="/" className="hover:text-gray-700 transition-colors underline">EmprendeTech</a>
+            <a href="/" className="hover:text-gray-700 transition-colors underline">Mercanta Business</a>
           </span>
         </div>
       </footer>

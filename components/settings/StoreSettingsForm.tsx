@@ -502,9 +502,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 <Label>Colores principales</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { name: 'Azul EmprendeTech', p: '#2563EB', s: '#1E40AF', b: '#16A34A' },
-                    { name: 'Morado EmprendeTech', p: '#7C3AED', s: '#5B21B6', b: '#059669' },
-                    { name: 'Verde EmprendeTech', p: '#059669', s: '#047857', b: '#2563EB' },
+                    { name: 'Azul Mercanta Business', p: '#2563EB', s: '#1E40AF', b: '#16A34A' },
+                    { name: 'Morado Mercanta Business', p: '#7C3AED', s: '#5B21B6', b: '#059669' },
+                    { name: 'Verde Mercanta Business', p: '#059669', s: '#047857', b: '#2563EB' },
                   ].map(c => {
                     const active = primaryColor === c.p
                     return (

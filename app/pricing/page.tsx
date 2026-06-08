@@ -55,7 +55,7 @@ export default function PricingPage() {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">E</span>
             </div>
-            <span className="font-bold text-gray-900 text-lg">EmprendeTech</span>
+            <span className="font-bold text-gray-900 text-lg">Mercanta Business</span>
           </Link>
           <Link href="/register" className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
             Crear cuenta gratis

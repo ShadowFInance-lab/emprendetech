@@ -50,9 +50,9 @@ export default function Sidebar({ store, profile }: SidebarProps) {
       <div className="p-5 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">E</span>
+            <span className="text-white font-bold text-sm">M</span>
           </div>
-          <span className="font-bold text-gray-900 text-lg">EmprendeTech</span>
+          <span className="font-bold text-gray-900 text-lg">Mercanta Business</span>
         </Link>
       </div>
 

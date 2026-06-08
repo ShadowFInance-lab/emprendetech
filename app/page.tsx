@@ -18,7 +18,7 @@ export default function HomePage() {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">E</span>
             </div>
-            <span className="font-bold text-gray-900 text-lg">EmprendeTech</span>
+            <span className="font-bold text-gray-900 text-lg">Mercanta Business</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-sm text-gray-600 hover:text-gray-900">

@@ -7,7 +7,7 @@ export default function ForgotLayout({ children }: { children: React.ReactNode }
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">E</span>
             </div>
-            <span className="text-white text-2xl font-bold">EmprendeTech</span>
+            <span className="text-white text-2xl font-bold">Mercanta Business</span>
           </a>
         </div>
         {children}

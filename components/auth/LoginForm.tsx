@@ -135,7 +135,7 @@ export default function LoginForm({ redirectTo, showResetSuccess, oauthError }: 
             Regístrate gratis
           </Link>
         </p>
-        <p className="text-[10px] text-gray-300">EmprendeTech {APP_VERSION}</p>
+        <p className="text-[10px] text-gray-300">Mercanta Business {APP_VERSION}</p>
       </CardFooter>
     </Card>
   )

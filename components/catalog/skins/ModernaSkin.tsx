@@ -431,7 +431,7 @@ export default function ModernaSkin({
             <span>© {new Date().getFullYear()} {store.name}. Todos los derechos reservados.</span>
             <span>
               Catálogo creado con{' '}
-              <a href="/" className="text-blue-400 hover:underline font-medium">EmprendeTech</a>
+              <a href="/" className="text-blue-400 hover:underline font-medium">Mercanta Business</a>
             </span>
           </div>
         </div>

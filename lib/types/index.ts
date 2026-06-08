@@ -1,5 +1,5 @@
 // ============================================================
-// EmprendeTech — Tipos TypeScript globales
+// Mercanta Business — Tipos TypeScript globales
 // ============================================================
 
 export type Plan = 'free' | 'emprendedor' | 'negocio' | 'vip_plus'

@@ -11,8 +11,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'EmprendeTech — Plataforma SaaS para negocios',
-    template: '%s | EmprendeTech',
+    default: 'Mercanta Business — Plataforma SaaS para negocios',
+    template: '%s | Mercanta Business',
   },
   description:
     'Crea tu catálogo online, administra inventario, registra ventas y haz crecer tu negocio.',

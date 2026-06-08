@@ -6,7 +6,7 @@ import { Sparkles } from 'lucide-react'
  * Los planes de pago no lo ven (Fix A — monetización).
  *
  * En producción, aquí iría el slot de Google AdSense o publicidad propia.
- * Por ahora promociona el upgrade a EmprendeTech.
+ * Por ahora promociona el upgrade a Mercanta Business.
  */
 export default function AdBanner({ variant = 'inline' }: { variant?: 'inline' | 'footer' }) {
   if (variant === 'footer') {
@@ -15,7 +15,7 @@ export default function AdBanner({ variant = 'inline' }: { variant?: 'inline' | 
         <span className="opacity-90">
           ¿Te gusta este catálogo? Crea el tuyo gratis en{' '}
           <Link href="/" className="font-bold underline hover:opacity-80">
-            EmprendeTech
+            Mercanta Business
           </Link>
         </span>
       </div>

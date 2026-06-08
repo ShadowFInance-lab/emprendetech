@@ -6,9 +6,9 @@ import type { Plan } from '@/lib/types'
 import type { ActionResult } from './auth'
 
 const PLAN_PRICES: Record<string, { amount: number; title: string; recurring: boolean }> = {
-  emprendedor: { amount: 199, title: 'EmprendeTech — Plan Emprendedor (mensual)', recurring: true },
-  negocio: { amount: 399, title: 'EmprendeTech — Plan Negocio (mensual)', recurring: true },
-  vip_plus: { amount: 1599, title: 'EmprendeTech — VIP Plus (pago único)', recurring: false },
+  emprendedor: { amount: 199, title: 'Mercanta Business — Plan Emprendedor (mensual)', recurring: true },
+  negocio: { amount: 399, title: 'Mercanta Business — Plan Negocio (mensual)', recurring: true },
+  vip_plus: { amount: 1599, title: 'Mercanta Business — VIP Plus (pago único)', recurring: false },
 }
 
 export interface MeteredUsage {
