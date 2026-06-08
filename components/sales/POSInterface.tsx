@@ -372,16 +372,18 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               </div>
             </div>
 
-            {/* Pagar con Mercado Pago (genera link/QR para el cliente) */}
-            <button
-              type="button"
-              onClick={handleMercadoPago}
-              disabled={mpLoading || isPending}
-              className="w-full flex items-center justify-center gap-2 h-11 rounded-md font-semibold text-white bg-[#009ee3] hover:bg-[#008fcc] transition-colors disabled:opacity-60"
-            >
-              {mpLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wallet size={18} />}
-              Pagar con Mercado Pago
-            </button>
+            {/* Pagar con Mercado Pago — SOLO si el método elegido es Mercado Pago */}
+            {paymentMethod === 'mercadopago' && (
+              <button
+                type="button"
+                onClick={handleMercadoPago}
+                disabled={mpLoading || isPending}
+                className="w-full flex items-center justify-center gap-2 h-11 rounded-md font-semibold text-white bg-[#009ee3] hover:bg-[#008fcc] transition-colors disabled:opacity-60"
+              >
+                {mpLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wallet size={18} />}
+                Pagar con Mercado Pago
+              </button>
+            )}
 
             {/* Botón cobrar */}
             <Button
