@@ -88,6 +88,7 @@ export async function updateStoreAction(
     'facebook', 'instagram', 'tiktok', 'youtube',
     'skin', 'primary_color', 'secondary_color', 'button_color',
     'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices',
+    'bg_color', 'button_style',
   ]
 
   fields.forEach(field => {
@@ -127,6 +128,8 @@ export async function updateStoreAction(
     delete updates.currency
     delete updates.sales_pin
     delete updates.youtube
+    delete updates.bg_color
+    delete updates.button_style
     const retry = await supabase
       .from('stores').update(updates).eq('id', storeId).eq('owner_id', user.id)
     error = retry.error

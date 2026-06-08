@@ -73,4 +73,8 @@ ALTER TABLE stores ADD COLUMN IF NOT EXISTS youtube TEXT;
 -- ─── 013: Moneda por producto ──────────────────────────────────────────────
 ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT;
 
+-- ─── 014: Fondo del catálogo + estilo de botón ─────────────────────────────
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS bg_color TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS button_style TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

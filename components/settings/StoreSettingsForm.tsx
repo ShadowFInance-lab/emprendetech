@@ -72,6 +72,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [secondaryColor, setSecondaryColor] = useState(store.secondary_color)
   const [buttonColor, setButtonColor] = useState(store.button_color)
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
+  const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
+  const [buttonStyle, setButtonStyle] = useState(store.button_style ?? 'redondeado')
+  const btnRadius = buttonStyle === 'cuadrado' ? '4px' : buttonStyle === 'pildora' ? '9999px' : '12px'
 
   // Redes: valores actuales + modal de conexión (sin campo de URL inline)
   const s = store as unknown as Record<string, string | null>
@@ -114,6 +117,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('secondary_color', secondaryColor)
     formData.set('button_color', buttonColor)
     formData.set('currency', currency)
+    formData.set('bg_color', bgColor)
+    formData.set('button_style', buttonStyle)
 
     startTransition(async () => {
       const result = await updateStoreAction(store.id, formData)
@@ -582,6 +587,37 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 </details>
               )}
 
+              {/* Fondo del catálogo + estilo de botones (planes de pago) */}
+              {isPaidPlan && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <Label className="text-xs text-gray-500">Fondo del catálogo</Label>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <label className="relative cursor-pointer inline-block">
+                        <span className="block w-12 h-9 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: bgColor }} />
+                        <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)}
+                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                      </label>
+                      <span className="text-xs text-gray-400">{bgColor}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Estilo de botones</Label>
+                    <div className="flex gap-2 mt-1.5">
+                      {[{ id: 'cuadrado', label: 'Cuadrado' }, { id: 'redondeado', label: 'Redondeado' }, { id: 'pildora', label: 'Píldora' }].map(o => (
+                        <button key={o.id} type="button" onClick={() => setButtonStyle(o.id)}
+                          className={`px-3 py-1.5 text-xs border-2 transition-all ${
+                            buttonStyle === o.id ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold' : 'border-gray-200 text-gray-600 hover:border-blue-200'
+                          }`}
+                          style={{ borderRadius: o.id === 'cuadrado' ? '4px' : o.id === 'pildora' ? '9999px' : '12px' }}>
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Preview GRANDE del catálogo */}
               <div>
                 <Label className="text-xs text-gray-500 mb-2 block">Vista previa</Label>
@@ -591,15 +627,15 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     <span className="text-white font-bold text-lg">{store.name}</span>
                     <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full">WhatsApp</span>
                   </div>
-                  <div className="p-5 bg-gray-50 grid grid-cols-2 gap-3">
+                  <div className="p-5 grid grid-cols-2 gap-3" style={{ backgroundColor: bgColor }}>
                     {[1, 2].map(i => (
                       <div key={i} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                         <div className="h-20 bg-gradient-to-br from-gray-100 to-gray-200" />
                         <div className="p-2.5">
                           <p className="text-xs font-medium text-gray-800">Producto {i}</p>
                           <p className="text-base font-extrabold" style={{ color: primaryColor }}>$450.00</p>
-                          <span className="block text-center text-white text-[11px] font-bold py-1.5 rounded-lg mt-1.5"
-                            style={{ backgroundColor: buttonColor }}>
+                          <span className="block text-center text-white text-[11px] font-bold py-1.5 mt-1.5"
+                            style={{ backgroundColor: buttonColor, borderRadius: btnRadius }}>
                             Pedir
                           </span>
                         </div>

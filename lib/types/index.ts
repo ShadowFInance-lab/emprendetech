@@ -42,6 +42,8 @@ export interface Store {
   font_family: string
   product_order: string
   currency: string
+  bg_color: string | null
+  button_style: string | null
   sales_pin: string | null
   low_stock_alert: number
   show_prices: boolean

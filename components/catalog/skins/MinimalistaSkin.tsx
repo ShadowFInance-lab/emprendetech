@@ -26,7 +26,7 @@ export default function MinimalistaSkin({
   return (
     <div
       className="min-h-screen bg-white"
-      style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}
+      style={{ fontFamily: 'var(--font-playfair), Georgia, serif', backgroundColor: store.bg_color || undefined }}
     >
       <style>{`
         :root { --store-primary: ${primary}; --store-button: ${button}; }
