@@ -6,7 +6,7 @@ import { PLAN_LIMITS } from '@/lib/constants/plans'
 import { isMercadoPagoConfigured } from '@/lib/mercadopago/client'
 import { getMeteredUsage } from '@/lib/actions/subscriptions'
 import { formatCurrency } from '@/lib/utils/format'
-import UpgradeButton from '@/components/subscription/UpgradeButton'
+import MpBrick from '@/components/subscription/MpBrick'
 import type { Plan } from '@/lib/types'
 
 const PLAN_FEATURES: Record<Plan, string[]> = {
@@ -208,7 +208,7 @@ export default async function SubscriptionPage({
 
                 {!isCurrent && planId !== 'free' && (
                   <div className="pt-4">
-                    <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} />
+                    <MpBrick plan={planId} label={`Elegir ${plan.label}`} />
                   </div>
                 )}
                 {!isCurrent && planId === 'free' && (

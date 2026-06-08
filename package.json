@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@mercadopago/sdk-react": "^1.0.7",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.107.0",
     "@zxing/browser": "^0.2.0",

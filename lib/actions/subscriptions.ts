@@ -60,7 +60,7 @@ export async function getMeteredUsage(): Promise<MeteredUsage> {
 /**
  * Crea una preferencia de pago en Mercado Pago y devuelve la URL de checkout.
  */
-export async function createCheckoutAction(plan: Plan): Promise<ActionResult & { checkoutUrl?: string }> {
+export async function createCheckoutAction(plan: Plan): Promise<ActionResult & { checkoutUrl?: string; preferenceId?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'No autenticado' }
@@ -114,7 +114,7 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
       },
     })
 
-    return { success: true, checkoutUrl: result.init_point }
+    return { success: true, checkoutUrl: result.init_point, preferenceId: result.id }
   } catch (err) {
     console.error('Error creando preferencia MP:', err)
     return { success: false, error: 'Error al generar el pago. Intenta de nuevo.' }
