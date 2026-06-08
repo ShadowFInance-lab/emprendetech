@@ -81,7 +81,9 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
   const client = getMercadoPagoClient()
   if (!client) return { success: false, error: 'Error de configuración de pagos' }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+  // MP rechaza la preferencia si auto_return/back_urls no son https válidos.
+  const httpsUrl = /^https:\/\//.test(appUrl)
 
   try {
     const preference = new Preference(client)
@@ -96,28 +98,27 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
             currency_id: 'MXN',
           },
         ],
-        payer: {
-          email: user.email ?? undefined,
-        },
-        metadata: {
-          user_id: user.id,
-          plan,
-        },
+        payer: { email: user.email ?? undefined },
+        metadata: { user_id: user.id, plan },
         external_reference: `${user.id}|${plan}`,
-        back_urls: {
-          success: `${appUrl}/subscription?status=success`,
-          failure: `${appUrl}/subscription?status=failure`,
-          pending: `${appUrl}/subscription?status=pending`,
-        },
-        auto_return: 'approved',
-        notification_url: `${appUrl}/api/webhooks/mercadopago`,
+        // Solo si hay URL https válida (si no, la preferencia se crea igual y abre el checkout)
+        ...(httpsUrl ? {
+          back_urls: {
+            success: `${appUrl}/subscription?status=success`,
+            failure: `${appUrl}/subscription?status=failure`,
+            pending: `${appUrl}/subscription?status=pending`,
+          },
+          auto_return: 'approved' as const,
+          notification_url: `${appUrl}/api/webhooks/mercadopago`,
+        } : {}),
       },
     })
 
     return { success: true, checkoutUrl: result.init_point, preferenceId: result.id }
   } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido'
     console.error('Error creando preferencia MP:', err)
-    return { success: false, error: 'Error al generar el pago. Intenta de nuevo.' }
+    return { success: false, error: `Mercado Pago rechazó el pago: ${msg}` }
   }
 }
 
@@ -183,7 +184,8 @@ export async function createSalePaymentLink(
   const client = getMercadoPagoClient()
   if (!client) return { success: false, error: 'Error de configuración de pagos' }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+  const httpsUrl = /^https:\/\//.test(appUrl)
   try {
     const preference = new Preference(client)
     const result = await preference.create({
@@ -195,17 +197,16 @@ export async function createSalePaymentLink(
           unit_price: Math.round(amount * 100) / 100,
           currency_id: 'MXN',
         }],
-        back_urls: {
-          success: `${appUrl}/sales`,
-          failure: `${appUrl}/sales/new`,
-          pending: `${appUrl}/sales`,
-        },
-        auto_return: 'approved',
+        ...(httpsUrl ? {
+          back_urls: { success: `${appUrl}/sales`, failure: `${appUrl}/sales/new`, pending: `${appUrl}/sales` },
+          auto_return: 'approved' as const,
+        } : {}),
       },
     })
     return { success: true, checkoutUrl: result.init_point }
   } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error desconocido'
     console.error('Error creando link de pago de venta:', err)
-    return { success: false, error: 'No se pudo generar el link de pago. Intenta de nuevo.' }
+    return { success: false, error: `Mercado Pago rechazó el pago: ${msg}` }
   }
 }
