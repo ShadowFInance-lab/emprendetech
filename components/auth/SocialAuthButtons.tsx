@@ -10,39 +10,28 @@ import { createClient } from '@/lib/supabase/client'
  * Requiere que los proveedores estén habilitados en:
  * Supabase → Authentication → Providers → Google / Facebook.
  */
-// Solo intenta el OAuth real si los proveedores ya están habilitados en Supabase.
-// Mientras tanto (valor por defecto), los botones muestran un aviso amigable
-// y NO redirigen — así nunca aparece el error crudo "Unsupported provider".
-const OAUTH_ENABLED = process.env.NEXT_PUBLIC_ENABLE_OAUTH === 'true'
-
 export default function SocialAuthButtons() {
   const [loading, setLoading] = useState<'google' | 'facebook' | null>(null)
 
   async function signInWith(provider: 'google' | 'facebook') {
     const label = provider === 'google' ? 'Google' : 'Facebook'
-
-    // Aún no configurado → mensaje claro y amigable, sin redirigir
-    if (!OAUTH_ENABLED) {
-      toast(`Pronto podrás entrar con ${label} 🚀`, {
-        description: 'Por ahora inicia sesión con tu correo y contraseña.',
-        duration: 5000,
-      })
-      return
-    }
-
     setLoading(provider)
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
     if (error) {
-      toast.error(`No se pudo conectar con ${label}. Intenta de nuevo en un momento.`, { duration: 6000 })
+      const notEnabled = /not enabled|unsupported|provider/i.test(error.message)
+      toast.error(
+        notEnabled
+          ? `Activa ${label} en Supabase → Authentication → Providers para usar este botón.`
+          : `No se pudo conectar con ${label}. Intenta de nuevo.`,
+        { duration: 6000 }
+      )
       setLoading(null)
     }
-    // Si no hay error, el navegador redirige al proveedor.
+    // Si no hay error, el navegador redirige al proveedor (login real).
   }
 
   return (
