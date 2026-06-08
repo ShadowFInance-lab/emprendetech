@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Bell, Check, Clock, CalendarClock } from 'lucide-react'
 import { getActiveReminders, toggleReminderAction, type DueReminder } from '@/lib/actions/reminders'
-import { playNotificationSound, getSavedNotifSound } from '@/lib/utils/notificationSounds'
+import { playNotificationSound, getSavedNotifSound, getSavedVolume } from '@/lib/utils/notificationSounds'
 
 export default function NotificationBell() {
   const [active, setActive] = useState<DueReminder[]>([])
@@ -28,7 +28,7 @@ export default function NotificationBell() {
   const hasUnseen = dueList.some((r) => !seenRef.current.has(r.id))
 
   const playBeep = useCallback(() => {
-    playNotificationSound(getSavedNotifSound())
+    playNotificationSound(getSavedNotifSound(), getSavedVolume())
   }, [])
 
   const refresh = useCallback(async () => {

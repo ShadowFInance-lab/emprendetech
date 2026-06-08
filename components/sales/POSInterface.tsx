@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, Loader2,
-  Package, X, CheckCircle2, Banknote, CreditCard, ArrowLeftRight, UserCheck, Wallet,
+  Package, X, CheckCircle2, Banknote, ArrowLeftRight, UserCheck, Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,6 @@ type POSProduct = {
 
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Efectivo', icon: Banknote },
-  { id: 'card', label: 'Tarjeta', icon: CreditCard },
   { id: 'transfer', label: 'Transferencia', icon: ArrowLeftRight },
   { id: 'mercadopago', label: 'Mercado Pago', icon: Wallet },
 ] as const
@@ -239,7 +238,7 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               onClick={clear}
               className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
             >
-              <Trash2 size={12} /> Limpiar
+              <Trash2 size={12} /> Cancelar compra
             </button>
           )}
         </div>
