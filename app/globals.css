@@ -92,15 +92,22 @@
     @apply font-sans;
   }
 
-/* ─── Ocultar branding de Google Translate (limpio y profesional) ─── */
+/* ─── Ocultar TODO el branding de Google Translate (limpio y profesional) ─── */
+.goog-te-banner-frame,
 .goog-te-banner-frame.skiptranslate,
+iframe.skiptranslate,
+.skiptranslate,
 .goog-logo-link,
 .goog-te-gadget-icon,
 #goog-gt-tt,
-.goog-te-balloon-frame { display: none !important; }
-.goog-te-gadget { color: transparent !important; font-size: 0 !important; }
-.goog-te-gadget .goog-te-combo { color: #374151 !important; font-size: 14px !important; }
-body { top: 0 !important; }
-.skiptranslate > iframe { display: none !important; visibility: hidden !important; height: 0 !important; }
+.goog-te-balloon-frame,
+.goog-tooltip,
+.goog-tooltip:hover,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+.VIpgJd-ZVi9od-ORHb-OEVmcd { display: none !important; }
+/* el widget empuja el body hacia abajo: lo reseteamos */
+body { top: 0 !important; position: static !important; }
+/* la traducción usa <font>; quitamos el resaltado/sombra de Google */
+.goog-text-highlight { background: none !important; box-shadow: none !important; }
 font[style] { background: transparent !important; box-shadow: none !important; }
 }
