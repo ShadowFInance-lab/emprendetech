@@ -122,14 +122,18 @@ export async function updateStoreAction(
     .eq('id', storeId)
     .eq('owner_id', user.id)
 
-  // Si alguna columna nueva aún no existe (migración pendiente: currency 009,
-  // sales_pin 011), reintenta sin ellas para no romper el guardado completo.
-  if (error && error.code === '42703') {
-    delete updates.currency
-    delete updates.sales_pin
-    delete updates.youtube
-    delete updates.bg_color
-    delete updates.button_style
+  // Si alguna columna nueva aún no existe (migraciones pendientes: 009/011/012/014),
+  // reintenta SIN esas columnas para no romper el guardado completo.
+  // Supabase devuelve 42703 (Postgres) o PGRST204 (PostgREST schema cache).
+  const isMissingColumn = error && (
+    error.code === '42703' ||
+    error.code === 'PGRST204' ||
+    /column|schema cache/i.test(error.message ?? '')
+  )
+  if (isMissingColumn) {
+    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style']) {
+      delete (updates as Record<string, unknown>)[k]
+    }
     const retry = await supabase
       .from('stores').update(updates).eq('id', storeId).eq('owner_id', user.id)
     error = retry.error
