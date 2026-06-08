@@ -197,6 +197,7 @@ export default async function SubscriptionPage({
 
               {/* Cuerpo */}
               <div className="p-5">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Incluye</p>
                 <div className="space-y-2.5">
                   {PLAN_FEATURES[planId].map((feature, i) => (
                     <div key={i} className="flex items-start gap-2 text-sm text-gray-600">
@@ -208,7 +209,7 @@ export default async function SubscriptionPage({
 
                 {!isCurrent && planId !== 'free' && (
                   <div className="pt-4">
-                    <MpBrick plan={planId} label={`Elegir ${plan.label}`} />
+                    <MpBrick plan={planId} label={`Elegir ${plan.label}`} accent={`bg-gradient-to-r ${style.bar}`} />
                   </div>
                 )}
                 {!isCurrent && planId === 'free' && (

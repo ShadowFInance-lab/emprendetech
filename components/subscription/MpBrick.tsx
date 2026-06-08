@@ -12,6 +12,7 @@ const PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
 interface Props {
   plan: Plan
   label: string
+  accent?: string
 }
 
 /**
@@ -19,7 +20,7 @@ interface Props {
  * Carga el SDK dinámicamente (cliente). Si no hay public key, hace fallback
  * al checkout por redirección.
  */
-export default function MpBrick({ plan, label }: Props) {
+export default function MpBrick({ plan, label, accent }: Props) {
   const [preferenceId, setPreferenceId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,7 +68,7 @@ export default function MpBrick({ plan, label }: Props) {
   }
 
   return (
-    <Button onClick={start} disabled={loading} className="w-full">
+    <Button onClick={start} disabled={loading} className={`w-full border-0 text-white hover:opacity-90 ${accent ?? ''}`}>
       {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando pago…</> : label}
     </Button>
   )
