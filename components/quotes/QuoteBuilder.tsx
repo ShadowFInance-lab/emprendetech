@@ -173,7 +173,13 @@ export default function QuoteBuilder({ mode, quoteId, customers, currency = 'MXN
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
       {/* IZQUIERDA: catálogo */}
       <div className="lg:col-span-3 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-[calc(100vh-9rem)]">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/60">
+        <div className="p-4 border-b border-gray-100 bg-gray-50/60 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
+              <Package size={14} /> Catálogo de productos
+            </p>
+            {!loading && <span className="text-[11px] text-gray-400">{products.length} disponibles</span>}
+          </div>
           <div className="relative">
             <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <Input value={query} onChange={e => setQuery(e.target.value)}

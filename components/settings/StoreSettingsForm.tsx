@@ -765,7 +765,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   <div className="flex justify-between items-center">
                     {modalValue ? (
                       <button type="button" onClick={() => setModalValue('')}
-                        className="text-xs text-red-500 hover:text-red-600">Quitar</button>
+                        className="text-xs text-gray-400 hover:text-gray-600">Quitar</button>
                     ) : <span />}
                     <div className="flex gap-2">
                       <Button type="button" variant="ghost" onClick={() => setSocialModal(null)}>Cancelar</Button>

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { CreditCard, CheckCircle2, AlertCircle, Zap } from 'lucide-react'
+import { CreditCard, CheckCircle2, AlertCircle, Zap, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
 import { isMercadoPagoConfigured } from '@/lib/mercadopago/client'
@@ -178,7 +178,7 @@ export default async function SubscriptionPage({
       </Card>
 
       {/* Planes — tarjetas premium */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {(Object.keys(PLAN_LIMITS) as Plan[]).map(planId => {
           const plan = PLAN_LIMITS[planId]
           const isCurrent = planId === currentPlan
@@ -188,67 +188,76 @@ export default async function SubscriptionPage({
           return (
             <div
               key={planId}
-              className={`relative rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+              className={`group relative rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5 ${
                 isPopular
-                  ? `bg-gradient-to-br ${style.bar} text-white shadow-2xl ${isCurrent ? 'ring-4 ring-white/60' : 'ring-2 ring-amber-300'} sm:scale-[1.03]`
+                  ? `bg-gradient-to-br ${style.bar} text-white shadow-2xl shadow-orange-500/30 ${isCurrent ? 'ring-4 ring-white/60' : 'ring-1 ring-white/30'} sm:scale-[1.04]`
                   : isCurrent
-                    ? 'bg-white ring-2 ring-blue-500 shadow-lg'
-                    : 'bg-white border border-gray-100 shadow-sm hover:shadow-xl'
+                    ? 'bg-white ring-2 ring-blue-500 shadow-xl'
+                    : 'bg-white border border-gray-100 shadow-md hover:shadow-2xl'
               }`}
             >
+              {/* Glow decorativo en la tarjeta destacada */}
+              {isPopular && (
+                <div className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/20 blur-3xl" />
+              )}
+              {/* Franja de color superior en tarjetas estándar */}
+              {!isPopular && <div className={`h-1.5 w-full bg-gradient-to-r ${style.bar}`} />}
+
               {/* Cinta diagonal "MEJOR VALOR" */}
               {isPopular && !isCurrent && (
-                <div className="absolute -right-12 top-6 rotate-45 bg-white text-amber-600 text-[11px] font-extrabold px-12 py-1 shadow-md tracking-wide">
+                <div className="absolute -right-12 top-7 rotate-45 bg-white text-orange-600 text-[11px] font-extrabold px-12 py-1 shadow-lg tracking-wider z-10">
                   MEJOR VALOR
                 </div>
               )}
               {isCurrent && (
-                <span className={`absolute top-4 right-4 text-[10px] font-extrabold px-3 py-1 rounded-full shadow ${isPopular ? 'bg-white text-amber-600' : 'bg-blue-600 text-white'}`}>
+                <span className={`absolute top-5 right-5 z-10 text-[10px] font-extrabold px-3 py-1 rounded-full shadow ${isPopular ? 'bg-white text-orange-600' : 'bg-blue-600 text-white'}`}>
                   TU PLAN
                 </span>
               )}
 
-              <div className="p-6">
-                {/* Icono */}
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg ${
-                  isPopular ? 'bg-white/20 backdrop-blur-sm shadow-inner' : `bg-gradient-to-br ${style.bar}`
+              <div className="relative p-7">
+                {/* Icono grande */}
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-4xl mb-5 ${
+                  isPopular ? 'bg-white/20 backdrop-blur-sm shadow-inner' : `bg-gradient-to-br ${style.bar} shadow-lg`
                 }`}>
                   {style.icon}
                 </div>
 
                 {/* Nombre + precio */}
-                <p className={`text-sm font-bold uppercase tracking-widest ${isPopular ? 'text-white/90' : 'text-gray-400'}`}>
+                <p className={`text-xs font-bold uppercase tracking-[0.2em] ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
                   {plan.label}
                 </p>
-                <p className={`text-5xl font-black mt-1 tracking-tight leading-none ${isPopular ? 'text-white' : 'text-gray-900'}`}>
+                <p className={`text-5xl font-black mt-1.5 tracking-tight leading-none ${isPopular ? 'text-white' : 'text-gray-900'}`}>
                   {plan.price_label}
                 </p>
-                <p className={`text-xs font-medium mt-2 ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
-                  {planId === 'vip_plus' ? 'Pago único · acceso para siempre'
-                    : planId === 'free' ? 'Gratis para empezar'
+                <p className={`text-xs font-medium mt-2.5 ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
+                  {planId === 'vip_plus' ? 'Pago único · acceso de por vida'
+                    : planId === 'free' ? 'Gratis para siempre'
                     : 'Facturación mensual'}
                 </p>
 
                 {/* Features */}
-                <div className={`mt-5 pt-5 space-y-3 border-t ${isPopular ? 'border-white/25' : 'border-gray-100'}`}>
+                <div className={`mt-6 pt-6 space-y-3.5 border-t ${isPopular ? 'border-white/25' : 'border-gray-100'}`}>
                   {PLAN_FEATURES[planId].map((feature, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-sm">
-                      <CheckCircle2 size={17} className={`flex-shrink-0 mt-0.5 ${isPopular ? 'text-white' : 'text-green-500'}`} />
+                    <div key={i} className="flex items-start gap-3 text-sm">
+                      <span className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isPopular ? 'bg-white/25' : 'bg-green-100'}`}>
+                        <Check size={12} strokeWidth={3} className={isPopular ? 'text-white' : 'text-green-600'} />
+                      </span>
                       <span className={isPopular ? 'text-white/95' : 'text-gray-600'}>{feature}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* CTA */}
-                <div className="pt-6">
+                <div className="pt-7">
                   {isCurrent ? (
-                    <div className={`text-center text-sm font-semibold py-2.5 rounded-xl ${isPopular ? 'bg-white/15 text-white' : 'bg-blue-50 text-blue-700'}`}>
-                      ✓ Estás en este plan
+                    <div className={`text-center text-sm font-semibold py-3 rounded-xl ${isPopular ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'}`}>
+                      ✓ Tu plan actual
                     </div>
                   ) : planId === 'free' ? (
-                    <p className="text-center text-xs text-gray-400 py-2.5">Tu punto de partida</p>
+                    <div className="text-center text-xs text-gray-400 py-3">Tu punto de partida</div>
                   ) : isPopular ? (
-                    <UpgradeButton plan={planId} label={`Obtener ${plan.label}`} accent="bg-white !text-amber-600 hover:bg-white/90 font-bold shadow-lg" />
+                    <UpgradeButton plan={planId} label={`Obtener ${plan.label}`} accent="bg-white !text-orange-600 hover:bg-white/90 font-bold shadow-lg" />
                   ) : (
                     <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} accent={`bg-gradient-to-r ${style.bar} shadow-md`} />
                   )}
