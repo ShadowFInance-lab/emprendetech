@@ -4,10 +4,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Loader2, Check, Link2, Unlink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
-import { getSocialConnections, disconnectSocialAction } from '@/lib/actions/social'
+import { FacebookIcon } from '@/components/catalog/SocialIcons'
 
-type Provider = 'google' | 'facebook' | 'instagram' | 'tiktok'
+type Provider = 'google' | 'facebook'
 
 interface Identity {
   identity_id?: string
@@ -28,159 +27,95 @@ function GoogleIcon({ size = 18 }: { size?: number }) {
   )
 }
 
-const NETWORKS: {
-  id: Provider
-  label: string
-  icon: React.ReactNode
-  note: string
-  color: string
-}[] = [
-  { id: 'google', label: 'Google', icon: <GoogleIcon />, note: 'Inicia sesión con tu cuenta de Google', color: 'hover:border-[#4285F4]' },
-  { id: 'facebook', label: 'Facebook', icon: <FacebookIcon className="text-[#1877F2]" />, note: 'Inicia sesión con Facebook', color: 'hover:border-[#1877F2]' },
-  { id: 'instagram', label: 'Instagram Business', icon: <InstagramIcon className="text-[#E1306C]" />, note: 'Se conecta vía Facebook (cuenta de empresa)', color: 'hover:border-[#E1306C]' },
-  { id: 'tiktok', label: 'TikTok Business', icon: <TikTokIcon />, note: 'Inicia sesión con TikTok (Login Kit)', color: 'hover:border-gray-900' },
+const NETWORKS: { id: Provider; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: 'google', label: 'Google', icon: <GoogleIcon />, color: 'hover:border-[#4285F4]' },
+  { id: 'facebook', label: 'Facebook', icon: <FacebookIcon className="text-[#1877F2]" />, color: 'hover:border-[#1877F2]' },
 ]
 
+/**
+ * Inicio de sesión con redes (login real vía Supabase Identity Linking).
+ * Instagram y TikTok NO van aquí: se configuran como @usuario en "Redes en tu
+ * catálogo" (no requieren login). Aquí solo Google y Facebook, que sí son
+ * proveedores de inicio de sesión nativos de Supabase.
+ */
 export default function SocialConnections() {
   const [identities, setIdentities] = useState<Identity[]>([])
-  const [tiktok, setTiktok] = useState<string | null | undefined>(undefined) // undefined=cargando
   const [loading, setLoading] = useState<Provider | null>(null)
   const [ready, setReady] = useState(false)
 
   const refresh = useCallback(async () => {
     const supabase = createClient()
-    const [{ data }, conns] = await Promise.all([
-      supabase.auth.getUserIdentities(),
-      getSocialConnections(),
-    ])
+    const { data } = await supabase.auth.getUserIdentities()
     setIdentities((data?.identities ?? []) as Identity[])
-    const tk = conns.find(c => c.provider === 'tiktok')
-    setTiktok(tk ? (tk.account_name ?? 'Cuenta TikTok') : null)
     setReady(true)
   }, [])
 
   useEffect(() => { refresh() }, [refresh])
 
-  // Avisos al volver del OAuth de TikTok (?social=...)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const s = params.get('social')
-    if (!s) return
-    if (s === 'tiktok_ok') toast.success('TikTok conectado')
-    else if (s === 'tiktok_cfg') toast.error('Falta configurar TIKTOK_CLIENT_KEY y TIKTOK_CLIENT_SECRET en Vercel.', { duration: 7000 })
-    else if (s === 'tiktok_err') toast.error('No se pudo conectar TikTok. Intenta de nuevo.')
-    // limpiar el parámetro de la URL
-    params.delete('social')
-    const qs = params.toString()
-    window.history.replaceState({}, '', `/settings${qs ? `?${qs}` : ''}`)
-  }, [])
-
-  function fbIdentity() { return identities.find(i => i.provider === 'facebook') }
-  function identityOf(provider: Provider) {
-    if (provider === 'instagram') return fbIdentity()
-    return identities.find(i => i.provider === provider)
-  }
-  function isConnected(provider: Provider) {
-    if (provider === 'tiktok') return !!tiktok
-    return !!identityOf(provider)
-  }
+  function identityOf(provider: Provider) { return identities.find(i => i.provider === provider) }
   function accountLabel(provider: Provider) {
-    if (provider === 'tiktok') return tiktok ?? ''
-    const idn = identityOf(provider)
-    const d = idn?.identity_data ?? {}
-    const base = (d.email as string) || (d.name as string) || (d.full_name as string) || 'Cuenta conectada'
-    return provider === 'instagram' ? `${base} (vía Facebook)` : base
+    const d = identityOf(provider)?.identity_data ?? {}
+    return (d.email as string) || (d.name as string) || (d.full_name as string) || 'Cuenta conectada'
   }
 
   async function connect(provider: Provider) {
     setLoading(provider)
-
-    // TikTok: OAuth propio (ruta /api)
-    if (provider === 'tiktok') {
-      window.location.href = '/api/oauth/tiktok/start'
-      return
-    }
-
     const supabase = createClient()
-    // Instagram Business se autentica a través de Facebook con permisos de Instagram
-    const linkProvider = provider === 'instagram' ? 'facebook' : provider
-    const scopes = provider === 'instagram' ? 'public_profile,instagram_basic,pages_show_list' : undefined
-
     const { error } = await supabase.auth.linkIdentity({
-      provider: linkProvider as 'google' | 'facebook',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/settings`, ...(scopes ? { scopes } : {}) },
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/settings` },
     })
     if (error) {
       const msg = /manual linking/i.test(error.message)
         ? 'Activa "Manual Linking" en Supabase → Authentication → Settings, y habilita el proveedor.'
         : /not enabled|unsupported|provider/i.test(error.message)
-          ? `Primero habilita ${linkProvider} en Supabase → Authentication → Providers (ver INTEGRACIONES.md).`
+          ? `Primero habilita ${provider} en Supabase → Authentication → Providers (ver INTEGRACIONES.md).`
           : `No se pudo conectar: ${error.message}`
       toast.error(msg, { duration: 7000 })
       setLoading(null)
     }
-    // Si no hay error: el navegador redirige al login oficial y vuelve a /settings.
   }
 
   async function disconnect(provider: Provider) {
-    setLoading(provider)
-
-    if (provider === 'tiktok') {
-      if (!confirm('¿Desconectar TikTok?')) { setLoading(null); return }
-      const res = await disconnectSocialAction('tiktok')
-      setLoading(null)
-      if (res.success) { toast.success('TikTok desconectado'); refresh() }
-      else toast.error(res.error ?? 'Error')
-      return
-    }
-
     const idn = identityOf(provider)
-    if (!idn) { setLoading(null); return }
+    if (!idn) return
     if (identities.length <= 1) {
       toast.error('No puedes desconectar tu único método de acceso. Conecta otro antes.')
-      setLoading(null); return
+      return
     }
-    const extra = provider === 'instagram' ? ' Esto también desconecta Facebook (comparten el acceso).' : ''
-    if (!confirm(`¿Desconectar ${provider}?${extra}`)) { setLoading(null); return }
-
+    if (!confirm(`¿Desconectar ${provider}?`)) return
+    setLoading(provider)
     const supabase = createClient()
     const { error } = await supabase.auth.unlinkIdentity(idn as never)
     setLoading(null)
     if (error) { toast.error(`No se pudo desconectar: ${error.message}`); return }
-    toast.success('Desconectado')
-    refresh()
+    toast.success('Desconectado'); refresh()
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">Conectar redes sociales</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Iniciar sesión con redes</h2>
         <p className="text-sm text-gray-500 mt-0.5">
-          Inicia sesión con cada red — sin pegar enlaces. Al pulsar <strong>Conectar</strong> se abre el login oficial.
+          Vincula tu acceso con un clic. <strong>Instagram y TikTok</strong> no necesitan login: agrégalos
+          arriba en <strong>“Redes en tu catálogo”</strong> con tu @usuario.
         </p>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="grid sm:grid-cols-2 gap-2.5">
         {NETWORKS.map(net => {
-          const connected = isConnected(net.id)
+          const connected = !!identityOf(net.id)
           const isLoading = loading === net.id
           const disabled = isLoading || !ready
           return (
-            <div key={net.id}
-              className={`flex items-center gap-3 border border-gray-200 rounded-xl p-3 transition-colors ${net.color}`}>
-              <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
-                {net.icon}
-              </div>
+            <div key={net.id} className={`flex items-center gap-3 border border-gray-200 rounded-xl p-3 transition-colors ${net.color}`}>
+              <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">{net.icon}</div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 text-sm flex items-center gap-1.5">
-                  {net.label}
-                  {connected && <Check size={14} className="text-green-600" />}
+                  {net.label}{connected && <Check size={14} className="text-green-600" />}
                 </p>
-                <p className="text-xs text-gray-400 truncate">
-                  {connected ? accountLabel(net.id) : net.note}
-                </p>
+                <p className="text-xs text-gray-400 truncate">{connected ? accountLabel(net.id) : 'No conectado'}</p>
               </div>
-
               {connected ? (
                 <button onClick={() => disconnect(net.id)} disabled={disabled}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50">
@@ -198,9 +133,8 @@ export default function SocialConnections() {
       </div>
 
       <p className="text-xs text-gray-400">
-        Google y Facebook requieren pegar credenciales en <span className="font-medium">Supabase → Authentication → Providers</span> + activar
-        <span className="font-medium"> Manual Linking</span>. Instagram se conecta vía Facebook (con permisos de Instagram). TikTok usa
-        <span className="font-medium"> TIKTOK_CLIENT_KEY/SECRET</span> en Vercel. Pasos exactos en <code className="bg-gray-100 px-1 rounded">INTEGRACIONES.md</code>.
+        Google y Facebook requieren pegar sus credenciales en <span className="font-medium">Supabase → Authentication → Providers</span>
+        {' '}y activar <span className="font-medium">Manual Linking</span>. Pasos exactos en <code className="bg-gray-100 px-1 rounded">INTEGRACIONES.md</code>.
       </p>
     </div>
   )

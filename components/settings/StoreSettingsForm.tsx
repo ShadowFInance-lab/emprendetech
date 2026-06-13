@@ -675,7 +675,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 <>
                   <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-2xl ${soc.bg} flex items-center justify-center`}>{soc.icon}</div>
-                    <h3 className="font-bold text-lg text-gray-900">Conectar con {soc.label}</h3>
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-900">Tu {soc.label}</h3>
+                      <p className="text-xs text-gray-400">Solo escribe tu usuario — sin enlaces.</p>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="social-modal-input">{soc.field}</Label>
@@ -700,7 +703,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   <div className="flex justify-between items-center">
                     {modalValue ? (
                       <button type="button" onClick={() => setModalValue('')}
-                        className="text-xs text-red-500 hover:text-red-600">Quitar enlace</button>
+                        className="text-xs text-red-500 hover:text-red-600">Quitar</button>
                     ) : <span />}
                     <div className="flex gap-2">
                       <Button type="button" variant="ghost" onClick={() => setSocialModal(null)}>Cancelar</Button>
