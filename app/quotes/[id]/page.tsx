@@ -81,10 +81,17 @@ export default async function QuoteDetailPage({ params }: { params: { id: string
         initial={{
           customer_id: quote.customer_id,
           customer_name: quote.customer_name,
+          customer_email: quote.customer_email,
+          customer_phone: quote.customer_phone,
+          customer_address: quote.customer_address,
+          customer_rfc: quote.customer_rfc,
           items: quote.items,
           discount_amt: quote.discount_amt,
           notes: quote.notes,
           valid_until: quote.valid_until,
+          payment_method: quote.payment_method,
+          deposit_pct: quote.deposit_pct,
+          delivery_time: quote.delivery_time,
           status: quote.status,
         }}
       />

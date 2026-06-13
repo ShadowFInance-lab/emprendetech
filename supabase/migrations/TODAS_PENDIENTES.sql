@@ -121,4 +121,18 @@ CREATE POLICY "social_owner" ON social_connections FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+-- ─── 017: Cotizaciones profesionales ───────────────────────────────────────
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS customer_email   TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS customer_phone   TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS customer_address TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS customer_rfc     TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS payment_method   TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS deposit_pct      NUMERIC;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS delivery_time    TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS public_token     TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS signature        TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS signed_at        TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS quotes_public_token_idx
+  ON quotes(public_token) WHERE public_token IS NOT NULL;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.
