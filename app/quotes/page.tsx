@@ -85,11 +85,9 @@ export default async function QuotesPage() {
         <div className="bg-white rounded-xl shadow-sm border p-16 text-center">
           <FileText size={40} className="text-gray-300 mx-auto mb-4" />
           <h3 className="font-semibold text-gray-700">Sin cotizaciones aún</h3>
-          <p className="text-gray-400 text-sm mt-1 mb-5">Crea tu primera cotización profesional para tus clientes</p>
-          <Link href="/quotes/new"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
-            <Plus size={16} /> Nueva cotización
-          </Link>
+          <p className="text-gray-400 text-sm mt-1">
+            Usa el botón <span className="font-medium text-gray-600">“Nueva cotización”</span> de arriba para crear la primera.
+          </p>
         </div>
       ) : null}
     </div>

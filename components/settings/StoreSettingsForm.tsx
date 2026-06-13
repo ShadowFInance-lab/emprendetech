@@ -133,7 +133,11 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           : /not enabled|unsupported|provider/i.test(error.message)
             ? 'Google aún no está habilitado en Supabase → Authentication → Providers.'
             : `No se pudo conectar: ${error.message}`
-        toast(msg, { duration: 6000, icon: 'ℹ️' })
+        toast(msg, {
+          duration: 6000,
+          icon: 'ℹ️',
+          style: { background: '#f9fafb', color: '#374151', border: '1px solid #e5e7eb' },
+        })
         setSocialLoading(null)
       }
     }

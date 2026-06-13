@@ -17,10 +17,10 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
 }
 
 const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
-  free:        { bar: 'from-slate-500 to-slate-700',    icon: '🆓' },
-  emprendedor: { bar: 'from-blue-500 to-indigo-600',    icon: '🚀' },
-  negocio:     { bar: 'from-purple-500 to-fuchsia-600', icon: '🏢' },
-  vip_plus:    { bar: 'from-amber-500 to-orange-600',   icon: '👑' },
+  free:        { bar: 'from-slate-400 to-slate-600',                  icon: '🆓' },
+  emprendedor: { bar: 'from-blue-500 via-blue-600 to-indigo-700',     icon: '🚀' },
+  negocio:     { bar: 'from-fuchsia-500 via-purple-600 to-indigo-700', icon: '🏢' },
+  vip_plus:    { bar: 'from-amber-400 via-orange-500 to-rose-600',    icon: '👑' },
 }
 
 export default async function SubscriptionPage({
@@ -190,15 +190,18 @@ export default async function SubscriptionPage({
               key={planId}
               className={`group relative rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5 ${
                 isPopular
-                  ? `bg-gradient-to-br ${style.bar} text-white shadow-2xl shadow-orange-500/30 ${isCurrent ? 'ring-4 ring-white/60' : 'ring-1 ring-white/30'} sm:scale-[1.04]`
+                  ? `bg-gradient-to-br ${style.bar} text-white shadow-2xl shadow-orange-500/40 ${isCurrent ? 'ring-4 ring-white/70' : 'ring-2 ring-amber-300/70'} sm:scale-[1.05] hover:shadow-orange-500/50`
                   : isCurrent
                     ? 'bg-white ring-2 ring-blue-500 shadow-xl'
-                    : 'bg-white border border-gray-100 shadow-md hover:shadow-2xl'
+                    : 'bg-white ring-1 ring-black/5 shadow-lg hover:shadow-2xl'
               }`}
             >
               {/* Glow decorativo en la tarjeta destacada */}
               {isPopular && (
-                <div className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/20 blur-3xl" />
+                <>
+                  <div className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/25 blur-3xl" />
+                  <div className="pointer-events-none absolute -bottom-24 -left-16 w-52 h-52 rounded-full bg-rose-300/30 blur-3xl" />
+                </>
               )}
               {/* Franja de color superior en tarjetas estándar */}
               {!isPopular && <div className={`h-1.5 w-full bg-gradient-to-r ${style.bar}`} />}
