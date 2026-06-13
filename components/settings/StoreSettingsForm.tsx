@@ -194,8 +194,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             <Share2 size={15} className="text-white" />
           </span>
           <div>
-            <p className="font-semibold text-gray-900 text-[15px] leading-tight">Redes sociales</p>
-            <p className="text-xs text-gray-400">Toca para conectar — aparecerán en tu catálogo público.</p>
+            <p className="font-semibold text-gray-900 text-[15px] leading-tight">Redes en tu catálogo</p>
+            <p className="text-xs text-gray-400">Tu @usuario para mostrar en el catálogo público (opcional). Para iniciar sesión con tus redes usa &quot;Conectar redes sociales&quot; abajo.</p>
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
@@ -211,7 +211,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 <div className={`w-11 h-11 rounded-2xl ${soc.bg} flex items-center justify-center`}>{soc.icon}</div>
                 <p className="text-xs font-semibold text-gray-900">{soc.label}</p>
                 <span className={`text-[11px] font-medium ${connected ? 'text-green-600' : 'text-blue-600'}`}>
-                  {connected ? '✓ Conectado' : 'Conectar'}
+                  {connected ? '✓ Agregado' : 'Agregar'}
                 </span>
               </button>
             )

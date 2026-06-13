@@ -47,7 +47,9 @@ Guía para dejar funcionando login social, redes y Mercado Pago. La **arquitectu
 
 ## 3. INSTAGRAM BUSINESS — pasos exactos
 
-> ⚠️ **Realidad técnica:** Supabase **no** tiene un proveedor nativo "Instagram". El login/datos de una **cuenta de Instagram Business** se obtiene **a través de Facebook** (la cuenta IG Business debe estar ligada a una Página de Facebook) usando la **Instagram Graph API**, y Meta exige **Revisión de la app**. Por eso "Conectar Instagram" dentro de la plataforma muestra estos pasos en vez de un OAuth instantáneo.
+> ✅ **En la app:** el botón **"Conectar Instagram Business"** abre el **login real de Facebook** pidiendo permisos de Instagram (`instagram_basic`, `pages_show_list`) — sin pegar URLs. Funciona en cuanto el proveedor Facebook está habilitado en Supabase. Para leer datos de IG en producción, Meta exige **Revisión de la app**.
+>
+> ⚠️ **Por qué vía Facebook:** Supabase no tiene proveedor nativo "Instagram". Una cuenta **Instagram Business** se autentica **a través de Facebook** (debe estar ligada a una Página de Facebook) usando la **Instagram Graph API**.
 
 **A) Página exacta donde crear la app:** https://developers.facebook.com/apps/ (la misma de Facebook; puedes reutilizar la app del paso 2).
 **B) Qué botón presionar:** en el panel de la app → **"Agregar producto"** → activa **"Inicio de sesión con Facebook"** y **"Instagram Graph API"**.
@@ -64,7 +66,9 @@ Guía para dejar funcionando login social, redes y Mercado Pago. La **arquitectu
 
 ## 4. TIKTOK BUSINESS — pasos exactos
 
-> ⚠️ **Realidad técnica:** TikTok **tampoco** es proveedor nativo de Supabase. Requiere el **Login Kit** de TikTok y un **flujo OAuth propio** (una ruta `/api` en el servidor que intercambie el code por token). Estos pasos dejan **listas tus credenciales**; el botón "Conectar TikTok" muestra esta guía hasta que tu app esté aprobada.
+> ✅ **En la app:** el **flujo OAuth real de TikTok ya está implementado** (`/api/oauth/tiktok/start` → login oficial de TikTok → `/api/oauth/tiktok/callback` → guarda el token en `social_connections`). El botón **"Conectar TikTok"** abre el login real **en cuanto pongas `TIKTOK_CLIENT_KEY` y `TIKTOK_CLIENT_SECRET` en Vercel**; si faltan, te avisa (no finge conexión).
+>
+> ⚠️ TikTok no es proveedor nativo de Supabase, por eso usa esta ruta propia (Login Kit) en vez de Supabase Auth.
 
 **A) Página exacta donde crear la app:** https://developers.tiktok.com/ → **Manage apps** (https://developers.tiktok.com/apps).
 **B) Qué botón presionar:** **"Connect an app"** (o **"Create an app"**).
@@ -80,8 +84,8 @@ TIKTOK_CLIENT_SECRET=...
 (y se consumen desde una ruta OAuth propia en el servidor).
 **H) URL de callback (Redirect URI) a registrar en TikTok:**
 `https://emprendetech-shadow-black-s-projects.vercel.app/api/oauth/tiktok/callback`
-(esa ruta `/api/oauth/tiktok/callback` se implementa cuando tengas las credenciales aprobadas).
-**I) Cómo probar:** con la app en modo *sandbox*, agrega tu usuario de TikTok como **tester**, pulsa "Conectar TikTok", autoriza y verifica que regresa el token. En producción requiere la **revisión aprobada**.
+(esta ruta **ya existe** en la app — solo regístrala en TikTok).
+**I) Cómo probar:** pon `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET` en Vercel + Redeploy. Corre la migración `016_social_connections.sql`. Con la app en *sandbox*, agrega tu usuario TikTok como **tester**, ve a Configuración → **Conectar TikTok**, autoriza y verás tu cuenta conectada (con botón Desconectar). En producción requiere la **revisión aprobada**.
 
 ---
 
@@ -91,8 +95,8 @@ TIKTOK_CLIENT_SECRET=...
 |---|---|---|---|
 | **Google** | ✅ Sí | ✅ Botón [Conectar] real (Identity Linking) | Pegar Client ID/Secret en Supabase + habilitar **Manual Linking** |
 | **Facebook** | ✅ Sí | ✅ Botón [Conectar] real | Pegar App ID/Secret en Supabase + Manual Linking |
-| **Instagram Business** | ❌ No (vía Facebook) | ⚠️ Botón muestra pasos | App de Meta + **App Review** aprobada |
-| **TikTok Business** | ❌ No (OAuth propio) | ⚠️ Botón muestra pasos | App de TikTok aprobada + ruta `/api/oauth/tiktok` |
+| **Instagram Business** | ❌ No (vía Facebook) | ✅ Botón abre login real (Facebook + permisos IG) | Facebook habilitado en Supabase + **App Review** para datos IG |
+| **TikTok Business** | ❌ No (OAuth propio ✅ implementado) | ✅ Botón abre login real de TikTok | `TIKTOK_CLIENT_KEY/SECRET` en Vercel + migración 016 + app aprobada |
 
 > **Habilitar el botón [Conectar] de Google/Facebook:** además de pegar credenciales, ve a **Supabase → Authentication → Settings** y activa **"Manual linking"** (permite vincular varias identidades a una misma cuenta y desconectarlas).
 

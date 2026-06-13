@@ -4,7 +4,7 @@ import { CreditCard, CheckCircle2, AlertCircle, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
 import { isMercadoPagoConfigured } from '@/lib/mercadopago/client'
-import { getMeteredUsage } from '@/lib/actions/subscriptions'
+import { getMeteredUsage, confirmCheckoutReturn } from '@/lib/actions/subscriptions'
 import { formatCurrency } from '@/lib/utils/format'
 import UpgradeButton from '@/components/subscription/UpgradeButton'
 import type { Plan } from '@/lib/types'
@@ -26,11 +26,25 @@ const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
 export default async function SubscriptionPage({
   searchParams,
 }: {
-  searchParams: { status?: string }
+  searchParams: { status?: string; payment_id?: string; collection_id?: string; collection_status?: string }
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Al volver del checkout, verificar el pago con Mercado Pago y activar el
+  // plan inmediatamente (no dependemos solo del webhook, que puede fallar por
+  // configuración). Es idempotente y solo activa el plan del propio usuario.
+  let justActivated: Plan | null = null
+  if (searchParams.payment_id || searchParams.collection_id || searchParams.status === 'success' || searchParams.collection_status === 'approved') {
+    const res = await confirmCheckoutReturn({
+      payment_id: searchParams.payment_id,
+      collection_id: searchParams.collection_id,
+      status: searchParams.status,
+      collection_status: searchParams.collection_status,
+    })
+    if (res.activated && res.plan) justActivated = res.plan
+  }
 
   const { data: profile } = await supabase
     .from('profiles').select('*').eq('id', user.id).single()
@@ -50,12 +64,16 @@ export default async function SubscriptionPage({
       </div>
 
       {/* Mensaje de estado de pago */}
-      {searchParams.status === 'success' && (
+      {(searchParams.status === 'success' || justActivated) && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
           <CheckCircle2 className="text-green-600 flex-shrink-0" />
           <div>
-            <p className="font-medium text-green-800">¡Pago recibido!</p>
-            <p className="text-sm text-green-600">Tu plan se activará en unos momentos.</p>
+            <p className="font-medium text-green-800">{justActivated ? '¡Plan activado!' : '¡Pago recibido!'}</p>
+            <p className="text-sm text-green-600">
+              {justActivated
+                ? `Tu plan ${PLAN_LIMITS[justActivated].label} ya está activo. ¡Gracias!`
+                : 'Estamos confirmando tu pago. Si no se activa en un minuto, recarga la página.'}
+            </p>
           </div>
         </div>
       )}
@@ -159,65 +177,82 @@ export default async function SubscriptionPage({
         </CardContent>
       </Card>
 
-      {/* Planes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Planes — tarjetas premium */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {(Object.keys(PLAN_LIMITS) as Plan[]).map(planId => {
           const plan = PLAN_LIMITS[planId]
           const isCurrent = planId === currentPlan
           const style = PLAN_STYLE[planId]
           const isPopular = planId === 'vip_plus'
+
           return (
             <div
               key={planId}
-              className={`relative rounded-2xl bg-white overflow-hidden border transition-all hover:shadow-xl hover:-translate-y-0.5 ${
-                isCurrent ? 'ring-2 ring-blue-500 border-transparent'
-                  : isPopular ? 'border-amber-300 shadow-xl ring-1 ring-amber-200 sm:scale-[1.02]'
-                  : 'border-gray-100 shadow-sm'
+              className={`relative rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+                isPopular
+                  ? `bg-gradient-to-br ${style.bar} text-white shadow-2xl ${isCurrent ? 'ring-4 ring-white/60' : 'ring-2 ring-amber-300'} sm:scale-[1.03]`
+                  : isCurrent
+                    ? 'bg-white ring-2 ring-blue-500 shadow-lg'
+                    : 'bg-white border border-gray-100 shadow-sm hover:shadow-xl'
               }`}
             >
-              {/* Encabezado con degradado vibrante */}
-              <div className={`relative bg-gradient-to-br ${style.bar} p-5 text-white`}>
-                {isPopular && !isCurrent && (
-                  <span className="absolute top-3 right-3 bg-white text-amber-600 text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow">
-                    ⭐ MEJOR VALOR
-                  </span>
-                )}
-                {isCurrent && (
-                  <span className="absolute top-3 right-3 bg-white/95 text-blue-700 text-[10px] font-extrabold px-2.5 py-1 rounded-full">
-                    TU PLAN
-                  </span>
-                )}
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl mb-2.5 shadow-inner">
+              {/* Cinta diagonal "MEJOR VALOR" */}
+              {isPopular && !isCurrent && (
+                <div className="absolute -right-12 top-6 rotate-45 bg-white text-amber-600 text-[11px] font-extrabold px-12 py-1 shadow-md tracking-wide">
+                  MEJOR VALOR
+                </div>
+              )}
+              {isCurrent && (
+                <span className={`absolute top-4 right-4 text-[10px] font-extrabold px-3 py-1 rounded-full shadow ${isPopular ? 'bg-white text-amber-600' : 'bg-blue-600 text-white'}`}>
+                  TU PLAN
+                </span>
+              )}
+
+              <div className="p-6">
+                {/* Icono */}
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg ${
+                  isPopular ? 'bg-white/20 backdrop-blur-sm shadow-inner' : `bg-gradient-to-br ${style.bar}`
+                }`}>
                   {style.icon}
                 </div>
-                <p className="text-sm font-bold uppercase tracking-wider text-white/90">{plan.label}</p>
-                <p className="text-4xl font-extrabold mt-1 tracking-tight leading-none">{plan.price_label}</p>
-                {planId === 'vip_plus' && <p className="text-xs text-white/90 font-medium mt-1">Pago único · para siempre</p>}
-              </div>
 
-              {/* Cuerpo */}
-              <div className="p-5">
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Incluye</p>
-                <div className="space-y-2.5">
+                {/* Nombre + precio */}
+                <p className={`text-sm font-bold uppercase tracking-widest ${isPopular ? 'text-white/90' : 'text-gray-400'}`}>
+                  {plan.label}
+                </p>
+                <p className={`text-5xl font-black mt-1 tracking-tight leading-none ${isPopular ? 'text-white' : 'text-gray-900'}`}>
+                  {plan.price_label}
+                </p>
+                <p className={`text-xs font-medium mt-2 ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
+                  {planId === 'vip_plus' ? 'Pago único · acceso para siempre'
+                    : planId === 'free' ? 'Gratis para empezar'
+                    : 'Facturación mensual'}
+                </p>
+
+                {/* Features */}
+                <div className={`mt-5 pt-5 space-y-3 border-t ${isPopular ? 'border-white/25' : 'border-gray-100'}`}>
                   {PLAN_FEATURES[planId].map((feature, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                      <CheckCircle2 size={15} className="text-green-500 flex-shrink-0 mt-0.5" />
-                      <span>{feature}</span>
+                    <div key={i} className="flex items-start gap-2.5 text-sm">
+                      <CheckCircle2 size={17} className={`flex-shrink-0 mt-0.5 ${isPopular ? 'text-white' : 'text-green-500'}`} />
+                      <span className={isPopular ? 'text-white/95' : 'text-gray-600'}>{feature}</span>
                     </div>
                   ))}
                 </div>
 
-                {!isCurrent && planId !== 'free' && (
-                  <div className="pt-4">
-                    <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} accent={`bg-gradient-to-r ${style.bar}`} />
-                  </div>
-                )}
-                {!isCurrent && planId === 'free' && (
-                  <p className="text-center text-xs text-gray-400 pt-4">Tu punto de partida</p>
-                )}
-                {isCurrent && (
-                  <p className="text-center text-xs text-gray-400 pt-4">✓ Estás en este plan</p>
-                )}
+                {/* CTA */}
+                <div className="pt-6">
+                  {isCurrent ? (
+                    <div className={`text-center text-sm font-semibold py-2.5 rounded-xl ${isPopular ? 'bg-white/15 text-white' : 'bg-blue-50 text-blue-700'}`}>
+                      ✓ Estás en este plan
+                    </div>
+                  ) : planId === 'free' ? (
+                    <p className="text-center text-xs text-gray-400 py-2.5">Tu punto de partida</p>
+                  ) : isPopular ? (
+                    <UpgradeButton plan={planId} label={`Obtener ${plan.label}`} accent="bg-white !text-amber-600 hover:bg-white/90 font-bold shadow-lg" />
+                  ) : (
+                    <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} accent={`bg-gradient-to-r ${style.bar} shadow-md`} />
+                  )}
+                </div>
               </div>
             </div>
           )

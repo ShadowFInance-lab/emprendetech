@@ -1,7 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getMercadoPagoClient, isMercadoPagoConfigured, Preference } from '@/lib/mercadopago/client'
+import { Payment } from 'mercadopago'
 import type { Plan } from '@/lib/types'
 import type { ActionResult } from './auth'
 
@@ -123,24 +124,23 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
 }
 
 /**
- * Activa un plan manualmente (usado por webhook o admin).
+ * Activa un plan (usado por el webhook y por la verificación de retorno).
+ * Usa el cliente ADMIN (service role) para saltar RLS, y es IDEMPOTENTE:
+ * no duplica la suscripción si ya hay una activa del mismo plan.
  */
-export async function activatePlanForUser(userId: string, plan: Plan): Promise<void> {
-  const supabase = await createClient()
+export async function activatePlanForUser(userId: string, plan: Plan, providerSubId?: string): Promise<void> {
+  const admin = createAdminClient()
 
   const now = new Date()
   const periodEnd = new Date(now)
-
   if (plan === 'vip_plus') {
-    // Vitalicio: 100 años
-    periodEnd.setFullYear(periodEnd.getFullYear() + 100)
+    periodEnd.setFullYear(periodEnd.getFullYear() + 100) // pago único / vitalicio
   } else {
-    // Mensual: +1 mes
-    periodEnd.setMonth(periodEnd.getMonth() + 1)
+    periodEnd.setMonth(periodEnd.getMonth() + 1) // mensual
   }
 
-  // Actualizar perfil
-  await supabase
+  // Actualizar perfil (idempotente)
+  await admin
     .from('profiles')
     .update({
       plan,
@@ -149,15 +149,68 @@ export async function activatePlanForUser(userId: string, plan: Plan): Promise<v
     })
     .eq('id', userId)
 
-  // Crear/actualizar suscripción
-  await supabase.from('subscriptions').insert({
-    profile_id: userId,
-    plan,
-    status: 'active',
-    provider: 'mercadopago',
-    current_period_start: now.toISOString(),
-    current_period_end: periodEnd.toISOString(),
-  })
+  // Solo insertar suscripción si no hay una activa del mismo plan
+  const { data: existing } = await admin
+    .from('subscriptions')
+    .select('id')
+    .eq('profile_id', userId)
+    .eq('plan', plan)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (!existing) {
+    await admin.from('subscriptions').insert({
+      profile_id: userId,
+      plan,
+      status: 'active',
+      provider: 'mercadopago',
+      ...(providerSubId ? { provider_sub_id: providerSubId } : {}),
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+    })
+  }
+}
+
+/**
+ * Verifica el pago directamente con Mercado Pago al volver del checkout
+ * (back_urls). Activa el plan AUNQUE el webhook no haya llegado todavía o
+ * esté mal configurado. Solo activa el plan del propio usuario logueado.
+ */
+export async function confirmCheckoutReturn(params: {
+  payment_id?: string
+  collection_id?: string
+  status?: string
+  collection_status?: string
+}): Promise<{ activated: boolean; plan?: Plan }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { activated: false }
+  if (!isMercadoPagoConfigured()) return { activated: false }
+
+  const paymentId = params.payment_id || params.collection_id
+  if (!paymentId || paymentId === 'null') return { activated: false }
+
+  const client = getMercadoPagoClient()
+  if (!client) return { activated: false }
+
+  try {
+    const payment = new Payment(client)
+    const data = await payment.get({ id: paymentId })
+    if (data.status !== 'approved') return { activated: false }
+
+    const ref = data.external_reference // "userId|plan"
+    if (!ref || !ref.includes('|')) return { activated: false }
+    const [refUser, plan] = ref.split('|') as [string, Plan]
+
+    // Seguridad: solo activa el plan si el pago pertenece a este usuario
+    if (refUser !== user.id) return { activated: false }
+
+    await activatePlanForUser(user.id, plan, String(paymentId))
+    return { activated: true, plan }
+  } catch (err) {
+    console.error('confirmCheckoutReturn error:', err)
+    return { activated: false }
+  }
 }
 
 export async function getMercadoPagoStatus(): Promise<{ configured: boolean }> {
