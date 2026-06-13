@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, History } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import POSInterface from '@/components/sales/POSInterface'
+import EmployeeNotices from '@/components/sales/EmployeeNotices'
 
 export default async function NewSalePage({
   searchParams,
@@ -53,6 +54,7 @@ export default async function NewSalePage({
           <History size={15} /> Historial
         </Link>
       </div>
+      <EmployeeNotices />
       <POSInterface presetCustomer={presetCustomer} />
     </div>
   )

@@ -26,6 +26,22 @@ const CreateSaleSchema = z.object({
 
 export type CreateSaleInput = z.infer<typeof CreateSaleSchema>
 
+// Resuelve la tienda en la que opera el usuario: la propia (dueño) o la del
+// jefe (empleado). Permite que los empleados usen el POS de la tienda del jefe.
+async function resolveStoreId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<string | null> {
+  const { data: own } = await supabase.from('stores').select('id').eq('owner_id', userId).maybeSingle()
+  if (own) return own.id
+  const { data: prof } = await supabase.from('profiles').select('boss_id').eq('id', userId).maybeSingle()
+  if (prof?.boss_id) {
+    const { data: bossStore } = await supabase.from('stores').select('id').eq('owner_id', prof.boss_id).maybeSingle()
+    return bossStore?.id ?? null
+  }
+  return null
+}
+
 /**
  * Registra una venta completa.
  * El descuento de stock + movimientos de inventario + alertas
@@ -37,9 +53,9 @@ export async function createSaleAction(input: CreateSaleInput): Promise<ActionRe
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'No autenticado' }
 
-  const { data: store } = await supabase
-    .from('stores').select('id').eq('owner_id', user.id).single()
-  if (!store) return { success: false, error: 'Tienda no encontrada' }
+  const storeId = await resolveStoreId(supabase, user.id)
+  if (!storeId) return { success: false, error: 'Tienda no encontrada' }
+  const store = { id: storeId }
 
   const parsed = CreateSaleSchema.safeParse(input)
   if (!parsed.success) {
@@ -200,9 +216,9 @@ export async function searchProductsForPOS(query: string): Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data: store } = await supabase
-    .from('stores').select('id').eq('owner_id', user.id).single()
-  if (!store) return []
+  const storeId = await resolveStoreId(supabase, user.id)
+  if (!storeId) return []
+  const store = { id: storeId }
 
   let q = supabase
     .from('products')

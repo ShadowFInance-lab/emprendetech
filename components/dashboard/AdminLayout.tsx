@@ -17,12 +17,18 @@ export default async function AdminLayout({
 
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { data: store }] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('stores').select('*').eq('owner_id', user.id).single(),
-  ])
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const isEmployee = profile?.role === 'employee'
 
-  if (!profile?.onboarding_done || !store) redirect('/onboarding')
+  // Tienda efectiva: la propia (dueño) o la del jefe (empleado)
+  let { data: store } = await supabase.from('stores').select('*').eq('owner_id', user.id).maybeSingle()
+  if (!store && profile?.boss_id) {
+    const { data: bossStore } = await supabase.from('stores').select('*').eq('owner_id', profile.boss_id).maybeSingle()
+    store = bossStore
+  }
+
+  if (!isEmployee && (!profile?.onboarding_done || !store)) redirect('/onboarding')
+  if (!store) redirect('/login') // empleado sin tienda asignada (caso raro)
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

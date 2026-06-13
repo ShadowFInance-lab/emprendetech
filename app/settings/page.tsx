@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StoreSettingsForm from '@/components/settings/StoreSettingsForm'
+import EmployeesSection from '@/components/settings/EmployeesSection'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -11,9 +12,9 @@ export default async function SettingsPage() {
     .from('stores').select('*').eq('owner_id', user.id).single()
   if (!store) redirect('/onboarding')
 
-  // Plan del usuario → para limitar skins disponibles (Fix A)
+  // Plan del usuario → para limitar skins disponibles (Fix A) + rol (jefe/empleado)
   const { data: profile } = await supabase
-    .from('profiles').select('plan').eq('id', user.id).single()
+    .from('profiles').select('plan, role').eq('id', user.id).single()
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
         </p>
       </div>
       <StoreSettingsForm store={store} plan={profile?.plan ?? 'free'} />
+      {profile?.role !== 'employee' && <EmployeesSection plan={profile?.plan ?? 'free'} />}
     </div>
   )
 }

@@ -57,7 +57,7 @@ export default async function SubscriptionPage({
   const usagePct = Math.min(100, (usage.salesThisMonth / usage.included) * 100)
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-6xl">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Suscripción</h1>
         <p className="text-gray-500 text-sm mt-1">Plan actual y opciones de mejora</p>
@@ -177,8 +177,8 @@ export default async function SubscriptionPage({
         </CardContent>
       </Card>
 
-      {/* Planes — tarjetas premium */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      {/* Planes — tarjetas premium horizontales */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
         {(Object.keys(PLAN_LIMITS) as Plan[]).map(planId => {
           const plan = PLAN_LIMITS[planId]
           const isCurrent = planId === currentPlan
@@ -215,31 +215,31 @@ export default async function SubscriptionPage({
                 </span>
               )}
 
-              <div className="relative p-7">
+              <div className="relative p-5 flex flex-col h-full">
                 {/* Icono grande */}
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-4xl mb-5 ${
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 ${
                   isPopular ? 'bg-white/20 backdrop-blur-sm shadow-inner' : `bg-gradient-to-br ${style.bar} shadow-lg`
                 }`}>
                   {style.icon}
                 </div>
 
                 {/* Nombre + precio */}
-                <p className={`text-xs font-bold uppercase tracking-[0.2em] ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
+                <p className={`text-xs font-bold uppercase tracking-[0.18em] ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
                   {plan.label}
                 </p>
-                <p className={`text-5xl font-black mt-1.5 tracking-tight leading-none ${isPopular ? 'text-white' : 'text-gray-900'}`}>
+                <p className={`text-4xl font-black mt-1.5 tracking-tight leading-[1.05] ${isPopular ? 'text-white' : 'text-gray-900'}`}>
                   {plan.price_label}
                 </p>
-                <p className={`text-xs font-medium mt-2.5 ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
-                  {planId === 'vip_plus' ? 'Pago único · acceso de por vida'
+                <p className={`text-xs font-medium mt-2 ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
+                  {planId === 'vip_plus' ? 'Pago único · de por vida'
                     : planId === 'free' ? 'Gratis para siempre'
                     : 'Facturación mensual'}
                 </p>
 
                 {/* Features */}
-                <div className={`mt-6 pt-6 space-y-3.5 border-t ${isPopular ? 'border-white/25' : 'border-gray-100'}`}>
+                <div className={`mt-5 pt-5 space-y-3 border-t ${isPopular ? 'border-white/25' : 'border-gray-100'}`}>
                   {PLAN_FEATURES[planId].map((feature, i) => (
-                    <div key={i} className="flex items-start gap-3 text-sm">
+                    <div key={i} className="flex items-start gap-2.5 text-[13px]">
                       <span className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isPopular ? 'bg-white/25' : 'bg-green-100'}`}>
                         <Check size={12} strokeWidth={3} className={isPopular ? 'text-white' : 'text-green-600'} />
                       </span>
@@ -249,7 +249,7 @@ export default async function SubscriptionPage({
                 </div>
 
                 {/* CTA */}
-                <div className="pt-7">
+                <div className="pt-6 mt-auto">
                   {isCurrent ? (
                     <div className={`text-center text-sm font-semibold py-3 rounded-xl ${isPopular ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'}`}>
                       ✓ Tu plan actual

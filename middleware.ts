@@ -84,16 +84,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // ─── Onboarding guard ────────────────────────────────────
-  // Si está autenticado pero no completó onboarding → forzar onboarding
-  if (user && isProtected && pathname !== '/onboarding') {
+  // ─── Rol (Jefe / Empleado) + onboarding ──────────────────
+  if (user && isProtected) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('onboarding_done')
+      .select('role, onboarding_done')
       .eq('id', user.id)
       .single()
 
-    if (profile && !profile.onboarding_done) {
+    // Empleados: acceso restringido SOLO al POS / ventas
+    if (profile?.role === 'employee') {
+      if (!pathname.startsWith('/sales')) {
+        return NextResponse.redirect(new URL('/sales/new', request.url))
+      }
+    } else if (pathname !== '/onboarding' && profile && !profile.onboarding_done) {
+      // Dueños: forzar onboarding si no lo completaron
       return NextResponse.redirect(new URL('/onboarding', request.url))
     }
   }

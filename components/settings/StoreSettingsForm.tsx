@@ -13,7 +13,7 @@ import { getPlanLimits } from '@/lib/constants/plans'
 import { SUPPORTED_CURRENCIES } from '@/lib/utils/format'
 import type { Store, Plan } from '@/lib/types'
 import { Lock, Share2, MessageCircle } from 'lucide-react'
-import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
+import { InstagramIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
 import { createClient } from '@/lib/supabase/client'
 import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
@@ -129,11 +129,11 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       })
       if (error) {
         const msg = /manual linking/i.test(error.message)
-          ? 'Activa "Manual Linking" en Supabase → Authentication → Settings, y habilita el proveedor.'
+          ? 'Google requiere activarse en Supabase (Authentication → Settings → Manual Linking).'
           : /not enabled|unsupported|provider/i.test(error.message)
-            ? `Habilita ${provider} en Supabase → Authentication → Providers (ver INTEGRACIONES.md).`
+            ? 'Google aún no está habilitado en Supabase → Authentication → Providers.'
             : `No se pudo conectar: ${error.message}`
-        toast.error(msg, { duration: 7000 })
+        toast(msg, { duration: 6000, icon: 'ℹ️' })
         setSocialLoading(null)
       }
     }
@@ -162,14 +162,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const SOCIALS: { name: string; type: 'handle' | 'login'; label: string; prefix: string; placeholder: string; field: string; icon: React.ReactNode; bg: string }[] = [
     { name: 'whatsapp', type: 'handle', label: 'WhatsApp', prefix: '', placeholder: '55 1234 5678', field: 'Tu número de WhatsApp (con lada)',
       icon: <MessageCircle size={24} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
-    { name: 'instagram', type: 'handle', label: 'Instagram', prefix: 'instagram.com/', placeholder: 'tu_tienda', field: 'Tu usuario de Instagram (instagram.com/tu_tienda)',
+    { name: 'instagram', type: 'handle', label: 'Instagram', prefix: 'instagram.com/', placeholder: 'tu_tienda', field: 'Solo nombre de usuario (ej. instagram.com/tu_tienda)',
       icon: <InstagramIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
-    { name: 'tiktok', type: 'handle', label: 'TikTok', prefix: 'tiktok.com/@', placeholder: 'tu_tienda', field: 'Tu usuario de TikTok (tiktok.com/@tu_tienda)',
+    { name: 'tiktok', type: 'handle', label: 'TikTok', prefix: 'tiktok.com/@', placeholder: 'tu_tienda', field: 'Solo nombre de usuario (ej. tiktok.com/@tu_tienda)',
       icon: <TikTokIcon size={22} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
     { name: 'google', type: 'login', label: 'Google', prefix: '', placeholder: '', field: '',
       icon: <GoogleGlyph />, bg: 'bg-white border border-gray-200' },
-    { name: 'facebook', type: 'login', label: 'Facebook', prefix: '', placeholder: '', field: '',
-      icon: <FacebookIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
   ]
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -249,7 +247,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </span>
           <div>
             <p className="font-semibold text-gray-900 text-[15px] leading-tight">Redes sociales</p>
-            <p className="text-xs text-gray-400">WhatsApp, Instagram y TikTok: solo tu @usuario. Google y Facebook: inicia sesión real.</p>
+            <p className="text-xs text-gray-400">WhatsApp, Instagram y TikTok: solo tu @usuario. Google: inicia sesión real.</p>
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
@@ -279,8 +277,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           <input key={soc.name} type="hidden" name={soc.name} value={socialVals[soc.name]} readOnly />
         ))}
         <p className="text-[11px] text-gray-400 mt-3">
-          Google y Facebook abren el login real y requieren configurarse en{' '}
-          <span className="font-medium">Supabase → Authentication → Providers</span> + Manual Linking (ver{' '}
+          Google abre el inicio de sesión real; requiere configurarse una sola vez en{' '}
+          <span className="font-medium">Supabase → Authentication → Providers</span> (ver{' '}
           <code className="bg-gray-100 px-1 rounded">INTEGRACIONES.md</code>).
         </p>
       </div>
@@ -739,7 +737,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     <div className={`w-12 h-12 rounded-2xl ${soc.bg} flex items-center justify-center`}>{soc.icon}</div>
                     <div>
                       <h3 className="font-bold text-lg text-gray-900">Tu {soc.label}</h3>
-                      <p className="text-xs text-gray-400">Solo escribe tu usuario — sin enlaces.</p>
+                      <p className="text-xs text-gray-400">Solo nombre de usuario — sin URL completa.</p>
                     </div>
                   </div>
                   <div className="space-y-1.5">

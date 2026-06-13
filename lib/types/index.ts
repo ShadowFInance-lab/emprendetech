@@ -17,6 +17,8 @@ export interface Profile {
   plan_status: PlanStatus
   plan_expires_at: string | null
   onboarding_done: boolean
+  role?: 'owner' | 'employee'
+  boss_id?: string | null
   created_at: string
   updated_at: string
 }

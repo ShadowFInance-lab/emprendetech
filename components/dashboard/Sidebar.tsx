@@ -31,6 +31,10 @@ export default function Sidebar({ store, profile }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  // Empleados: solo ven el POS (Ventas). El dueño ve todo.
+  const isEmployee = profile.role === 'employee'
+  const navItems = isEmployee ? NAV_ITEMS.filter(i => i.href === '/sales/new') : NAV_ITEMS
+
   const planBadgeColor: Record<string, string> = {
     free: 'bg-gray-100 text-gray-600',
     emprendedor: 'bg-blue-100 text-blue-700',
@@ -72,9 +76,9 @@ export default function Sidebar({ store, profile }: SidebarProps) {
             <p className="font-semibold text-gray-900 text-sm truncate">{store.name}</p>
             <span className={cn(
               'text-xs px-2 py-0.5 rounded-full font-medium',
-              planBadgeColor[profile.plan] ?? planBadgeColor.free
+              isEmployee ? 'bg-emerald-100 text-emerald-700' : (planBadgeColor[profile.plan] ?? planBadgeColor.free)
             )}>
-              {planLabel[profile.plan] ?? 'Gratis'}
+              {isEmployee ? 'Empleado' : (planLabel[profile.plan] ?? 'Gratis')}
             </span>
           </div>
         </div>
@@ -82,7 +86,7 @@ export default function Sidebar({ store, profile }: SidebarProps) {
 
       {/* Nav items */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(item => {
+        {navItems.map(item => {
           const isActive = pathname === item.href ||
             (item.href !== '/dashboard' && pathname.startsWith(item.href))
           return (
