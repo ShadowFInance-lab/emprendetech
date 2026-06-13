@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import { SUPPORTED_CURRENCIES } from '@/lib/utils/format'
 import type { Store, Plan } from '@/lib/types'
 import { Lock, Share2, MessageCircle } from 'lucide-react'
 import { InstagramIcon, FacebookIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
+import { createClient } from '@/lib/supabase/client'
 import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
 
@@ -51,6 +52,17 @@ const PRODUCT_ORDERS = [
   { id: 'manual', label: 'Orden manual' },
 ]
 
+function GoogleGlyph() {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+    </svg>
+  )
+}
+
 interface Props { store: Store; plan?: Plan }
 
 export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
@@ -87,6 +99,46 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [socialModal, setSocialModal] = useState<string | null>(null)
   const [modalValue, setModalValue] = useState('')
 
+  // Login real (Google / Facebook) vía Supabase Identity Linking
+  const [identities, setIdentities] = useState<{ provider: string; identity_data?: Record<string, unknown> | null }[]>([])
+  const [socialLoading, setSocialLoading] = useState<string | null>(null)
+  const loadIdentities = useCallback(async () => {
+    const supabase = createClient()
+    const { data } = await supabase.auth.getUserIdentities()
+    setIdentities((data?.identities ?? []) as { provider: string }[])
+  }, [])
+  useEffect(() => { loadIdentities() }, [loadIdentities])
+
+  async function toggleLogin(provider: string) {
+    const supabase = createClient()
+    const connected = identities.some(i => i.provider === provider)
+    if (connected) {
+      if (identities.length <= 1) { toast.error('No puedes desconectar tu único acceso. Conecta otro antes.'); return }
+      if (!confirm(`¿Desconectar ${provider}?`)) return
+      setSocialLoading(provider)
+      const idn = identities.find(i => i.provider === provider)
+      const { error } = await supabase.auth.unlinkIdentity(idn as never)
+      setSocialLoading(null)
+      if (error) { toast.error('No se pudo desconectar'); return }
+      toast.success('Desconectado'); loadIdentities()
+    } else {
+      setSocialLoading(provider)
+      const { error } = await supabase.auth.linkIdentity({
+        provider: provider as 'google' | 'facebook',
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=/settings` },
+      })
+      if (error) {
+        const msg = /manual linking/i.test(error.message)
+          ? 'Activa "Manual Linking" en Supabase → Authentication → Settings, y habilita el proveedor.'
+          : /not enabled|unsupported|provider/i.test(error.message)
+            ? `Habilita ${provider} en Supabase → Authentication → Providers (ver INTEGRACIONES.md).`
+            : `No se pudo conectar: ${error.message}`
+        toast.error(msg, { duration: 7000 })
+        setSocialLoading(null)
+      }
+    }
+  }
+
   function socialPrefix(name: string) {
     return ({ instagram: 'instagram.com/', facebook: 'facebook.com/', tiktok: 'tiktok.com/@', whatsapp: '' } as Record<string, string>)[name] ?? ''
   }
@@ -107,15 +159,17 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     setSocialModal(null)
   }
 
-  const SOCIALS = [
-    { name: 'whatsapp', label: 'WhatsApp', prefix: '', placeholder: '55 1234 5678', field: 'Tu número de WhatsApp (con lada)',
-      icon: <MessageCircle size={26} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
-    { name: 'instagram', label: 'Instagram', prefix: 'instagram.com/', placeholder: 'tu_tienda', field: 'Tu usuario de Instagram',
-      icon: <InstagramIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
-    { name: 'facebook', label: 'Facebook', prefix: 'facebook.com/', placeholder: 'tu.pagina', field: 'Tu página de Facebook',
-      icon: <FacebookIcon size={26} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
-    { name: 'tiktok', label: 'TikTok', prefix: 'tiktok.com/@', placeholder: 'tu_tienda', field: 'Tu usuario de TikTok',
-      icon: <TikTokIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
+  const SOCIALS: { name: string; type: 'handle' | 'login'; label: string; prefix: string; placeholder: string; field: string; icon: React.ReactNode; bg: string }[] = [
+    { name: 'whatsapp', type: 'handle', label: 'WhatsApp', prefix: '', placeholder: '55 1234 5678', field: 'Tu número de WhatsApp (con lada)',
+      icon: <MessageCircle size={24} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
+    { name: 'instagram', type: 'handle', label: 'Instagram', prefix: 'instagram.com/', placeholder: 'tu_tienda', field: 'Tu usuario de Instagram (instagram.com/tu_tienda)',
+      icon: <InstagramIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
+    { name: 'tiktok', type: 'handle', label: 'TikTok', prefix: 'tiktok.com/@', placeholder: 'tu_tienda', field: 'Tu usuario de TikTok (tiktok.com/@tu_tienda)',
+      icon: <TikTokIcon size={22} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
+    { name: 'google', type: 'login', label: 'Google', prefix: '', placeholder: '', field: '',
+      icon: <GoogleGlyph />, bg: 'bg-white border border-gray-200' },
+    { name: 'facebook', type: 'login', label: 'Facebook', prefix: '', placeholder: '', field: '',
+      icon: <FacebookIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-blue-500 to-blue-700' },
   ]
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -194,33 +248,41 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             <Share2 size={15} className="text-white" />
           </span>
           <div>
-            <p className="font-semibold text-gray-900 text-[15px] leading-tight">Redes en tu catálogo</p>
-            <p className="text-xs text-gray-400">Tu @usuario para mostrar en el catálogo público (opcional). Para iniciar sesión con tus redes usa &quot;Conectar redes sociales&quot; abajo.</p>
+            <p className="font-semibold text-gray-900 text-[15px] leading-tight">Redes sociales</p>
+            <p className="text-xs text-gray-400">WhatsApp, Instagram y TikTok: solo tu @usuario. Google y Facebook: inicia sesión real.</p>
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
           {SOCIALS.map(soc => {
-            const connected = !!socialVals[soc.name]
+            const isLogin = soc.type === 'login'
+            const connected = isLogin ? identities.some(i => i.provider === soc.name) : !!socialVals[soc.name]
+            const busy = socialLoading === soc.name
             return (
               <button
                 key={soc.name}
                 type="button"
-                onClick={() => openSocialModal(soc.name)}
-                className="rounded-xl border border-gray-100 bg-white p-3 flex flex-col items-center gap-1.5 hover:shadow-sm hover:border-gray-200 transition-all"
+                disabled={busy}
+                onClick={() => (isLogin ? toggleLogin(soc.name) : openSocialModal(soc.name))}
+                className="rounded-xl border border-gray-100 bg-white p-3 flex flex-col items-center gap-1.5 hover:shadow-sm hover:border-gray-200 transition-all disabled:opacity-60"
               >
                 <div className={`w-11 h-11 rounded-2xl ${soc.bg} flex items-center justify-center`}>{soc.icon}</div>
                 <p className="text-xs font-semibold text-gray-900">{soc.label}</p>
                 <span className={`text-[11px] font-medium ${connected ? 'text-green-600' : 'text-blue-600'}`}>
-                  {connected ? '✓ Agregado' : 'Agregar'}
+                  {busy ? '…' : connected ? (isLogin ? '✓ Conectado' : '✓ Agregado') : (isLogin ? 'Conectar' : 'Agregar')}
                 </span>
               </button>
             )
           })}
         </div>
-        {/* Inputs ocultos: el formulario envía los valores capturados en el modal */}
-        {SOCIALS.map(soc => (
+        {/* Inputs ocultos: el formulario envía los @usuario al guardar */}
+        {SOCIALS.filter(soc => soc.type === 'handle').map(soc => (
           <input key={soc.name} type="hidden" name={soc.name} value={socialVals[soc.name]} readOnly />
         ))}
+        <p className="text-[11px] text-gray-400 mt-3">
+          Google y Facebook abren el login real y requieren configurarse en{' '}
+          <span className="font-medium">Supabase → Authentication → Providers</span> + Manual Linking (ver{' '}
+          <code className="bg-gray-100 px-1 rounded">INTEGRACIONES.md</code>).
+        </p>
       </div>
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
