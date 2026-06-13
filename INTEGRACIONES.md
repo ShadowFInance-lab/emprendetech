@@ -1,52 +1,104 @@
 # 🔌 Integraciones externas — Mercanta Business
 
-Guía para dejar funcionando login social, redes y Mercado Pago. La **arquitectura ya está en el código**; aquí está exactamente qué credenciales crear y dónde ponerlas.
+Guía para dejar funcionando login social, redes y Mercado Pago. La **arquitectura ya está en el código** (botones en login/registro y botones "Conectar" dentro de Configuración). Aquí están los pasos EXACTOS por red.
+
+> **Dato clave del proyecto**
+> URL de callback de Supabase (la misma para todo): 
+> `https://lmwjzqhcenlyhxyxoftx.supabase.co/auth/v1/callback`
+> Project Ref de Supabase: `lmwjzqhcenlyhxyxoftx`
 
 ---
 
-## 1. Login social (Continuar con Google / Facebook)
+## 1. GOOGLE — pasos exactos
 
-**Arquitectura: ✅ ya implementada** (botones en login/registro → `supabase.auth.signInWithOAuth` → `/auth/callback` → sesión). **No necesitas variables en la app** — las credenciales van en el panel de Supabase.
+**A) Página exacta donde crear la app:** https://console.cloud.google.com/
+**B) Qué botón presionar:**
+1. Arriba, selector de proyecto → **"Proyecto nuevo"** → ponle nombre (ej. *Mercanta*) → **Crear**.
+2. Menú ☰ → **APIs y servicios → Pantalla de consentimiento OAuth** → tipo **Externo** → **Crear** → llena nombre de app + correo de soporte → **Guardar y continuar** (puedes dejar scopes por defecto).
+3. Menú ☰ → **APIs y servicios → Credenciales** → botón **"+ CREAR CREDENCIALES"** → **"ID de cliente de OAuth"**.
 
-### Google
-1. Ve a **https://console.cloud.google.com** → crea un proyecto.
-2. **APIs y servicios → Pantalla de consentimiento OAuth** → configúrala (External).
-3. **Credenciales → Crear credenciales → ID de cliente OAuth → Aplicación web**.
-4. En **URI de redirección autorizados** pega:
-   `https://lmwjzqhcenlyhxyxoftx.supabase.co/auth/v1/callback`
-5. Copia el **Client ID** y **Client Secret**.
-6. Supabase → **Authentication → Providers → Google** → pégalos → **Enable** → Save.
-
-### Facebook
-1. **https://developers.facebook.com** → Mis apps → Crear app (tipo "Consumidor").
-2. Agrega el producto **Facebook Login**.
-3. En **Valid OAuth Redirect URIs**: `https://lmwjzqhcenlyhxyxoftx.supabase.co/auth/v1/callback`
-4. Copia **App ID** y **App Secret**.
-5. Supabase → Authentication → Providers → **Facebook** → pégalos → Enable.
-
-> Apple/Microsoft: Supabase también los soporta (`apple`, `azure`). Cuando los quieras, se agrega el botón y se habilita el provider igual que arriba.
-
-**Después de habilitarlos en Supabase, los botones "Continuar con Google/Facebook" funcionan sin tocar el código.**
+**C) Qué tipo de aplicación seleccionar:** **Aplicación web** (Web application).
+**D) Qué permisos solicitar:** los básicos `email`, `profile`, `openid` (vienen por defecto; no necesitas verificación de Google para login básico).
+**E) Qué Client ID copiar:** el campo **"Tu ID de cliente"** (termina en `.apps.googleusercontent.com`).
+**F) Qué Client Secret copiar:** el campo **"Tu secreto de cliente"**.
+**G) Dónde pegarlos en Supabase:** Supabase → tu proyecto → **Authentication → Providers → Google** → pega **Client ID** y **Client Secret** → activa el switch **Enable Sign in with Google** → **Save**.
+**H) URL de callback a registrar:** en Google, dentro de la credencial, sección **"URIs de redireccionamiento autorizados" → AGREGAR URI**:
+`https://lmwjzqhcenlyhxyxoftx.supabase.co/auth/v1/callback`
+(Opcional, en "Orígenes autorizados de JavaScript": `https://emprendetech-shadow-black-s-projects.vercel.app`)
+**I) Cómo probar:** entra a tu app → **Configuración → Conectar redes → [Conectar] Google**, o en el login pulsa **"Continuar con Google"**. Debe abrir la pantalla oficial de Google y volver con la sesión iniciada / la cuenta vinculada.
 
 ---
 
-## 2. Redes del catálogo (Instagram / Facebook / TikTok / WhatsApp)
+## 2. FACEBOOK — pasos exactos
 
-Esto es **distinto** al login. Vincular la *cuenta de negocio* del cliente por OAuth requiere apps verificadas:
-- **WhatsApp Business / Instagram / Facebook** → Meta for Developers + **revisión de negocio** (Graph API permissions).
-- **TikTok** → TikTok for Developers + revisión.
+**A) Página exacta donde crear la app:** https://developers.facebook.com/apps/
+**B) Qué botón presionar:** **"Crear app"** (Create App).
+**C) Qué tipo de aplicación seleccionar:** caso de uso **"Autenticar y solicitar datos de usuarios con el inicio de sesión con Facebook"** → tipo **Consumidor / Empresa**. Después, en el panel, **Agregar producto → "Inicio de sesión con Facebook" → Configurar**.
+**D) Qué permisos solicitar:** `email` y `public_profile` (login básico; no requieren revisión).
+**E) Qué Client ID copiar:** **Configuración → Básica → "Identificador de la app" (App ID)**.
+**F) Qué Client Secret copiar:** **Configuración → Básica → "Clave secreta de la app" (App Secret)** → botón **Mostrar**.
+**G) Dónde pegarlos en Supabase:** Supabase → **Authentication → Providers → Facebook** → pega **App ID** (en *Client ID*) y **App Secret** (en *Client Secret*) → **Enable** → **Save**.
+**H) URL de callback a registrar:** en Facebook → **Inicio de sesión con Facebook → Configuración → "URI de redireccionamiento de OAuth válidos"**:
+`https://lmwjzqhcenlyhxyxoftx.supabase.co/auth/v1/callback`
+(En *Configuración → Básica* agrega el **Dominio de la app**: `lmwjzqhcenlyhxyxoftx.supabase.co`. Para publicar, pasa la app a **modo Activo**.)
+**I) Cómo probar:** app → **Configuración → Conectar redes → [Conectar] Facebook** o login **"Continuar con Facebook"**. Abre Facebook, autorizas y vuelves conectado.
 
-Hoy funciona con **@usuario** (sin URL manual). El OAuth real de estas redes es un proyecto que requiere tus apps aprobadas por Meta/TikTok. Variables que harían falta el día que las tengas:
+---
+
+## 3. INSTAGRAM BUSINESS — pasos exactos
+
+> ⚠️ **Realidad técnica:** Supabase **no** tiene un proveedor nativo "Instagram". El login/datos de una **cuenta de Instagram Business** se obtiene **a través de Facebook** (la cuenta IG Business debe estar ligada a una Página de Facebook) usando la **Instagram Graph API**, y Meta exige **Revisión de la app**. Por eso "Conectar Instagram" dentro de la plataforma muestra estos pasos en vez de un OAuth instantáneo.
+
+**A) Página exacta donde crear la app:** https://developers.facebook.com/apps/ (la misma de Facebook; puedes reutilizar la app del paso 2).
+**B) Qué botón presionar:** en el panel de la app → **"Agregar producto"** → activa **"Inicio de sesión con Facebook"** y **"Instagram Graph API"**.
+**C) Qué tipo de aplicación seleccionar:** tipo **Empresa** (Business).
+**D) Qué permisos solicitar (requieren App Review de Meta):** `instagram_basic`, `pages_show_list`, `pages_read_engagement`, `business_management` (agrega `instagram_content_publish` solo si vas a publicar).
+**E) Qué Client ID copiar:** el **App ID** de Facebook (Configuración → Básica).
+**F) Qué Client Secret copiar:** el **App Secret** de Facebook (Configuración → Básica).
+**G) Dónde pegarlos en Supabase:** se pegan en **Authentication → Providers → Facebook** (Instagram Business viaja sobre el proveedor de Facebook; no hay casilla "Instagram" separada).
+**H) URL de callback a registrar:** la misma de Facebook:
+`https://lmwjzqhcenlyhxyxoftx.supabase.co/auth/v1/callback`
+**I) Cómo probar:** 1) Convierte tu Instagram a cuenta **Business/Creador** y enlázala a una **Página de Facebook**. 2) Envía los permisos a **Revisión de la app**. 3) Aprobados, conéctala desde **Configuración → Conectar redes**. Mientras no estén aprobados, solo funciona con tu propia cuenta de desarrollador (modo prueba).
+
+---
+
+## 4. TIKTOK BUSINESS — pasos exactos
+
+> ⚠️ **Realidad técnica:** TikTok **tampoco** es proveedor nativo de Supabase. Requiere el **Login Kit** de TikTok y un **flujo OAuth propio** (una ruta `/api` en el servidor que intercambie el code por token). Estos pasos dejan **listas tus credenciales**; el botón "Conectar TikTok" muestra esta guía hasta que tu app esté aprobada.
+
+**A) Página exacta donde crear la app:** https://developers.tiktok.com/ → **Manage apps** (https://developers.tiktok.com/apps).
+**B) Qué botón presionar:** **"Connect an app"** (o **"Create an app"**).
+**C) Qué tipo de aplicación seleccionar:** app de **TikTok for Developers** con cuenta/identidad **verificada** (para Business añade *TikTok for Business*).
+**D) Qué permisos (scopes) solicitar:** `user.info.basic` (perfil); agrega `video.list` / `video.publish` solo si listarás o publicarás videos. Cada scope pasa por **revisión**.
+**E) Qué Client ID copiar:** **Client key** (TikTok lo llama *Client key*).
+**F) Qué Client Secret copiar:** **Client secret**.
+**G) Dónde pegarlos:** TikTok no se pega en Supabase. Van como variables de entorno en **Vercel → Settings → Environment Variables**:
 ```
-META_APP_ID=
-META_APP_SECRET=
-TIKTOK_CLIENT_KEY=
-TIKTOK_CLIENT_SECRET=
+TIKTOK_CLIENT_KEY=...
+TIKTOK_CLIENT_SECRET=...
 ```
+(y se consumen desde una ruta OAuth propia en el servidor).
+**H) URL de callback (Redirect URI) a registrar en TikTok:**
+`https://emprendetech-shadow-black-s-projects.vercel.app/api/oauth/tiktok/callback`
+(esa ruta `/api/oauth/tiktok/callback` se implementa cuando tengas las credenciales aprobadas).
+**I) Cómo probar:** con la app en modo *sandbox*, agrega tu usuario de TikTok como **tester**, pulsa "Conectar TikTok", autoriza y verifica que regresa el token. En producción requiere la **revisión aprobada**.
 
 ---
 
-## 3. Mercado Pago (cobros de planes y ventas)
+## 5. Resumen de estados (login social)
+
+| Red | Proveedor nativo en Supabase | Conectar en la plataforma | Qué falta para activarlo |
+|---|---|---|---|
+| **Google** | ✅ Sí | ✅ Botón [Conectar] real (Identity Linking) | Pegar Client ID/Secret en Supabase + habilitar **Manual Linking** |
+| **Facebook** | ✅ Sí | ✅ Botón [Conectar] real | Pegar App ID/Secret en Supabase + Manual Linking |
+| **Instagram Business** | ❌ No (vía Facebook) | ⚠️ Botón muestra pasos | App de Meta + **App Review** aprobada |
+| **TikTok Business** | ❌ No (OAuth propio) | ⚠️ Botón muestra pasos | App de TikTok aprobada + ruta `/api/oauth/tiktok` |
+
+> **Habilitar el botón [Conectar] de Google/Facebook:** además de pegar credenciales, ve a **Supabase → Authentication → Settings** y activa **"Manual linking"** (permite vincular varias identidades a una misma cuenta y desconectarlas).
+
+---
+
+## 6. Mercado Pago (cobros de planes y ventas)
 
 **Arquitectura: ✅ ya implementada** (`createCheckoutAction` → preferencia → Checkout Pro → webhook `/api/webhooks/mercadopago` activa el plan).
 
@@ -58,38 +110,20 @@ NEXT_PUBLIC_APP_URL=https://emprendetech-shadow-black-s-projects.vercel.app
 ```
 > ⚠️ **Después de agregar/cambiar variables, haz REDEPLOY** (Vercel solo las aplica a deploys nuevos). Verifica en **`/api/mp-status`** que digan `true`.
 
-### Por qué "solo aparece Mercado Pago Seguro / no abre el pago"
-Es porque `MERCADOPAGO_ACCESS_TOKEN` no se está leyendo en el servidor (deploy sin la variable). Al estar `true` en `/api/mp-status`, el botón crea la preferencia y abre el Checkout real.
-
----
-
-## 4. Modo Sandbox (pruebas sin dinero real)
-
-Para probar sin cobrar de verdad, usa **credenciales de prueba** de Mercado Pago:
-1. MP → **Tus integraciones → tu app → Credenciales de prueba** → copia el **TEST** Access Token y Public Key.
-2. Ponlos en Vercel (en lugar de los `APP_USR-` de producción) → Redeploy.
-3. MP → **Cuentas de prueba** → crea un **vendedor** y un **comprador** de prueba.
-
----
-
-## 5. PASOS PARA PROBAR MERCADO PAGO
-
-1. Asegúrate de que `/api/mp-status` diga `mercadopago_access_token_presente: true`.
-2. Entra a `…/subscription` y pulsa **"Elegir VIP Plus"** → te lleva al Checkout de Mercado Pago.
-3. Paga con una **tarjeta de prueba**:
+### Probar Mercado Pago
+1. `/api/mp-status` debe decir `mercadopago_access_token_presente: true`.
+2. `…/subscription` → **"Elegir VIP Plus"** → abre el Checkout de Mercado Pago.
+3. Tarjeta de prueba:
    | Resultado | Tarjeta | CVV | Vence | Titular |
    |---|---|---|---|---|
-   | ✅ Aprobado | `5031 7557 3453 0604` (Master) | 123 | 11/30 | **APRO** |
-   | ❌ Rechazado | misma tarjeta | 123 | 11/30 | **OTHE** |
-   | ⏳ Pendiente | misma tarjeta | 123 | 11/30 | **CONT** |
-   (el **nombre del titular** define el resultado del pago).
-4. Al aprobarse, Mercado Pago llama al **webhook** → tu plan cambia a VIP Plus.
-5. Verifica: vuelve a `…/subscription` → debe decir **"TU PLAN"** en VIP Plus (recarga). Y en la barra lateral el badge del plan se actualiza.
-6. Para **rechazado**: usa titular `OTHE` → vuelves con estado "failure" y el plan NO cambia.
+   | ✅ Aprobado | `5031 7557 3453 0604` | 123 | 11/30 | **APRO** |
+   | ❌ Rechazado | misma | 123 | 11/30 | **OTHE** |
+   | ⏳ Pendiente | misma | 123 | 11/30 | **CONT** |
+4. Al aprobarse → webhook → tu plan cambia a VIP Plus.
 
 ---
 
-## 6. Lista completa de variables de entorno
+## 7. Lista completa de variables de entorno
 
 | Variable | Para qué | Dónde se pone | Estado |
 |---|---|---|---|
@@ -99,9 +133,8 @@ Para probar sin cobrar de verdad, usa **credenciales de prueba** de Mercado Pago
 | `NEXT_PUBLIC_APP_URL` | URLs de retorno + webhook | Vercel | ⚠️ **crítica** para pagos |
 | `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | Checkout | Vercel | ⚠️ verifica en /api/mp-status |
 | `MERCADOPAGO_ACCESS_TOKEN` | Preferencia + webhook | Vercel | ⚠️ verifica en /api/mp-status |
-| Google Client ID/Secret | Login Google | **Supabase** (no en la app) | ⬜ por configurar |
-| Facebook App ID/Secret | Login Facebook | **Supabase** (no en la app) | ⬜ por configurar |
-| `META_APP_ID` / `META_APP_SECRET` | Redes catálogo (futuro) | Vercel | ⬜ opcional |
-| `TIKTOK_CLIENT_KEY` / `_SECRET` | TikTok (futuro) | Vercel | ⬜ opcional |
+| Google Client ID/Secret | Login + Conectar Google | **Supabase** (no en la app) | ⬜ por configurar |
+| Facebook App ID/Secret | Login + Conectar Facebook | **Supabase** (no en la app) | ⬜ por configurar |
+| `TIKTOK_CLIENT_KEY` / `_SECRET` | Conectar TikTok (OAuth propio) | Vercel | ⬜ requiere app aprobada |
 
-**Comprueba el estado real en vivo:** abre `/api/mp-status`.
+**Comprueba el estado real de pagos en vivo:** abre `/api/mp-status`.

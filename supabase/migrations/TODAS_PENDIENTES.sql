@@ -77,4 +77,29 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT;
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS bg_color TEXT;
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS button_style TEXT;
 
+-- ─── 015: Módulo de Cotizaciones ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS quotes (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id      UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  customer_id   UUID REFERENCES customers(id) ON DELETE SET NULL,
+  customer_name TEXT,
+  folio         TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'borrador'
+                CHECK (status IN ('borrador','enviada','aceptada','rechazada','expirada','convertida')),
+  items         JSONB NOT NULL DEFAULT '[]'::jsonb,
+  subtotal      DECIMAL(12,2) NOT NULL DEFAULT 0,
+  discount_amt  DECIMAL(12,2) NOT NULL DEFAULT 0,
+  total         DECIMAL(12,2) NOT NULL DEFAULT 0,
+  notes         TEXT,
+  valid_until   DATE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS quotes_store_idx ON quotes(store_id);
+ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "quotes_owner" ON quotes;
+CREATE POLICY "quotes_owner" ON quotes FOR ALL
+  USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()))
+  WITH CHECK (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StoreSettingsForm from '@/components/settings/StoreSettingsForm'
+import SocialConnections from '@/components/settings/SocialConnections'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
         </p>
       </div>
       <StoreSettingsForm store={store} plan={profile?.plan ?? 'free'} />
+      <SocialConnections />
     </div>
   )
 }
