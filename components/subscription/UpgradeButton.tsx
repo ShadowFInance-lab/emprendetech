@@ -17,12 +17,16 @@ export default function UpgradeButton({ plan, label, accent }: Props) {
   const [isPending, startTransition] = useTransition()
 
   function handleUpgrade() {
+    console.log('[MP DEBUG] UpgradeButton: iniciando checkout del plan →', plan)
     startTransition(async () => {
       const result = await createCheckoutAction(plan)
+      console.log('[MP DEBUG] UpgradeButton: respuesta de createCheckoutAction →', result)
       if (result.success && result.checkoutUrl) {
         // Pago en Mercado Pago (Checkout Pro). El webhook activa el plan al aprobar.
+        console.log('[MP DEBUG] UpgradeButton: redirigiendo a →', result.checkoutUrl)
         window.location.href = result.checkoutUrl
       } else {
+        console.warn('[MP DEBUG] UpgradeButton: sin checkoutUrl. Error →', result.error)
         toast.error(result.error ?? 'Error al iniciar el pago')
       }
     })

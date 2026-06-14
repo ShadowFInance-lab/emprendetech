@@ -71,8 +71,25 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
   const planConfig = PLAN_PRICES[plan]
   if (!planConfig) return { success: false, error: 'Plan inválido' }
 
+  // ─── [MP DEBUG] diagnóstico de configuración (sin exponer el token) ────────
+  const token = process.env.MERCADOPAGO_ACCESS_TOKEN || ''
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+  const httpsUrl = /^https:\/\//.test(appUrl) // MP rechaza auto_return/back_urls si no son https válidos
+  console.log('[MP DEBUG] createCheckoutAction →', {
+    plan,
+    userId: user.id,
+    userEmail: user.email,
+    amount: planConfig.amount,
+    appUrl,
+    httpsUrl,
+    mpConfigured: isMercadoPagoConfigured(),
+    tokenPresent: !!token,
+    tokenType: token.startsWith('TEST-') ? 'test' : token.startsWith('APP_USR') ? 'produccion' : 'desconocido',
+  })
+
   // Si MP no está configurado, devolver mensaje claro
   if (!isMercadoPagoConfigured()) {
+    console.warn('[MP DEBUG] MP NO configurado: falta MERCADOPAGO_ACCESS_TOKEN en el entorno del servidor')
     return {
       success: false,
       error: 'Pagos en línea no activos. Si eres el dueño: agrega MERCADOPAGO_ACCESS_TOKEN en Vercel → Environment Variables y haz REDEPLOY (las variables solo aplican a deploys nuevos).',
@@ -80,45 +97,52 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
   }
 
   const client = getMercadoPagoClient()
-  if (!client) return { success: false, error: 'Error de configuración de pagos' }
+  if (!client) {
+    console.error('[MP DEBUG] getMercadoPagoClient() devolvió null')
+    return { success: false, error: 'Error de configuración de pagos' }
+  }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-  // MP rechaza la preferencia si auto_return/back_urls no son https válidos.
-  const httpsUrl = /^https:\/\//.test(appUrl)
+  const body = {
+    items: [
+      {
+        id: `plan_${plan}`,
+        title: planConfig.title,
+        quantity: 1,
+        unit_price: planConfig.amount,
+        currency_id: 'MXN',
+      },
+    ],
+    payer: { email: user.email ?? undefined },
+    metadata: { user_id: user.id, plan },
+    external_reference: `${user.id}|${plan}`,
+    // Solo si hay URL https válida (si no, la preferencia se crea igual y abre el checkout)
+    ...(httpsUrl ? {
+      back_urls: {
+        success: `${appUrl}/subscription?status=success`,
+        failure: `${appUrl}/subscription?status=failure`,
+        pending: `${appUrl}/subscription?status=pending`,
+      },
+      auto_return: 'approved' as const,
+      notification_url: `${appUrl}/api/webhooks/mercadopago`,
+    } : {}),
+  }
+  console.log('[MP DEBUG] preference.body →', JSON.stringify(body))
 
   try {
     const preference = new Preference(client)
-    const result = await preference.create({
-      body: {
-        items: [
-          {
-            id: `plan_${plan}`,
-            title: planConfig.title,
-            quantity: 1,
-            unit_price: planConfig.amount,
-            currency_id: 'MXN',
-          },
-        ],
-        payer: { email: user.email ?? undefined },
-        metadata: { user_id: user.id, plan },
-        external_reference: `${user.id}|${plan}`,
-        // Solo si hay URL https válida (si no, la preferencia se crea igual y abre el checkout)
-        ...(httpsUrl ? {
-          back_urls: {
-            success: `${appUrl}/subscription?status=success`,
-            failure: `${appUrl}/subscription?status=failure`,
-            pending: `${appUrl}/subscription?status=pending`,
-          },
-          auto_return: 'approved' as const,
-          notification_url: `${appUrl}/api/webhooks/mercadopago`,
-        } : {}),
-      },
+    const result = await preference.create({ body })
+    console.log('[MP DEBUG] preferencia creada OK →', {
+      id: result.id,
+      init_point: result.init_point,
+      sandbox_init_point: result.sandbox_init_point,
     })
-
     return { success: true, checkoutUrl: result.init_point, preferenceId: result.id }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido'
-    console.error('Error creando preferencia MP:', err)
+    console.error('[MP DEBUG] preference.create FALLÓ →', msg)
+    console.error('[MP DEBUG] error completo:', err)
+    const cause = (err as { cause?: unknown })?.cause
+    if (cause) console.error('[MP DEBUG] error.cause:', JSON.stringify(cause))
     return { success: false, error: `Mercado Pago rechazó el pago: ${msg}` }
   }
 }
@@ -239,27 +263,38 @@ export async function createSalePaymentLink(
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
   const httpsUrl = /^https:\/\//.test(appUrl)
+  const token = process.env.MERCADOPAGO_ACCESS_TOKEN || ''
+  console.log('[MP DEBUG] createSalePaymentLink →', {
+    amount, appUrl, httpsUrl,
+    tokenType: token.startsWith('TEST-') ? 'test' : token.startsWith('APP_USR') ? 'produccion' : 'desconocido',
+  })
+
+  const body = {
+    items: [{
+      id: 'venta',
+      title: description.slice(0, 120),
+      quantity: 1,
+      unit_price: Math.round(amount * 100) / 100,
+      currency_id: 'MXN',
+    }],
+    ...(httpsUrl ? {
+      back_urls: { success: `${appUrl}/sales`, failure: `${appUrl}/sales/new`, pending: `${appUrl}/sales` },
+      auto_return: 'approved' as const,
+    } : {}),
+  }
+  console.log('[MP DEBUG] sale preference.body →', JSON.stringify(body))
+
   try {
     const preference = new Preference(client)
-    const result = await preference.create({
-      body: {
-        items: [{
-          id: 'venta',
-          title: description.slice(0, 120),
-          quantity: 1,
-          unit_price: Math.round(amount * 100) / 100,
-          currency_id: 'MXN',
-        }],
-        ...(httpsUrl ? {
-          back_urls: { success: `${appUrl}/sales`, failure: `${appUrl}/sales/new`, pending: `${appUrl}/sales` },
-          auto_return: 'approved' as const,
-        } : {}),
-      },
-    })
+    const result = await preference.create({ body })
+    console.log('[MP DEBUG] sale preferencia creada OK →', { id: result.id, init_point: result.init_point })
     return { success: true, checkoutUrl: result.init_point }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido'
-    console.error('Error creando link de pago de venta:', err)
+    console.error('[MP DEBUG] sale preference.create FALLÓ →', msg)
+    console.error('[MP DEBUG] error completo:', err)
+    const cause = (err as { cause?: unknown })?.cause
+    if (cause) console.error('[MP DEBUG] error.cause:', JSON.stringify(cause))
     return { success: false, error: `Mercado Pago rechazó el pago: ${msg}` }
   }
 }
