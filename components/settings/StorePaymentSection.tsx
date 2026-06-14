@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Wallet, Loader2, Check, Trash2 } from 'lucide-react'
+import { Wallet, Loader2, Check, Trash2, Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getStorePaymentStatus, saveStorePaymentTokenAction, clearStorePaymentTokenAction } from '@/lib/actions/payments'
@@ -15,6 +15,7 @@ export default function StorePaymentSection() {
   const [configured, setConfigured] = useState(false)
   const [ready, setReady] = useState(false)
   const [token, setToken] = useState('')
+  const [showManual, setShowManual] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const refresh = useCallback(async () => {
@@ -24,19 +25,32 @@ export default function StorePaymentSection() {
   }, [])
   useEffect(() => { refresh() }, [refresh])
 
+  // Avisos al volver del OAuth de Mercado Pago (?mp=...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const mp = params.get('mp')
+    if (!mp) return
+    if (mp === 'ok') { toast.success('Cuenta de Mercado Pago conectada'); refresh() }
+    else if (mp === 'cfg') toast('Para el botón de conexión, el administrador debe configurar MERCADOPAGO_CLIENT_ID. Mientras tanto, pega tu Access Token.', { duration: 8000, icon: 'ℹ️' })
+    else if (mp === 'err') toast.error('No se pudo conectar Mercado Pago. Intenta de nuevo o pega tu token.')
+    params.delete('mp')
+    const qs = params.toString()
+    window.history.replaceState({}, '', `/settings${qs ? `?${qs}` : ''}`)
+  }, [refresh])
+
   function save() {
     if (!token.trim()) { toast.error('Pega tu Access Token de Mercado Pago'); return }
     startTransition(async () => {
       const res = await saveStorePaymentTokenAction(token)
-      if (res.success) { toast.success('Cuenta de cobros guardada'); setToken(''); refresh() }
+      if (res.success) { toast.success('Cuenta de cobros guardada'); setToken(''); setShowManual(false); refresh() }
       else toast.error(res.error ?? 'Error', { duration: 6000 })
     })
   }
   function clear() {
-    if (!confirm('¿Quitar tu cuenta de Mercado Pago para ventas?')) return
+    if (!confirm('¿Desconectar tu cuenta de Mercado Pago para ventas?')) return
     startTransition(async () => {
       const res = await clearStorePaymentTokenAction()
-      if (res.success) { toast.success('Cuenta quitada'); refresh() }
+      if (res.success) { toast.success('Cuenta desconectada'); refresh() }
       else toast.error(res.error ?? 'Error')
     })
   }
@@ -53,28 +67,40 @@ export default function StorePaymentSection() {
         </div>
       </div>
 
-      {ready && configured && (
-        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
-          <span className="text-sm text-green-700 flex items-center gap-2"><Check size={15} /> Cuenta de cobros conectada</span>
+      {ready && configured ? (
+        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+          <span className="text-sm text-green-700 flex items-center gap-2"><Check size={16} /> Cuenta de cobros conectada</span>
           <button onClick={clear} disabled={isPending}
             className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-600">
-            <Trash2 size={13} /> Quitar
+            <Trash2 size={13} /> Desconectar
           </button>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Botón OAuth (1 clic) */}
+          <a href="/api/oauth/mercadopago/start"
+            className="flex items-center justify-center gap-2 h-12 rounded-xl bg-[#009ee3] hover:bg-[#008fcc] text-white font-semibold transition-colors shadow-md">
+            <Link2 size={18} /> Conectar con Mercado Pago
+          </a>
 
-      <div className="space-y-2">
-        <Input value={token} onChange={e => setToken(e.target.value)} type="password"
-          placeholder={configured ? 'Pega un nuevo Access Token para reemplazar' : 'Access Token de Mercado Pago (APP_USR-…)'}
-          className="h-10 text-sm" />
-        <Button onClick={save} disabled={isPending} className="h-10 bg-gradient-to-r from-sky-500 to-cyan-500 hover:opacity-90">
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Wallet size={16} className="mr-1.5" /> {configured ? 'Actualizar cuenta' : 'Conectar cuenta de cobros'}</>}
-        </Button>
-        <p className="text-[11px] text-gray-400">
-          Lo obtienes en <span className="font-medium">Mercado Pago → Tus integraciones → tu app → Credenciales</span> (Access Token).
-          Se guarda cifrado en tu tienda y nunca se muestra en el catálogo. Empleados cobran a esta misma cuenta.
-        </p>
-      </div>
+          {/* Alternativa: pegar token manualmente */}
+          <button onClick={() => setShowManual(v => !v)} className="text-xs text-gray-500 hover:text-gray-700 underline">
+            {showManual ? 'Ocultar' : 'O pega tu Access Token manualmente'}
+          </button>
+          {showManual && (
+            <div className="space-y-2">
+              <Input value={token} onChange={e => setToken(e.target.value)} type="password"
+                placeholder="Access Token de Mercado Pago (APP_USR-…)" className="h-10 text-sm" />
+              <Button onClick={save} disabled={isPending} className="h-10 bg-gradient-to-r from-sky-500 to-cyan-500 hover:opacity-90">
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Wallet size={16} className="mr-1.5" /> Guardar token</>}
+              </Button>
+              <p className="text-[11px] text-gray-400">
+                Lo obtienes en <span className="font-medium">Mercado Pago → Tus integraciones → tu app → Credenciales</span>. Se guarda en tu tienda y nunca se muestra en el catálogo.
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

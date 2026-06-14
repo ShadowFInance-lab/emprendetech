@@ -218,7 +218,12 @@ export async function uploadStoreImage(
     .eq('id', storeId)
     .eq('owner_id', user.id)
 
-  if (updateError) return { success: false, error: 'Se subió la imagen pero no se guardó el enlace.' }
+  if (updateError) {
+    const hint = type === 'background'
+      ? ' Ejecuta la migración 022_catalog_background.sql en Supabase (falta la columna background_url).'
+      : ''
+    return { success: false, error: `Se subió la imagen pero no se guardó el enlace.${hint}` }
+  }
 
   revalidatePath('/settings')
   const { data: storeRow } = await supabase.from('stores').select('slug').eq('id', storeId).single()

@@ -32,12 +32,11 @@ export async function getMyRole(): Promise<{ role: 'owner' | 'employee'; plan: s
 }
 
 /**
- * Crea un empleado SIN requerir service-role key:
- * 1) signUp con cliente anónimo (no toca la sesión del dueño)
- * 2) RPC assign_employee (SECURITY DEFINER): marca role='employee'+boss_id y
- *    confirma el correo del empleado.
+ * Crea un empleado pidiendo SOLO nombre + contraseña (sin correo).
+ * Generamos un "usuario" (correo interno) a partir del nombre. No requiere
+ * service-role key: usa signUp anónimo + RPC assign_employee (SECURITY DEFINER).
  */
-export async function createEmployeeAction(input: { name: string; email: string; password: string }): Promise<ActionResult> {
+export async function createEmployeeAction(input: { name: string; password: string }): Promise<ActionResult & { loginEmail?: string }> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -49,21 +48,25 @@ export async function createEmployeeAction(input: { name: string; email: string;
       return { success: false, error: 'Las cuentas de empleado están disponibles en planes de pago.' }
     }
 
-    const email = input.email?.trim().toLowerCase()
-    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { success: false, error: 'Correo inválido' }
+    const name = (input.name || '').trim()
+    if (!name) return { success: false, error: 'Escribe el nombre del empleado' }
     if (!input.password || input.password.length < 6) return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
 
-    // 1) Crear el usuario con cliente anónimo (sin persistir sesión → no afecta al dueño)
+    // "usuario" interno desde el nombre (NFD + quitar todo lo no alfanumérico quita acentos)
+    const slug = name.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '').slice(0, 16) || 'empleado'
+    const email = `${slug}@empleados.mercanta.app`
+
+    // 1) Crear el usuario con cliente anónimo (no afecta la sesión del dueño)
     const anon = createPublicClient()
     const { data: signUpData, error: signErr } = await anon.auth.signUp({
       email,
       password: input.password,
-      options: { data: { full_name: input.name?.trim() || email } },
+      options: { data: { full_name: name } },
     })
     if (signErr || !signUpData?.user) {
       const already = /registered|already|exists/i.test(signErr?.message ?? '')
       console.error('[EMPLEADO DEBUG] signUp error:', signErr?.message)
-      return { success: false, error: already ? 'Ese correo ya tiene una cuenta.' : `No se pudo crear el empleado: ${signErr?.message ?? 'error'}` }
+      return { success: false, error: already ? `Ya existe un empleado llamado "${name}". Usa otro nombre.` : `No se pudo crear el empleado: ${signErr?.message ?? 'error'}` }
     }
 
     // 2) Asignar rol de empleado + confirmar correo (RPC SECURITY DEFINER)
@@ -75,7 +78,7 @@ export async function createEmployeeAction(input: { name: string; email: string;
     }
 
     revalidatePath('/settings')
-    return { success: true }
+    return { success: true, loginEmail: email }
   } catch (err) {
     console.error('[EMPLEADO DEBUG] createEmployeeAction throw:', err)
     return { success: false, error: 'No se pudo crear el empleado. Aplica la migración 021 en Supabase.' }
