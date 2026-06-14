@@ -71,11 +71,13 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [saved, setSaved] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
+  const [uploadingBg, setUploadingBg] = useState(false)
   const logoRef = useRef<HTMLInputElement>(null)
   const bannerRef = useRef<HTMLInputElement>(null)
 
   const [logoUrl, setLogoUrl] = useState(store.logo_url ?? '')
   const [bannerUrl, setBannerUrl] = useState(store.banner_url ?? '')
+  const [backgroundUrl, setBackgroundUrl] = useState(store.background_url ?? '')
   const [skin, setSkin] = useState(store.skin)
   const [fontFamily, setFontFamily] = useState(store.font_family)
   const [productOrder, setProductOrder] = useState(store.product_order)
@@ -198,7 +200,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     })
   }
 
-  async function handleImageUpload(file: File, type: 'logo' | 'banner') {
+  async function handleImageUpload(file: File, type: 'logo' | 'banner' | 'background') {
     // Validación clara ANTES de subir
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
     if (!validTypes.includes(file.type)) {
@@ -211,7 +213,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     }
 
     if (type === 'logo') setUploadingLogo(true)
-    else setUploadingBanner(true)
+    else if (type === 'banner') setUploadingBanner(true)
+    else setUploadingBg(true)
 
     const fd = new FormData()
     fd.set('file', file)
@@ -219,14 +222,16 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     const result = await uploadStoreImage(store.id, fd)
     if (result.success && result.url) {
       if (type === 'logo') setLogoUrl(result.url)
-      else setBannerUrl(result.url)
-      toast.success(`${type === 'logo' ? 'Logo' : 'Banner'} actualizado`)
+      else if (type === 'banner') setBannerUrl(result.url)
+      else setBackgroundUrl(result.url)
+      toast.success('Imagen actualizada')
     } else {
       toast.error(result.error ?? 'Error al subir imagen')
     }
 
     if (type === 'logo') setUploadingLogo(false)
-    else setUploadingBanner(false)
+    else if (type === 'banner') setUploadingBanner(false)
+    else setUploadingBg(false)
   }
 
   return (
@@ -663,6 +668,25 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       </label>
                       <span className="text-xs text-gray-400">{bgColor}</span>
                     </div>
+                    {/* Imagen de fondo opcional (se ve detrás del catálogo) */}
+                    <div className="mt-2 flex items-center gap-2">
+                      {backgroundUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={backgroundUrl} alt="Fondo" className="w-12 h-9 rounded-lg object-cover ring-1 ring-black/10" />
+                      ) : (
+                        <span className="w-12 h-9 rounded-lg bg-gray-100 ring-1 ring-black/10" />
+                      )}
+                      <label className="text-xs text-blue-600 hover:underline cursor-pointer inline-flex items-center gap-1">
+                        {uploadingBg ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                        {backgroundUrl ? 'Cambiar imagen' : 'Subir imagen'}
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, 'background') }} />
+                      </label>
+                      {backgroundUrl && (
+                        <button type="button" onClick={() => setBackgroundUrl('')} className="text-[11px] text-gray-400 hover:text-red-500">Quitar</button>
+                      )}
+                    </div>
+                    <input type="hidden" name="background_url" value={backgroundUrl} />
                   </div>
                   <div>
                     <Label className="text-xs text-gray-500">Estilo de botones</Label>

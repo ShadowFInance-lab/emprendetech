@@ -22,11 +22,13 @@ interface Props {
 const RANGE_LABEL: Record<RangeKey, string> = { today: 'Hoy', week: 'Esta semana', month: 'Este mes' }
 const AUTO_KEY = 'et_autodownload_enabled'
 const LAST_KEY = 'et_autodownload_last'
+const AUTO_HOUR_KEY = 'et_autodownload_hour'
 
 export default function DailySalesExport({ today, week, month, isPaid, storeName, currency, dateLabel }: Props) {
   const [range, setRange] = useState<RangeKey>('today')
   const [busy, setBusy] = useState<'excel' | 'pdf' | null>(null)
   const [auto, setAuto] = useState(false)
+  const [autoHour, setAutoHour] = useState('21')
 
   const sales = range === 'today' ? today : range === 'week' ? week : month
   const total = sales.reduce((a, s) => a + Number(s.total), 0)
@@ -52,8 +54,12 @@ export default function DailySalesExport({ today, week, month, isPaid, storeName
   useEffect(() => {
     if (!isPaid) return
     const enabled = localStorage.getItem(AUTO_KEY) === '1'
+    const hour = parseInt(localStorage.getItem(AUTO_HOUR_KEY) || '21', 10)
     setAuto(enabled)
-    if (enabled && today.length > 0 && localStorage.getItem(LAST_KEY) !== dateLabel) {
+    setAutoHour(String(hour))
+    const nowHour = new Date().getHours()
+    // Solo descarga si ya pasó la hora elegida y no se descargó hoy
+    if (enabled && nowHour >= hour && today.length > 0 && localStorage.getItem(LAST_KEY) !== dateLabel) {
       localStorage.setItem(LAST_KEY, dateLabel)
       exportSalesToExcel(today, { storeName, currency, dateLabel: `Hoy-${dateLabel}` })
         .then(() => toast.success('Descarga automática del reporte de hoy'))
@@ -66,6 +72,12 @@ export default function DailySalesExport({ today, week, month, isPaid, storeName
     setAuto(v)
     localStorage.setItem(AUTO_KEY, v ? '1' : '0')
     toast.success(v ? 'Descarga automática activada' : 'Descarga automática desactivada')
+  }
+
+  function changeHour(h: string) {
+    setAutoHour(h)
+    localStorage.setItem(AUTO_HOUR_KEY, h)
+    toast.success(`Reporte automático a las ${h.padStart(2, '0')}:00`)
   }
 
   return (
@@ -122,11 +134,29 @@ export default function DailySalesExport({ today, week, month, isPaid, storeName
       </div>
 
       {isPaid && (
-        <label className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2 cursor-pointer text-xs text-gray-600 select-none">
-          <input type="checkbox" checked={auto} onChange={e => toggleAuto(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 text-blue-600" />
-          Descargar el reporte de hoy automáticamente cada día
-        </label>
+        <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between gap-3 flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600 select-none">
+            <input type="checkbox" checked={auto} onChange={e => toggleAuto(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+            Descargar el reporte de hoy automáticamente cada día
+          </label>
+          {auto && (
+            <label className="flex items-center gap-1.5 text-xs text-gray-500">
+              a las
+              <select value={autoHour} onChange={e => changeHour(e.target.value)}
+                className="h-8 px-2 border border-gray-200 rounded-lg bg-white text-gray-700 font-medium">
+                {Array.from({ length: 17 }, (_, i) => i + 7).map(h => (
+                  <option key={h} value={String(h)}>{String(h).padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+      {isPaid && auto && (
+        <p className="text-[11px] text-gray-400 mt-1.5">
+          Se descarga al abrir la app a partir de esa hora (una vez al día).
+        </p>
       )}
     </div>
   )

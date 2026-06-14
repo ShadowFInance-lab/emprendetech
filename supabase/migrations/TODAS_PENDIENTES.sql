@@ -209,4 +209,43 @@ DROP POLICY IF EXISTS "spc_employee_read" ON store_payment_config;
 CREATE POLICY "spc_employee_read" ON store_payment_config FOR SELECT
   USING (store_id = boss_store_id());
 
+-- ─── 021: Crear empleados sin service-role (RPCs SECURITY DEFINER) ──────────
+CREATE OR REPLACE FUNCTION assign_employee(emp_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  caller uuid := auth.uid();
+  caller_plan text;
+BEGIN
+  IF caller IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
+  SELECT plan INTO caller_plan FROM profiles WHERE id = caller;
+  IF caller_plan IS NULL OR caller_plan NOT IN ('emprendedor','negocio','vip_plus') THEN
+    RAISE EXCEPTION 'plan_required';
+  END IF;
+  INSERT INTO profiles (id, role, boss_id, onboarding_done)
+  VALUES (emp_id, 'employee', caller, true)
+  ON CONFLICT (id) DO UPDATE SET role = 'employee', boss_id = caller, onboarding_done = true;
+  UPDATE auth.users SET email_confirmed_at = COALESCE(email_confirmed_at, now()) WHERE id = emp_id;
+END; $$;
+GRANT EXECUTE ON FUNCTION assign_employee(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION list_my_employees()
+RETURNS TABLE (id uuid, full_name text, email text, created_at timestamptz)
+LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  SELECT p.id, p.full_name, u.email::text, p.created_at
+  FROM profiles p JOIN auth.users u ON u.id = p.id
+  WHERE p.boss_id = auth.uid()
+  ORDER BY p.created_at DESC
+$$;
+GRANT EXECUTE ON FUNCTION list_my_employees() TO authenticated;
+
+CREATE OR REPLACE FUNCTION remove_employee(emp_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE profiles SET boss_id = NULL WHERE id = emp_id AND boss_id = auth.uid();
+END; $$;
+GRANT EXECUTE ON FUNCTION remove_employee(uuid) TO authenticated;
+
+-- ─── 022: Imagen de fondo del catálogo ─────────────────────────────────────
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS background_url TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

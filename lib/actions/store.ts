@@ -88,7 +88,7 @@ export async function updateStoreAction(
     'facebook', 'instagram', 'tiktok', 'youtube',
     'skin', 'primary_color', 'secondary_color', 'button_color',
     'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices',
-    'bg_color', 'button_style',
+    'bg_color', 'button_style', 'background_url',
   ]
 
   fields.forEach(field => {
@@ -131,7 +131,7 @@ export async function updateStoreAction(
     /column|schema cache/i.test(error.message ?? '')
   )
   if (isMissingColumn) {
-    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style']) {
+    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style', 'background_url']) {
       delete (updates as Record<string, unknown>)[k]
     }
     const retry = await supabase
@@ -181,7 +181,7 @@ export async function uploadStoreImage(
     .from('stores').select('id').eq('id', storeId).eq('owner_id', user.id).single()
   if (!store) return { success: false, error: 'Tienda no encontrada' }
 
-  const type = formData.get('type') as 'logo' | 'banner'
+  const type = formData.get('type') as 'logo' | 'banner' | 'background'
   const file = formData.get('file') as File
   if (!file || !file.size) return { success: false, error: 'No se recibió la imagen' }
 

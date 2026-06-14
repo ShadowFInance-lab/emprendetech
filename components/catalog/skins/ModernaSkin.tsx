@@ -34,7 +34,16 @@ export default function ModernaSkin({
   return (
     <div
       className="min-h-screen bg-gray-50"
-      style={{ fontFamily: 'var(--font-inter), sans-serif', backgroundColor: store.bg_color || undefined }}
+      style={{
+        fontFamily: 'var(--font-inter), sans-serif',
+        backgroundColor: store.bg_color || undefined,
+        ...(store.background_url ? {
+          backgroundImage: `url(${store.background_url})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        } : {}),
+      }}
     >
       {/* CSS variables de la tienda */}
       <style>{`

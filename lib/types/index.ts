@@ -45,6 +45,7 @@ export interface Store {
   product_order: string
   currency: string
   bg_color: string | null
+  background_url: string | null
   button_style: string | null
   sales_pin: string | null
   low_stock_alert: number

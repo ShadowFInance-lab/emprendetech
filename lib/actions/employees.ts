@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient, createPublicClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
 export interface Employee {
@@ -12,13 +12,6 @@ export interface Employee {
 }
 
 const PAID_PLANS = ['emprendedor', 'negocio', 'vip_plus']
-
-/** Cliente admin seguro: null si falta la service role key (evita throws opacos). */
-function adminOrNull() {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null
-  try { return createAdminClient() } catch { return null }
-}
-const NO_ADMIN = 'Falta configurar SUPABASE_SERVICE_ROLE_KEY en Vercel (Project Settings → API → service_role) y hacer Redeploy.'
 
 /** Rol + plan del usuario actual. Tolerante si la migración 018 no se aplicó. */
 export async function getMyRole(): Promise<{ role: 'owner' | 'employee'; plan: string; bossId: string | null }> {
@@ -38,6 +31,12 @@ export async function getMyRole(): Promise<{ role: 'owner' | 'employee'; plan: s
   }
 }
 
+/**
+ * Crea un empleado SIN requerir service-role key:
+ * 1) signUp con cliente anónimo (no toca la sesión del dueño)
+ * 2) RPC assign_employee (SECURITY DEFINER): marca role='employee'+boss_id y
+ *    confirma el correo del empleado.
+ */
 export async function createEmployeeAction(input: { name: string; email: string; password: string }): Promise<ActionResult> {
   try {
     const supabase = await createClient()
@@ -54,39 +53,32 @@ export async function createEmployeeAction(input: { name: string; email: string;
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { success: false, error: 'Correo inválido' }
     if (!input.password || input.password.length < 6) return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
 
-    const admin = adminOrNull()
-    if (!admin) return { success: false, error: NO_ADMIN }
-
-    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    // 1) Crear el usuario con cliente anónimo (sin persistir sesión → no afecta al dueño)
+    const anon = createPublicClient()
+    const { data: signUpData, error: signErr } = await anon.auth.signUp({
       email,
       password: input.password,
-      email_confirm: true,
-      user_metadata: { full_name: input.name?.trim() || email },
+      options: { data: { full_name: input.name?.trim() || email } },
     })
-    if (createErr || !created?.user) {
-      const already = /already|registered|exists/i.test(createErr?.message ?? '')
-      console.error('[EMPLEADO DEBUG] createUser error:', createErr?.message)
-      return { success: false, error: already ? 'Ese correo ya tiene una cuenta.' : `No se pudo crear el empleado: ${createErr?.message ?? 'error'}` }
+    if (signErr || !signUpData?.user) {
+      const already = /registered|already|exists/i.test(signErr?.message ?? '')
+      console.error('[EMPLEADO DEBUG] signUp error:', signErr?.message)
+      return { success: false, error: already ? 'Ese correo ya tiene una cuenta.' : `No se pudo crear el empleado: ${signErr?.message ?? 'error'}` }
     }
 
-    const { error: upErr } = await admin.from('profiles').upsert({
-      id: created.user.id,
-      full_name: input.name?.trim() || email,
-      role: 'employee',
-      boss_id: user.id,
-      onboarding_done: true,
-    })
-    if (upErr) {
-      await admin.auth.admin.deleteUser(created.user.id) // evitar usuario huérfano
-      console.error('[EMPLEADO DEBUG] upsert profile error:', upErr.message)
-      return { success: false, error: 'Falta aplicar la migración 018_roles_employees.sql en Supabase.' }
+    // 2) Asignar rol de empleado + confirmar correo (RPC SECURITY DEFINER)
+    const { error: rpcErr } = await supabase.rpc('assign_employee', { emp_id: signUpData.user.id })
+    if (rpcErr) {
+      console.error('[EMPLEADO DEBUG] assign_employee error:', rpcErr.message)
+      if (/plan_required/.test(rpcErr.message)) return { success: false, error: 'Tu plan no permite empleados.' }
+      return { success: false, error: 'Falta aplicar la migración 021_employee_rpcs.sql en Supabase.' }
     }
 
     revalidatePath('/settings')
     return { success: true }
   } catch (err) {
     console.error('[EMPLEADO DEBUG] createEmployeeAction throw:', err)
-    return { success: false, error: 'No se pudo crear el empleado. Revisa SUPABASE_SERVICE_ROLE_KEY y la migración 018.' }
+    return { success: false, error: 'No se pudo crear el empleado. Aplica la migración 021 en Supabase.' }
   }
 }
 
@@ -95,19 +87,10 @@ export async function listEmployeesAction(): Promise<Employee[]> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
-    const admin = adminOrNull()
-    if (!admin) return []
-    const { data: profs, error } = await admin
-      .from('profiles').select('id, full_name, created_at').eq('boss_id', user.id)
-    if (error || !profs || profs.length === 0) return []
-
-    const emails: Record<string, string> = {}
-    try {
-      const { data: list } = await admin.auth.admin.listUsers({ perPage: 1000 })
-      for (const u of list?.users ?? []) emails[u.id] = u.email ?? ''
-    } catch { /* opcional */ }
-
-    return profs.map(p => ({ id: p.id, name: p.full_name, email: emails[p.id] ?? null, created_at: p.created_at }))
+    const { data, error } = await supabase.rpc('list_my_employees')
+    if (error || !data) return []
+    return (data as { id: string; full_name: string | null; email: string | null; created_at: string }[])
+      .map(e => ({ id: e.id, name: e.full_name, email: e.email, created_at: e.created_at }))
   } catch {
     return []
   }
@@ -118,17 +101,12 @@ export async function deleteEmployeeAction(employeeId: string): Promise<ActionRe
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
-    const admin = adminOrNull()
-    if (!admin) return { success: false, error: NO_ADMIN }
-    const { data: emp } = await admin.from('profiles').select('boss_id').eq('id', employeeId).maybeSingle()
-    if (!emp || emp.boss_id !== user.id) return { success: false, error: 'No autorizado' }
-    const { error } = await admin.auth.admin.deleteUser(employeeId)
-    if (error) return { success: false, error: 'No se pudo eliminar' }
+    const { error } = await supabase.rpc('remove_employee', { emp_id: employeeId })
+    if (error) return { success: false, error: 'No se pudo quitar el acceso' }
     revalidatePath('/settings')
     return { success: true }
-  } catch (err) {
-    console.error('[EMPLEADO DEBUG] deleteEmployeeAction throw:', err)
-    return { success: false, error: 'No se pudo eliminar el empleado' }
+  } catch {
+    return { success: false, error: 'No se pudo quitar el acceso' }
   }
 }
 
@@ -138,16 +116,11 @@ export async function notifyEmployeeAction(employeeId: string, message: string):
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
     if (!message.trim()) return { success: false, error: 'Escribe un mensaje' }
-    const admin = adminOrNull()
-    if (!admin) return { success: false, error: NO_ADMIN }
-    const { data: emp } = await admin.from('profiles').select('boss_id').eq('id', employeeId).maybeSingle()
-    if (!emp || emp.boss_id !== user.id) return { success: false, error: 'No autorizado' }
-    const { error } = await admin.from('employee_notifications')
+    const { error } = await supabase.from('employee_notifications')
       .insert({ employee_id: employeeId, sender_id: user.id, message: message.trim() })
     if (error) return { success: false, error: 'No se pudo enviar (¿migración 018 aplicada?)' }
     return { success: true }
-  } catch (err) {
-    console.error('[EMPLEADO DEBUG] notifyEmployeeAction throw:', err)
+  } catch {
     return { success: false, error: 'No se pudo enviar la notificación' }
   }
 }
