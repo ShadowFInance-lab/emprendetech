@@ -163,8 +163,8 @@ export async function activatePlanForUser(userId: string, plan: Plan, providerSu
     periodEnd.setMonth(periodEnd.getMonth() + 1) // mensual
   }
 
-  // Actualizar perfil (idempotente)
-  await admin
+  // Actualizar perfil (idempotente) — capturamos el error para diagnosticar
+  const { data: updated, error: updErr } = await admin
     .from('profiles')
     .update({
       plan,
@@ -172,6 +172,13 @@ export async function activatePlanForUser(userId: string, plan: Plan, providerSu
       plan_expires_at: plan === 'vip_plus' ? null : periodEnd.toISOString(),
     })
     .eq('id', userId)
+    .select('id, plan, plan_status')
+  if (updErr) {
+    console.error('[WEBHOOK DEBUG] activatePlanForUser ❌ error actualizando profile:', updErr.code, updErr.message)
+    console.error('[WEBHOOK DEBUG] (si es check constraint, corre 019_fix_plan_check.sql)')
+  } else {
+    console.log('[WEBHOOK DEBUG] activatePlanForUser ✅ profile →', updated)
+  }
 
   // Solo insertar suscripción si no hay una activa del mismo plan
   const { data: existing } = await admin
