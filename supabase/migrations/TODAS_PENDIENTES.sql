@@ -186,4 +186,27 @@ DROP POLICY IF EXISTS "empnotif_sender_insert" ON employee_notifications;
 CREATE POLICY "empnotif_sender_insert" ON employee_notifications FOR INSERT
   WITH CHECK (sender_id = auth.uid());
 
+-- ─── 019: Arreglo del CHECK de plan (vip_plus) ─────────────────────────────
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_plan_check;
+ALTER TABLE profiles ADD CONSTRAINT profiles_plan_check
+  CHECK (plan IN ('free','emprendedor','negocio','lifetime','vip_plus'));
+ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_plan_check;
+ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_plan_check
+  CHECK (plan IN ('free','emprendedor','negocio','lifetime','vip_plus'));
+
+-- ─── 020: Cuenta de Mercado Pago de la tienda (solo ventas) ────────────────
+CREATE TABLE IF NOT EXISTS store_payment_config (
+  store_id                 UUID PRIMARY KEY REFERENCES stores(id) ON DELETE CASCADE,
+  mercadopago_access_token TEXT,
+  updated_at               TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE store_payment_config ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "spc_owner" ON store_payment_config;
+CREATE POLICY "spc_owner" ON store_payment_config FOR ALL
+  USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()))
+  WITH CHECK (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
+DROP POLICY IF EXISTS "spc_employee_read" ON store_payment_config;
+CREATE POLICY "spc_employee_read" ON store_payment_config FOR SELECT
+  USING (store_id = boss_store_id());
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

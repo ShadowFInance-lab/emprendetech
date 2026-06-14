@@ -67,7 +67,6 @@ interface Props { store: Store; plan?: Plan }
 
 export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const allowedSkins = getPlanLimits(plan).skins
-  const isPaidPlan = plan !== 'free'
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -563,12 +562,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                   <Palette size={15} className="text-white" />
                 </span>
-                Paleta de colores
+                Personalización de colores y estilo
               </CardTitle>
               <p className="text-xs text-gray-400">
-                {isPaidPlan
-                  ? 'Elige una paleta o personaliza tus 3 tonos (principal, secundario y botones).'
-                  : 'El plan Gratis incluye 5 paletas básicas. Personalizar tus propios 3 tonos es para planes de pago.'}
+                Elige una paleta o personaliza tus 3 tonos, el fondo del catálogo, el estilo de los botones y la tipografía. Todo libre.
               </p>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -603,9 +600,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               {/* Más paletas */}
               <Label className="block">Más paletas</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {COLOR_PALETTES.map((palette, idx) => {
+                {COLOR_PALETTES.map((palette) => {
                   const isActive = primaryColor === palette.p && buttonColor === palette.b
-                  const isLocked = !isPaidPlan && idx >= 5
+                  const isLocked = false
                   return (
                     <button
                       key={palette.name}
@@ -631,40 +628,31 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 })}
               </div>
 
-              {!isPaidPlan && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5 text-xs text-amber-700 flex items-center gap-2">
-                  <Lock size={13} /> Desbloquea las 10 paletas y elige tus propios 3 tonos con un plan de pago (Emprendedor, Negocio o VIP Plus).
+              {/* Colores personalizables (3 tonos) — libres para todos */}
+              <details className="group" open>
+                <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1.5">
+                  <Palette size={14} /> Personaliza tus 3 tonos (principal, secundario y botones)
+                </summary>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  {[
+                    { label: 'Principal', value: primaryColor, onChange: setPrimaryColor },
+                    { label: 'Secundario', value: secondaryColor, onChange: setSecondaryColor },
+                    { label: 'Botones', value: buttonColor, onChange: setButtonColor },
+                  ].map(({ label, value, onChange }) => (
+                    <div key={label} className="text-center">
+                      <label className="relative cursor-pointer inline-block">
+                        <span className="block w-full h-12 rounded-xl shadow-sm ring-1 ring-black/5" style={{ backgroundColor: value }} />
+                        <input type="color" value={value} onChange={e => onChange(e.target.value)}
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-1">{label}</p>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </details>
 
-              {/* Colores personalizables (3 tonos) — solo planes de pago */}
-              {isPaidPlan && (
-                <details className="group">
-                  <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1.5">
-                    <Palette size={14} /> Personaliza tus 3 tonos (principal, secundario y botones)
-                  </summary>
-                  <div className="grid grid-cols-3 gap-3 mt-3">
-                    {[
-                      { label: 'Principal', value: primaryColor, onChange: setPrimaryColor },
-                      { label: 'Secundario', value: secondaryColor, onChange: setSecondaryColor },
-                      { label: 'Botones', value: buttonColor, onChange: setButtonColor },
-                    ].map(({ label, value, onChange }) => (
-                      <div key={label} className="text-center">
-                        <label className="relative cursor-pointer inline-block">
-                          <span className="block w-full h-12 rounded-xl shadow-sm ring-1 ring-black/5" style={{ backgroundColor: value }} />
-                          <input type="color" value={value} onChange={e => onChange(e.target.value)}
-                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-                        </label>
-                        <p className="text-[11px] text-gray-500 mt-1">{label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
-
-              {/* Fondo del catálogo + estilo de botones (planes de pago) */}
-              {isPaidPlan && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              {/* Fondo del catálogo + estilo de botones — libres para todos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <div>
                     <Label className="text-xs text-gray-500">Fondo del catálogo</Label>
                     <div className="flex items-center gap-2 mt-1.5">
@@ -691,7 +679,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     </div>
                   </div>
                 </div>
-              )}
 
               {/* Preview GRANDE del catálogo */}
               <div>

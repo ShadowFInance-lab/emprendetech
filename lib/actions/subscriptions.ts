@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getMercadoPagoClient, isMercadoPagoConfigured, Preference } from '@/lib/mercadopago/client'
+import { getMercadoPagoClient, getMercadoPagoClientFor, isMercadoPagoConfigured, Preference } from '@/lib/mercadopago/client'
 import { Payment } from 'mercadopago'
 import type { Plan } from '@/lib/types'
 import type { ActionResult } from './auth'
@@ -248,10 +248,33 @@ export async function getMercadoPagoStatus(): Promise<{ configured: boolean }> {
   return { configured: isMercadoPagoConfigured() }
 }
 
+/** Token de Mercado Pago de la tienda (propia o del jefe) para cobrar ventas. */
+async function getStoreSaleToken(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    let storeId: string | null = null
+    const { data: own } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
+    if (own) storeId = own.id
+    else {
+      const { data: prof } = await supabase.from('profiles').select('boss_id').eq('id', user.id).maybeSingle()
+      if (prof?.boss_id) {
+        const { data: bs } = await supabase.from('stores').select('id').eq('owner_id', prof.boss_id).maybeSingle()
+        storeId = bs?.id ?? null
+      }
+    }
+    if (!storeId) return null
+    const { data: cfg } = await supabase
+      .from('store_payment_config').select('mercadopago_access_token').eq('store_id', storeId).maybeSingle()
+    return cfg?.mercadopago_access_token ?? null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Genera un link de pago de Mercado Pago para una venta del POS.
- * El comercio muestra el link/QR al cliente; al aprobarse, registra la venta
- * con método "mercadopago".
+ * Usa la cuenta de Mercado Pago de la TIENDA (no la de la plataforma).
  */
 export async function createSalePaymentLink(
   amount: number,
@@ -262,18 +285,18 @@ export async function createSalePaymentLink(
   if (!user) return { success: false, error: 'No autenticado' }
   if (!amount || amount <= 0) return { success: false, error: 'Agrega productos al carrito primero' }
 
-  if (!isMercadoPagoConfigured()) {
-    return { success: false, error: 'Mercado Pago no está configurado. Agrega las variables en Vercel.' }
+  // Token de la TIENDA para ventas (si está configurado); si no, el de la plataforma
+  const storeToken = await getStoreSaleToken(supabase)
+  const client = getMercadoPagoClientFor(storeToken)
+  if (!client) {
+    return { success: false, error: 'Configura tu cuenta de Mercado Pago para ventas en Configuración (o agrega MERCADOPAGO_ACCESS_TOKEN en Vercel).' }
   }
-  const client = getMercadoPagoClient()
-  if (!client) return { success: false, error: 'Error de configuración de pagos' }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
   const httpsUrl = /^https:\/\//.test(appUrl)
-  const token = process.env.MERCADOPAGO_ACCESS_TOKEN || ''
   console.log('[MP DEBUG] createSalePaymentLink →', {
     amount, appUrl, httpsUrl,
-    tokenType: token.startsWith('TEST-') ? 'test' : token.startsWith('APP_USR') ? 'produccion' : 'desconocido',
+    cuenta: storeToken ? 'tienda' : 'plataforma(env)',
   })
 
   const body = {

@@ -17,4 +17,14 @@ export function isMercadoPagoConfigured(): boolean {
   return !!token && token !== 'YOUR_MP_ACCESS_TOKEN'
 }
 
+/**
+ * Cliente de MP para un token específico (cuenta de la tienda para ventas).
+ * Si no se pasa token, usa el de la plataforma (env). Null si no hay ninguno.
+ */
+export function getMercadoPagoClientFor(token?: string | null) {
+  const accessToken = token || process.env.MERCADOPAGO_ACCESS_TOKEN
+  if (!accessToken || accessToken === 'YOUR_MP_ACCESS_TOKEN') return null
+  return new MercadoPagoConfig({ accessToken })
+}
+
 export { Preference }

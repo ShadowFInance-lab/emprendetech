@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import type { Plan } from '@/lib/types'
 import StoreSettingsForm from '@/components/settings/StoreSettingsForm'
 import EmployeesSection from '@/components/settings/EmployeesSection'
+import StorePaymentSection from '@/components/settings/StorePaymentSection'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -9,12 +11,13 @@ export default async function SettingsPage() {
   if (!user) redirect('/login')
 
   const { data: store } = await supabase
-    .from('stores').select('*').eq('owner_id', user.id).single()
+    .from('stores').select('*').eq('owner_id', user.id).maybeSingle()
   if (!store) redirect('/onboarding')
 
-  // Plan del usuario → para limitar skins disponibles (Fix A) + rol (jefe/empleado)
+  // select('*') es tolerante si falta la columna role (migración 018 no aplicada)
   const { data: profile } = await supabase
-    .from('profiles').select('plan, role').eq('id', user.id).single()
+    .from('profiles').select('*').eq('id', user.id).maybeSingle()
+  const plan = ((profile?.plan as Plan) ?? 'free')
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -24,8 +27,9 @@ export default async function SettingsPage() {
           Personaliza cómo aparece tu tienda en el catálogo público
         </p>
       </div>
-      <StoreSettingsForm store={store} plan={profile?.plan ?? 'free'} />
-      {profile?.role !== 'employee' && <EmployeesSection plan={profile?.plan ?? 'free'} />}
+      <StoreSettingsForm store={store} plan={plan} />
+      <StorePaymentSection />
+      {profile?.role !== 'employee' && <EmployeesSection plan={plan} />}
     </div>
   )
 }
