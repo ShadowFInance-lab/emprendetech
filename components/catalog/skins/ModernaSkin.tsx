@@ -41,7 +41,7 @@ export default function ModernaSkin({
           backgroundImage: `url(${store.background_url})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
+          backgroundRepeat: 'no-repeat',
         } : {}),
       }}
     >

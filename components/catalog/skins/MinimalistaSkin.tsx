@@ -33,7 +33,7 @@ export default function MinimalistaSkin({
           backgroundImage: `url(${store.background_url})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
+          backgroundRepeat: 'no-repeat',
         } : {}),
       }}
     >

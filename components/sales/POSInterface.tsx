@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, Loader2,
-  Package, X, CheckCircle2, Banknote, ArrowLeftRight, UserCheck, Wallet,
+  Package, X, CheckCircle2, Banknote, ArrowLeftRight, UserCheck, Wallet, CreditCard,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,6 +28,7 @@ type POSProduct = {
 
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Efectivo', icon: Banknote },
+  { id: 'card', label: 'Tarjeta', icon: CreditCard },
   { id: 'transfer', label: 'Transferencia', icon: ArrowLeftRight },
   { id: 'mercadopago', label: 'Mercado Pago', icon: Wallet },
 ] as const
@@ -324,22 +325,25 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               </details>
             )}
 
-            {/* Método de pago */}
-            <div className="grid grid-cols-2 gap-2">
-              {PAYMENT_METHODS.map(method => (
-                <button
-                  key={method.id}
-                  onClick={() => setPaymentMethod(method.id)}
-                  className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs font-medium transition-all ${
-                    paymentMethod === method.id
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                  }`}
-                >
-                  <method.icon size={16} />
-                  {method.label}
-                </button>
-              ))}
+            {/* Método de pago — botones grandes tipo terminal */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Método de pago</p>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_METHODS.map(method => (
+                  <button
+                    key={method.id}
+                    onClick={() => setPaymentMethod(method.id)}
+                    className={`flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl border-2 text-sm font-semibold transition-all ${
+                      paymentMethod === method.id
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                        : 'border-gray-200 text-gray-500 hover:border-blue-200'
+                    }`}
+                  >
+                    <method.icon size={22} />
+                    {method.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Descuento */}
@@ -350,25 +354,25 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
                 min="0"
                 value={discount}
                 onChange={e => setDiscount(e.target.value)}
-                className="w-24 h-8 text-right text-sm"
+                className="w-24 h-9 text-right text-sm"
               />
             </div>
 
-            {/* Totales */}
-            <div className="space-y-1 pt-2 border-t border-gray-100">
-              <div className="flex justify-between text-sm text-gray-500">
+            {/* Total — pantalla de terminal */}
+            <div className="rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 text-white p-4 shadow-lg">
+              <div className="flex justify-between text-xs text-gray-400">
                 <span>Subtotal</span>
                 <span>{formatCurrency(sub)}</span>
               </div>
               {discountNum > 0 && (
-                <div className="flex justify-between text-sm text-red-500">
+                <div className="flex justify-between text-xs text-red-300 mt-0.5">
                   <span>Descuento</span>
                   <span>-{formatCurrency(discountNum)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-lg font-bold text-gray-900">
-                <span>Total</span>
-                <span>{formatCurrency(total)}</span>
+              <div className="flex items-end justify-between mt-1.5 pt-1.5 border-t border-white/10">
+                <span className="text-sm font-medium text-gray-300">TOTAL</span>
+                <span className="text-4xl font-black tracking-tight tabular-nums">{formatCurrency(total)}</span>
               </div>
             </div>
 
@@ -378,23 +382,23 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
                 type="button"
                 onClick={handleMercadoPago}
                 disabled={mpLoading || isPending}
-                className="w-full flex items-center justify-center gap-2 h-11 rounded-md font-semibold text-white bg-[#009ee3] hover:bg-[#008fcc] transition-colors disabled:opacity-60"
+                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl font-semibold text-white bg-[#009ee3] hover:bg-[#008fcc] transition-colors disabled:opacity-60"
               >
                 {mpLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wallet size={18} />}
-                Pagar con Mercado Pago
+                Generar cobro con Mercado Pago
               </button>
             )}
 
-            {/* Botón cobrar */}
+            {/* Botón cobrar grande */}
             <Button
               onClick={handleCheckout}
               disabled={isPending}
-              className="w-full bg-green-600 hover:bg-green-700 h-12 text-base"
+              className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg font-bold rounded-xl shadow-lg shadow-green-600/20"
             >
               {isPending ? (
                 <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Procesando...</>
               ) : (
-                <><CheckCircle2 className="mr-2 h-5 w-5" /> Cobrar {formatCurrency(total)}</>
+                <><CheckCircle2 className="mr-2 h-6 w-6" /> Cobrar {formatCurrency(total)}</>
               )}
             </Button>
           </div>

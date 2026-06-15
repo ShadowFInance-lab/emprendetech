@@ -206,19 +206,19 @@ export default async function SubscriptionPage({
               {/* Franja de color superior en tarjetas estándar */}
               {!isPopular && <div className={`h-1.5 w-full bg-gradient-to-r ${style.bar}`} />}
 
-              {/* Cinta diagonal "MEJOR VALOR" */}
-              {isPopular && !isCurrent && (
-                <div className="absolute -right-12 top-7 rotate-45 bg-white text-orange-600 text-[11px] font-extrabold px-12 py-1 shadow-lg tracking-wider z-10">
-                  MEJOR VALOR
+              {/* Banner "MÁS POPULAR" en la tarjeta destacada (estilo Stripe) */}
+              {isPopular && (
+                <div className="w-full bg-white/20 backdrop-blur-sm text-center py-1.5 text-[11px] font-extrabold tracking-[0.18em] text-white">
+                  ⭐ MÁS POPULAR
                 </div>
               )}
               {isCurrent && (
-                <span className={`absolute top-5 right-5 z-10 text-[10px] font-extrabold px-3 py-1 rounded-full shadow ${isPopular ? 'bg-white text-orange-600' : 'bg-blue-600 text-white'}`}>
+                <span className={`absolute top-3 right-3 z-10 text-[10px] font-extrabold px-3 py-1 rounded-full shadow ${isPopular ? 'bg-white text-orange-600' : 'bg-blue-600 text-white'}`}>
                   TU PLAN
                 </span>
               )}
 
-              <div className="relative p-5 flex flex-col h-full">
+              <div className="relative p-6 flex flex-col h-full">
                 {/* Icono grande */}
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 ${
                   isPopular ? 'bg-white/20 backdrop-blur-sm shadow-inner' : `bg-gradient-to-br ${style.bar} shadow-lg`

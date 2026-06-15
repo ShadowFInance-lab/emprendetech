@@ -20,7 +20,7 @@ export default async function SettingsPage() {
   const plan = ((profile?.plan as Plan) ?? 'free')
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl space-y-6 pb-28">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Configuración de tienda</h1>
         <p className="text-gray-500 text-sm mt-1">

@@ -713,7 +713,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     <span className="text-white font-bold text-lg">{store.name}</span>
                     <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full">WhatsApp</span>
                   </div>
-                  <div className="p-5 grid grid-cols-2 gap-3" style={{ backgroundColor: bgColor }}>
+                  <div className="p-5 grid grid-cols-2 gap-3" style={{
+                    backgroundColor: bgColor,
+                    ...(backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
+                  }}>
                     {[1, 2].map(i => (
                       <div key={i} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                         <div className="h-20 bg-gradient-to-br from-gray-100 to-gray-200" />
