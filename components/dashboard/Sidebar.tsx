@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, ShoppingCart, Users,
   Settings, CreditCard, ExternalLink, Menu, X,
-  LogOut, Store, FileText,
+  LogOut, Store, FileText, History,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/lib/actions/auth'
@@ -31,9 +31,14 @@ export default function Sidebar({ store, profile }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Empleados: solo ven el POS (Ventas). El dueño ve todo.
+  // Empleados: solo POS + historial de ventas. El dueño ve todo.
   const isEmployee = profile.role === 'employee'
-  const navItems = isEmployee ? NAV_ITEMS.filter(i => i.href === '/sales/new') : NAV_ITEMS
+  const navItems = isEmployee
+    ? [
+        { href: '/sales/new', label: 'Ventas (POS)', icon: ShoppingCart },
+        { href: '/sales', label: 'Historial', icon: History },
+      ]
+    : NAV_ITEMS
 
   const planBadgeColor: Record<string, string> = {
     free: 'bg-gray-100 text-gray-600',

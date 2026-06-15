@@ -10,6 +10,7 @@ import {
   createEmployeeAction, listEmployeesAction, deleteEmployeeAction, notifyEmployeeAction,
   type Employee,
 } from '@/lib/actions/employees'
+import TeamAttendance from './TeamAttendance'
 
 const PAID = ['emprendedor', 'negocio', 'vip_plus']
 
@@ -153,6 +154,7 @@ export default function EmployeesSection({ plan }: { plan: string }) {
               ))}
             </div>
           )}
+          <TeamAttendance />
         </div>
       )}
     </div>

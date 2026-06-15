@@ -248,4 +248,24 @@ GRANT EXECUTE ON FUNCTION remove_employee(uuid) TO authenticated;
 -- ─── 022: Imagen de fondo del catálogo ─────────────────────────────────────
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS background_url TEXT;
 
+-- ─── 023: Asistencia de empleados ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS employee_attendance (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  boss_id     UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  work_date   DATE NOT NULL DEFAULT current_date,
+  check_in    TIMESTAMPTZ,
+  check_out   TIMESTAMPTZ,
+  note        TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (employee_id, work_date)
+);
+ALTER TABLE employee_attendance ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "att_employee" ON employee_attendance;
+CREATE POLICY "att_employee" ON employee_attendance FOR ALL
+  USING (employee_id = auth.uid()) WITH CHECK (employee_id = auth.uid());
+DROP POLICY IF EXISTS "att_boss" ON employee_attendance;
+CREATE POLICY "att_boss" ON employee_attendance FOR ALL
+  USING (boss_id = auth.uid()) WITH CHECK (boss_id = auth.uid());
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

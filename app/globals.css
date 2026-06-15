@@ -105,8 +105,11 @@ iframe.skiptranslate,
 .goog-tooltip:hover,
 .VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
 .VIpgJd-ZVi9od-ORHb-OEVmcd { display: none !important; }
-/* el widget empuja el body hacia abajo: lo reseteamos */
+/* el widget empuja el body/html hacia abajo: lo reseteamos */
 body { top: 0 !important; position: static !important; }
+html { margin-top: 0 !important; }
+html.translated-ltr body, html.translated-rtl body { top: 0 !important; }
+.goog-te-banner-frame { display: none !important; visibility: hidden !important; height: 0 !important; }
 /* la traducción usa <font>; quitamos el resaltado/sombra de Google */
 .goog-text-highlight { background: none !important; box-shadow: none !important; }
 font[style] { background: transparent !important; box-shadow: none !important; }

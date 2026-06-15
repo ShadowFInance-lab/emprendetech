@@ -26,8 +26,16 @@ export default async function SalesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: store } = await supabase
-    .from('stores').select('id, name').eq('owner_id', user.id).single()
+  // Tienda efectiva: propia (dueño) o la del jefe (empleado)
+  let { data: store } = await supabase
+    .from('stores').select('id, name').eq('owner_id', user.id).maybeSingle()
+  if (!store) {
+    const { data: prof } = await supabase.from('profiles').select('boss_id').eq('id', user.id).maybeSingle()
+    if (prof?.boss_id) {
+      const { data: bs } = await supabase.from('stores').select('id, name').eq('owner_id', prof.boss_id).maybeSingle()
+      store = bs
+    }
+  }
   if (!store) redirect('/onboarding')
 
   // Exportar es función de planes de pago

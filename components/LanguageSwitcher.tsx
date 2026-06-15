@@ -54,15 +54,29 @@ export default function LanguageSwitcher() {
     }
   }, [])
 
+  // Quita el banner/chrome que Google inyecta (queda solo la traducción)
+  function hideGoogleChrome() {
+    document.querySelectorAll<HTMLElement>('.goog-te-banner-frame').forEach(el => { el.style.display = 'none' })
+    document.body.style.top = '0px'
+    document.documentElement.style.marginTop = '0px'
+  }
+
   function changeLanguage(code: string) {
     setCurrent(code)
     setOpen(false)
-    // El widget de Google Translate usa un <select.goog-te-combo>; lo disparamos.
+    // Cookie googtrans → persiste la traducción en toda la navegación
+    const host = window.location.hostname
+    const val = code === 'es' ? '' : `/es/${code}`
+    document.cookie = `googtrans=${val}; path=/`
+    try { document.cookie = `googtrans=${val}; path=/; domain=.${host}` } catch { /* ignore */ }
+
+    // El widget usa un <select.goog-te-combo>; lo disparamos.
     const trySet = (attempt = 0) => {
       const combo = document.querySelector<HTMLSelectElement>('select.goog-te-combo')
       if (combo) {
         combo.value = code
         combo.dispatchEvent(new Event('change'))
+        for (let i = 1; i <= 6; i++) setTimeout(hideGoogleChrome, i * 250)
       } else if (attempt < 10) {
         setTimeout(() => trySet(attempt + 1), 300)
       }

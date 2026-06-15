@@ -188,65 +188,51 @@ export default async function SubscriptionPage({
           return (
             <div
               key={planId}
-              className={`group relative rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1.5 ${
+              className={`group relative rounded-3xl overflow-hidden text-white transition-all duration-300 hover:-translate-y-1.5 bg-gradient-to-br ${style.bar} ${
                 isPopular
-                  ? `bg-gradient-to-br ${style.bar} text-white shadow-2xl shadow-orange-500/40 ${isCurrent ? 'ring-4 ring-white/70' : 'ring-2 ring-amber-300/70'} sm:scale-[1.05] hover:shadow-orange-500/50`
-                  : isCurrent
-                    ? 'bg-white ring-2 ring-blue-500 shadow-xl'
-                    : 'bg-white ring-1 ring-black/5 shadow-lg hover:shadow-2xl'
+                  ? `shadow-2xl shadow-orange-500/40 ${isCurrent ? 'ring-4 ring-white/70' : 'ring-2 ring-white/50'} sm:scale-[1.05] hover:shadow-orange-500/50`
+                  : `shadow-xl ${isCurrent ? 'ring-4 ring-white/70' : 'ring-1 ring-white/15'} hover:shadow-2xl`
               }`}
             >
-              {/* Glow decorativo en la tarjeta destacada */}
-              {isPopular && (
-                <>
-                  <div className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/25 blur-3xl" />
-                  <div className="pointer-events-none absolute -bottom-24 -left-16 w-52 h-52 rounded-full bg-rose-300/30 blur-3xl" />
-                </>
-              )}
-              {/* Franja de color superior en tarjetas estándar */}
-              {!isPopular && <div className={`h-1.5 w-full bg-gradient-to-r ${style.bar}`} />}
+              {/* Glow decorativo */}
+              <div className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/15 blur-3xl" />
+              {isPopular && <div className="pointer-events-none absolute -bottom-24 -left-16 w-52 h-52 rounded-full bg-white/15 blur-3xl" />}
 
-              {/* Banner "MÁS POPULAR" en la tarjeta destacada (estilo Stripe) */}
+              {/* Banner "MÁS POPULAR" en la destacada */}
               {isPopular && (
-                <div className="w-full bg-white/20 backdrop-blur-sm text-center py-1.5 text-[11px] font-extrabold tracking-[0.18em] text-white">
+                <div className="w-full bg-white/20 backdrop-blur-sm text-center py-1.5 text-[11px] font-extrabold tracking-[0.18em]">
                   ⭐ MÁS POPULAR
                 </div>
               )}
               {isCurrent && (
-                <span className={`absolute top-3 right-3 z-10 text-[10px] font-extrabold px-3 py-1 rounded-full shadow ${isPopular ? 'bg-white text-orange-600' : 'bg-blue-600 text-white'}`}>
+                <span className="absolute top-3 right-3 z-10 text-[10px] font-extrabold px-3 py-1 rounded-full shadow bg-white text-gray-900">
                   TU PLAN
                 </span>
               )}
 
               <div className="relative p-6 flex flex-col h-full">
                 {/* Icono grande */}
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 ${
-                  isPopular ? 'bg-white/20 backdrop-blur-sm shadow-inner' : `bg-gradient-to-br ${style.bar} shadow-lg`
-                }`}>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 bg-white/20 backdrop-blur-sm shadow-inner">
                   {style.icon}
                 </div>
 
                 {/* Nombre + precio */}
-                <p className={`text-xs font-bold uppercase tracking-[0.18em] ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
-                  {plan.label}
-                </p>
-                <p className={`text-4xl font-black mt-1.5 tracking-tight leading-[1.05] ${isPopular ? 'text-white' : 'text-gray-900'}`}>
-                  {plan.price_label}
-                </p>
-                <p className={`text-xs font-medium mt-2 ${isPopular ? 'text-white/80' : 'text-gray-400'}`}>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">{plan.label}</p>
+                <p className="text-4xl font-black mt-1.5 tracking-tight leading-[1.05] text-white">{plan.price_label}</p>
+                <p className="text-xs font-medium mt-2 text-white/80">
                   {planId === 'vip_plus' ? 'Pago único · de por vida'
                     : planId === 'free' ? 'Gratis para siempre'
                     : 'Facturación mensual'}
                 </p>
 
                 {/* Features */}
-                <div className={`mt-5 pt-5 space-y-3 border-t ${isPopular ? 'border-white/25' : 'border-gray-100'}`}>
+                <div className="mt-5 pt-5 space-y-3 border-t border-white/25">
                   {PLAN_FEATURES[planId].map((feature, i) => (
                     <div key={i} className="flex items-start gap-2.5 text-[13px]">
-                      <span className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isPopular ? 'bg-white/25' : 'bg-green-100'}`}>
-                        <Check size={12} strokeWidth={3} className={isPopular ? 'text-white' : 'text-green-600'} />
+                      <span className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-white/25">
+                        <Check size={12} strokeWidth={3} className="text-white" />
                       </span>
-                      <span className={isPopular ? 'text-white/95' : 'text-gray-600'}>{feature}</span>
+                      <span className="text-white/95">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -254,15 +240,11 @@ export default async function SubscriptionPage({
                 {/* CTA */}
                 <div className="pt-6 mt-auto">
                   {isCurrent ? (
-                    <div className={`text-center text-sm font-semibold py-3 rounded-xl ${isPopular ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700'}`}>
-                      ✓ Tu plan actual
-                    </div>
+                    <div className="text-center text-sm font-semibold py-3 rounded-xl bg-white/20 text-white">✓ Tu plan actual</div>
                   ) : planId === 'free' ? (
-                    <div className="text-center text-xs text-gray-400 py-3">Tu punto de partida</div>
-                  ) : isPopular ? (
-                    <UpgradeButton plan={planId} label={`Obtener ${plan.label}`} accent="bg-white !text-orange-600 hover:bg-white/90 font-bold shadow-lg" />
+                    <div className="text-center text-xs text-white/70 py-3">Tu punto de partida</div>
                   ) : (
-                    <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} accent={`bg-gradient-to-r ${style.bar} shadow-md`} />
+                    <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} accent="bg-white !text-gray-900 hover:bg-white/90 font-bold shadow-lg" />
                   )}
                 </div>
               </div>

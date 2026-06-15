@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { ArrowLeft, History } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getMyRole } from '@/lib/actions/employees'
 import POSInterface from '@/components/sales/POSInterface'
 import EmployeeNotices from '@/components/sales/EmployeeNotices'
+import EmployeeClock from '@/components/sales/EmployeeClock'
 
 export default async function NewSalePage({
   searchParams,
@@ -31,6 +33,9 @@ export default async function NewSalePage({
     }
   }
 
+  const { role } = await getMyRole()
+  const isEmployee = role === 'employee'
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -54,6 +59,7 @@ export default async function NewSalePage({
           <History size={15} /> Historial
         </Link>
       </div>
+      {isEmployee && <EmployeeClock />}
       <EmployeeNotices />
       <POSInterface presetCustomer={presetCustomer} />
     </div>
