@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Phone, ShieldAlert, BadgeCheck, Store, Banknote, Percent } from 'lucide-react'
+import { X, Loader2, Save, Phone, ShieldAlert, BadgeCheck, Store, Banknote, Percent, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { getEmployeeMeta, saveEmployeeMetaAction, type EmployeeMeta } from '@/lib/actions/employees'
+import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { savePayrollDiscountAction } from '@/lib/actions/payroll'
 
 const EMPTY: EmployeeMeta = { phone: '', insurance_no: '', emergency_phone: '', branch: '', salary: null }
@@ -39,6 +39,13 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
       ])
       if (m.success && d.success) { toast.success('Empleado actualizado'); onSaved(); onClose() }
       else toast.error(m.error || d.error || 'Error al guardar')
+    })
+  }
+  function remove() {
+    if (!confirm('¿Quitar el acceso de este empleado? No podrá iniciar sesión.')) return
+    startTransition(async () => {
+      const r = await deleteEmployeeAction(employeeId)
+      if (r.success) { toast.success('Acceso quitado'); onSaved(); onClose() } else toast.error(r.error ?? 'Error')
     })
   }
 
@@ -77,6 +84,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
               className="w-full h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
               {isPending ? <Loader2 size={16} className="animate-spin" /> : <><Save size={15} /> Guardar cambios</>}
             </button>
+            <button onClick={remove} disabled={isPending} className="w-full inline-flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-red-600"><Trash2 size={13} /> Quitar acceso</button>
             <p className="text-[11px] text-gray-400 text-center">Los datos se reflejan en la nómina y el recibo del empleado.</p>
           </div>
         )}

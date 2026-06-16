@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, ShoppingCart, Users,
   Settings, CreditCard, ExternalLink, Menu, X,
-  LogOut, Store, FileText, History, UserCog,
+  LogOut, Store, FileText, History, UserCog, MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/lib/actions/auth'
@@ -38,6 +38,7 @@ export default function Sidebar({ store, profile }: SidebarProps) {
     ? [
         { href: '/sales/new', label: 'Ventas (POS)', icon: ShoppingCart },
         { href: '/sales', label: 'Historial', icon: History },
+        { href: '/mensajes', label: 'Mensajes', icon: MessageCircle },
       ]
     : NAV_ITEMS
 

@@ -23,7 +23,11 @@ export default function EmployeeNotices() {
     setThread(t)
     const bossMsgs = t.filter(m => m.from_role === 'boss')
     if (inited.current && bossMsgs.length > bossCount.current) {
-      try { playNotificationSound(getSavedNotifSound(), getSavedVolume()) } catch { /* noop */ }
+      try {
+        const v = Math.min(1, (getSavedVolume() || 0.5) * 1.7)
+        playNotificationSound(getSavedNotifSound(), v)
+        setTimeout(() => { try { playNotificationSound(getSavedNotifSound(), v) } catch { /* noop */ } }, 350)
+      } catch { /* noop */ }
     }
     bossCount.current = bossMsgs.length
     inited.current = true

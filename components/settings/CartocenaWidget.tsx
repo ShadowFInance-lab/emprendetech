@@ -6,9 +6,13 @@ import { PiggyBank, Pencil, X, Plus, Trash2, Loader2, Target } from 'lucide-reac
 import { Input } from '@/components/ui/input'
 import {
   getTeamFundAction, saveTeamFundGoalAction, addFundContributionAction, deleteFundContributionAction,
-  type TeamFund, type FundContribution,
+  type TeamFund, type FundContribution, type PayrollPeriod,
 } from '@/lib/actions/payroll'
 import { formatCurrency } from '@/lib/utils/format'
+
+const FUND_PERIODS: { id: PayrollPeriod; label: string }[] = [
+  { id: 'week', label: 'Semana' }, { id: 'fortnight', label: 'Quincena' }, { id: 'month', label: 'Mes' },
+]
 
 /**
  * Cartocena: fondo del equipo (semanal). Tarjeta resumen + modal para fijar la
@@ -17,17 +21,19 @@ import { formatCurrency } from '@/lib/utils/format'
 export default function CartocenaWidget({ names, totalCount }: { names: string[]; totalCount: number }) {
   const [fund, setFund] = useState<TeamFund>({ goal: 0, accumulated: 0, contributors: 0 })
   const [items, setItems] = useState<FundContribution[]>([])
+  const [period, setPeriod] = useState<PayrollPeriod>('week')
   const [open, setOpen] = useState(false)
   const [goalDraft, setGoalDraft] = useState('0')
   const [who, setWho] = useState('')
   const [amount, setAmount] = useState('')
   const [isPending, startTransition] = useTransition()
+  const periodLabel = FUND_PERIODS.find(p => p.id === period)?.label.toLowerCase() ?? 'semana'
 
   const load = useCallback(async () => {
-    const f = await getTeamFundAction()
+    const f = await getTeamFundAction(period)
     setFund({ goal: f.goal, accumulated: f.accumulated, contributors: f.contributors })
     setItems(f.items); setGoalDraft(String(f.goal))
-  }, [])
+  }, [period])
   useEffect(() => { load() }, [load])
   useEffect(() => { if (!who && names[0]) setWho(names[0]) }, [names, who])
 
@@ -62,7 +68,7 @@ export default function CartocenaWidget({ names, totalCount }: { names: string[]
           <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center"><PiggyBank size={17} className="text-white" /></span>
           <button onClick={() => setOpen(true)} className="text-amber-600 hover:text-amber-800" title="Gestionar cartocena"><Pencil size={14} /></button>
         </div>
-        <p className="text-[11px] text-amber-700/80 font-medium">Cartocena (semana)</p>
+        <p className="text-[11px] text-amber-700/80 font-medium">Cartocena ({periodLabel})</p>
         <p className="text-lg font-bold text-amber-700 leading-tight">{formatCurrency(fund.accumulated)}</p>
         <div className="h-1.5 bg-amber-100 rounded-full overflow-hidden mt-1.5"><div className="h-full bg-amber-500 rounded-full" style={{ width: `${pct}%` }} /></div>
         <p className="text-[10px] text-amber-700/70 mt-1">Meta {formatCurrency(fund.goal)} · {fund.contributors}/{totalCount} aportes</p>
@@ -77,6 +83,13 @@ export default function CartocenaWidget({ names, totalCount }: { names: string[]
               <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
             </div>
             <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Periodo */}
+              <div className="flex bg-gray-100 rounded-lg p-0.5">
+                {FUND_PERIODS.map(p => (
+                  <button key={p.id} onClick={() => setPeriod(p.id)}
+                    className={`flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${period === p.id ? 'bg-white shadow-sm text-amber-600' : 'text-gray-500'}`}>{p.label}</button>
+                ))}
+              </div>
               {/* Resumen */}
               <div className="rounded-xl bg-amber-50 border border-amber-100 p-3">
                 <div className="flex items-baseline justify-between">
@@ -84,7 +97,7 @@ export default function CartocenaWidget({ names, totalCount }: { names: string[]
                   <span className="text-xs text-amber-700/70">de {formatCurrency(fund.goal)} · {pct}%</span>
                 </div>
                 <div className="h-2 bg-amber-100 rounded-full overflow-hidden mt-2"><div className="h-full bg-amber-500 rounded-full" style={{ width: `${pct}%` }} /></div>
-                <p className="text-[11px] text-amber-700/70 mt-1.5">{fund.contributors}/{totalCount} empleados han aportado · se reinicia cada lunes</p>
+                <p className="text-[11px] text-amber-700/70 mt-1.5">{fund.contributors}/{totalCount} empleados han aportado · {periodLabel}</p>
               </div>
 
               {/* Meta semanal */}

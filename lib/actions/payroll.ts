@@ -204,17 +204,17 @@ function mondayISO(): string {
   return mon.toISOString().slice(0, 10)
 }
 
-/** Cartocena de esta semana: meta + acumulado y aportantes derivados de los aportes. */
-export async function getTeamFundAction(): Promise<TeamFund & { items: FundContribution[] }> {
+/** Cartocena del periodo: meta + acumulado y aportantes derivados de los aportes. */
+export async function getTeamFundAction(period: PayrollPeriod = 'week'): Promise<TeamFund & { items: FundContribution[] }> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { goal: 0, accumulated: 0, contributors: 0, items: [] }
-    const monday = mondayISO()
+    const start = periodStartDate(period)
     const [{ data: tf }, { data: contrib }] = await Promise.all([
       supabase.from('team_fund').select('goal').eq('boss_id', user.id).maybeSingle(),
       supabase.from('team_fund_contributions').select('id, contributor, amount, created_at')
-        .eq('boss_id', user.id).eq('week_start', monday).order('created_at', { ascending: false }),
+        .eq('boss_id', user.id).gte('created_at', `${start}T00:00:00`).order('created_at', { ascending: false }),
     ])
     const items: FundContribution[] = (contrib ?? []).map(c => ({
       id: c.id as string, contributor: c.contributor as string, amount: Number(c.amount) || 0, created_at: c.created_at as string,

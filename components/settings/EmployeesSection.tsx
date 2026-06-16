@@ -3,13 +3,11 @@
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, Lock, Crown, Check, Copy, Users, ClipboardList } from 'lucide-react'
+import { UserPlus, Loader2, Lock, Crown, Check, Copy, ClipboardList } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/actions/employees'
 import { createStaffAction } from '@/lib/actions/staff'
-import EmployeeManageCard from './EmployeeManageCard'
-import TeamAttendance from './TeamAttendance'
 import PayrollDashboard from './PayrollDashboard'
 import TeamChatPanel from '@/components/team/TeamChatPanel'
 
@@ -18,16 +16,13 @@ const PAID = ['emprendedor', 'negocio', 'vip_plus']
 export default function EmployeesSection({ plan }: { plan: string }) {
   const isPaid = PAID.includes(plan)
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [loading, setLoading] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [form, setForm] = useState({ name: '', password: '' })
   const [lastCreated, setLastCreated] = useState<string | null>(null)
   const [signal, setSignal] = useState(0)
 
   const refresh = useCallback(async () => {
-    setLoading(true)
     setEmployees(await listEmployeesAction())
-    setLoading(false)
   }, [])
   useEffect(() => { if (isPaid) refresh() }, [isPaid, refresh])
 
@@ -110,23 +105,6 @@ export default function EmployeesSection({ plan }: { plan: string }) {
       <div className="lg:col-span-2 space-y-4">
         {/* Crear empleado + KPIs + Cartocena + nómina + descuentos + resumen */}
         <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} />
-
-        {/* Gestión de cada empleado */}
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
-          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-3"><Users size={16} className="text-indigo-600" /> Equipo · datos y ventas</p>
-          {loading ? (
-            <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>
-          ) : employees.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Aún no tienes empleados.</p>
-          ) : (
-            <div className="space-y-2">{employees.map(emp => <EmployeeManageCard key={emp.id} emp={emp} onChange={refresh} />)}</div>
-          )}
-        </div>
-
-        {/* Asistencia */}
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
-          <TeamAttendance />
-        </div>
       </div>
 
       {/* Columna derecha: chats */}

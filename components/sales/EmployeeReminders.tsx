@@ -39,7 +39,9 @@ export default function EmployeeReminders() {
   const hasUnseen = dueList.some(r => !seenRef.current.has(r.id))
 
   const playBeep = useCallback(() => {
-    playNotificationSound(getSavedNotifSound(), getSavedVolume())
+    const v = Math.min(1, (getSavedVolume() || 0.5) * 1.7)
+    playNotificationSound(getSavedNotifSound(), v)
+    setTimeout(() => { try { playNotificationSound(getSavedNotifSound(), v) } catch { /* noop */ } }, 350)
   }, [])
 
   useEffect(() => {

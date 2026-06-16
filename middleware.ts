@@ -67,6 +67,7 @@ export async function middleware(request: NextRequest) {
     '/onboarding',
     '/quotes',
     '/employees',
+    '/mensajes',
   ]
 
   const isProtected = protectedPrefixes.some(prefix =>
@@ -94,9 +95,10 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Empleados: acceso restringido SOLO al POS / ventas
+    // Empleados: acceso restringido al POS / ventas y a Mensajes
     if (profile?.role === 'employee') {
-      if (!pathname.startsWith('/sales')) {
+      const allowed = pathname.startsWith('/sales') || pathname.startsWith('/mensajes')
+      if (!allowed) {
         return NextResponse.redirect(new URL('/sales/new', request.url))
       }
     } else if (pathname !== '/onboarding' && profile && !profile.onboarding_done) {

@@ -262,7 +262,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                   const present = r.days.filter(d => d.checkIn); const last = present[present.length - 1]
                   const inc = incidencia(r.notes)
                   return (
-                    <tr key={r.employeeId} className="group bg-white hover:bg-indigo-50/30">
+                    <tr key={r.employeeId} onClick={() => setEditing({ id: r.employeeId, name: r.name ?? 'Empleado', discount: individualOf(r) })} className="group bg-white hover:bg-indigo-50/30 cursor-pointer">
                       <td className="px-3 py-2 sticky left-0 bg-white group-hover:bg-indigo-50/30 z-10 border-b border-gray-100">
                         <div className="flex items-center gap-2">
                           <span className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{(r.name || '?').charAt(0).toUpperCase()}</span>
@@ -281,7 +281,9 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                         <div className="flex items-center justify-center gap-1">
                           {week.map((date, i) => {
                             const d = dayMap.get(date); const ok = !!d?.checkIn, ab = !!d && !d.checkIn
-                            return <span key={date} title={`${WD[i]} ${date.slice(5)}`} className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] ${ok ? 'bg-emerald-100 text-emerald-600' : ab ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-300'}`}>{ok ? <Check size={11} /> : ab ? <X size={11} /> : '·'}</span>
+                            const late = ok && !!d?.note && d.note.toLowerCase().includes('tarde')
+                            const cls = late ? 'bg-amber-100 text-amber-600' : ok ? 'bg-emerald-100 text-emerald-600' : ab ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-300'
+                            return <span key={date} title={`${WD[i]} ${date.slice(5)}${late ? ' · llegada tarde' : ''}`} className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] ${cls}`}>{late ? <Clock4 size={10} /> : ok ? <Check size={11} /> : ab ? <X size={11} /> : '·'}</span>
                           })}
                         </div>
                       </td>
@@ -289,14 +291,14 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       <td className="px-2 py-2 text-right border-b border-gray-100 whitespace-nowrap">{formatCurrency(r.base)}</td>
                       <td className="px-2 py-2 text-center border-b border-gray-100"><span className={`text-[10px] font-medium rounded-full px-2 py-0.5 ${inc.cls}`}>{inc.txt}</span></td>
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[180px]"><span className="line-clamp-1" title={r.notes || 'Sin incidencias'}>{r.notes || 'Sin incidencias'}</span></td>
-                      <td className="px-2 py-2 border-b border-gray-100">
+                      <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1 justify-center">
                           <Input type="number" min="0" value={discounts[r.employeeId] ?? '0'} onChange={e => setDiscounts(d => ({ ...d, [r.employeeId]: e.target.value }))} className="w-20 h-8 text-right text-xs" />
                           <button onClick={() => saveDiscount(r)} disabled={isPending} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50" title="Guardar"><Save size={14} /></button>
                         </div>
                       </td>
                       <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap">{formatCurrency(netOf(r))}</td>
-                      <td className="px-3 py-2 text-center border-b border-gray-100 whitespace-nowrap">
+                      <td className="px-3 py-2 text-center border-b border-gray-100 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                         <button onClick={() => receipt({ name: r.name ?? 'Empleado', periodo: periodLabel, days: r.daysPresent, absences: 0, base: r.base, individual: individualOf(r) })} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Recibo PDF"><ReceiptText size={15} /></button>
                         <button onClick={() => setEditing({ id: r.employeeId, name: r.name ?? 'Empleado', discount: individualOf(r) })} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-indigo-600 hover:bg-indigo-50" title="Editar"><Pencil size={15} /></button>
                       </td>
@@ -306,7 +308,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 {staff.map(s => {
                   const inc = s.absences > 0 ? { txt: `${s.absences} falta(s)`, cls: 'bg-red-100 text-red-600' } : { txt: '—', cls: 'bg-emerald-50 text-emerald-600' }
                   return (
-                    <tr key={s.id} className="group bg-slate-50/40 hover:bg-indigo-50/30">
+                    <tr key={s.id} onClick={() => setEditingStaff(s)} className="group bg-slate-50/40 hover:bg-indigo-50/30 cursor-pointer">
                       <td className="px-3 py-2 sticky left-0 bg-slate-50 group-hover:bg-indigo-50/30 z-10 border-b border-gray-100">
                         <div className="flex items-center gap-2">
                           <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold flex-shrink-0">{(s.name || '?').charAt(0).toUpperCase()}</span>
@@ -322,7 +324,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                       <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                       <td className="px-2 py-2 text-center text-[11px] text-gray-400 border-b border-gray-100">Manual</td>
-                      <td className="px-2 py-2 text-center border-b border-gray-100">
+                      <td className="px-2 py-2 text-center border-b border-gray-100" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1 justify-center">
                           <Input type="number" min="0" value={s.days_worked} onChange={e => setStaffDays(s.id, parseInt(e.target.value) || 0)} className="w-14 h-8 text-center text-xs" />
                           <button onClick={() => saveStaffRow(s)} disabled={isPending} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50" title="Guardar"><Save size={13} /></button>
@@ -331,14 +333,14 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       <td className="px-2 py-2 text-right border-b border-gray-100 whitespace-nowrap">{formatCurrency(s.salary)}</td>
                       <td className="px-2 py-2 text-center border-b border-gray-100"><span className={`text-[10px] font-medium rounded-full px-2 py-0.5 ${inc.cls}`}>{inc.txt}</span></td>
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[180px]"><span className="line-clamp-1" title={s.note || '—'}>{s.note || '—'}</span></td>
-                      <td className="px-2 py-2 border-b border-gray-100">
+                      <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1 justify-center">
                           <Input type="number" min="0" value={s.discount} onChange={e => setStaffDiscount(s.id, parseFloat(e.target.value) || 0)} className="w-20 h-8 text-right text-xs" />
                           <button onClick={() => saveStaffRow(s)} disabled={isPending} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50" title="Guardar"><Save size={14} /></button>
                         </div>
                       </td>
                       <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap">{formatCurrency(netStaff(s))}</td>
-                      <td className="px-3 py-2 text-center border-b border-gray-100 whitespace-nowrap">
+                      <td className="px-3 py-2 text-center border-b border-gray-100 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                         <button onClick={() => receipt({ name: s.name, periodo: 'Manual', days: s.days_worked, absences: s.absences, base: s.salary, individual: s.discount })} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Recibo PDF"><ReceiptText size={15} /></button>
                         <button onClick={() => setEditingStaff(s)} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-indigo-600 hover:bg-indigo-50" title="Editar"><Pencil size={15} /></button>
                       </td>
