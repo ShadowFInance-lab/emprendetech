@@ -6,6 +6,8 @@ import { MessagesSquare, Send, Loader2, RefreshCw } from 'lucide-react'
 import { getGroupThreadAction, sendGroupMessageAction, type GroupMessage } from '@/lib/actions/team'
 import { playNotificationSound, getSavedNotifSound, getSavedVolume } from '@/lib/utils/notificationSounds'
 
+const initials = (name: string) => (name || 'E').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+
 /**
  * Chat grupal del equipo (un solo hilo compartido entre el jefe y todos sus
  * empleados). Se usa igual en el panel del jefe (/employees) y en el POS del
@@ -78,19 +80,26 @@ export default function TeamGroupChat({ compact = false }: { compact?: boolean }
           messages.map(m => {
             const mine = m.sender_id === meId
             return (
-              <div key={m.id} className={`flex flex-col max-w-[80%] ${mine ? 'self-end items-end' : 'self-start items-start'}`}>
+              <div key={m.id} className={`flex items-end gap-1.5 max-w-[85%] ${mine ? 'self-end flex-row-reverse' : 'self-start'}`}>
                 {!mine && (
-                  <span className="text-[10px] font-semibold text-gray-400 mb-0.5 px-1 flex items-center gap-1">
-                    {m.sender_name || 'Equipo'}
-                    {m.sender_role === 'boss' && <span className="text-[9px] bg-amber-100 text-amber-700 rounded px-1">Jefe</span>}
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 ${m.sender_role === 'boss' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                    {initials(m.sender_name || 'Equipo')}
                   </span>
                 )}
-                <div className={`text-sm px-3 py-1.5 rounded-2xl ${mine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-700 rounded-bl-sm'}`}>
-                  {m.message}
+                <div className="flex flex-col">
+                  {!mine && (
+                    <span className="text-[10px] font-semibold text-gray-400 mb-0.5 px-1 flex items-center gap-1">
+                      {m.sender_name || 'Equipo'}
+                      {m.sender_role === 'boss' && <span className="text-[9px] bg-amber-100 text-amber-700 rounded px-1">Jefe</span>}
+                    </span>
+                  )}
+                  <div className={`text-sm px-3 py-1.5 rounded-2xl ${mine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-700 rounded-bl-sm'}`}>
+                    {m.message}
+                  </div>
+                  <span className={`text-[9px] text-gray-300 mt-0.5 px-1 ${mine ? 'text-right' : ''}`}>
+                    {new Date(m.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-                <span className="text-[9px] text-gray-300 mt-0.5 px-1">
-                  {new Date(m.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                </span>
               </div>
             )
           })

@@ -192,3 +192,49 @@ export async function deleteDeductionAction(id: string): Promise<ActionResult> {
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
 }
+
+// ─── Cartocena (fondo/colecta del equipo, semanal) ──────────────────────────
+export interface TeamFund { goal: number; accumulated: number; contributors: number }
+
+function mondayISO(): string {
+  const now = new Date()
+  const dow = (now.getDay() + 6) % 7
+  const mon = new Date(now); mon.setDate(now.getDate() - dow)
+  return mon.toISOString().slice(0, 10)
+}
+
+/** Lee la cartocena de esta semana (acumulado se reinicia cada lunes; la meta se conserva). */
+export async function getTeamFundAction(): Promise<TeamFund> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { goal: 0, accumulated: 0, contributors: 0 }
+    const { data } = await supabase.from('team_fund')
+      .select('goal, accumulated, contributors, week_start').eq('boss_id', user.id).maybeSingle()
+    if (!data) return { goal: 0, accumulated: 0, contributors: 0 }
+    const sameWeek = data.week_start === mondayISO()
+    return {
+      goal: Number(data.goal) || 0,
+      accumulated: sameWeek ? Number(data.accumulated) || 0 : 0,
+      contributors: sameWeek ? Number(data.contributors) || 0 : 0,
+    }
+  } catch { return { goal: 0, accumulated: 0, contributors: 0 } }
+}
+
+export async function saveTeamFundAction(input: TeamFund): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { error } = await supabase.from('team_fund').upsert({
+      boss_id: user.id,
+      goal: Math.max(0, input.goal || 0),
+      accumulated: Math.max(0, input.accumulated || 0),
+      contributors: Math.max(0, Math.round(input.contributors || 0)),
+      week_start: mondayISO(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'boss_id' })
+    if (error) return { success: false, error: 'No se pudo guardar (¿migración 029?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}

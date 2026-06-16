@@ -45,6 +45,32 @@ export default function EmployeesSection({ plan }: { plan: string }) {
     navigator.clipboard?.writeText(text).then(() => toast.success('Usuario copiado')).catch(() => {})
   }
 
+  const createCard = (
+    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 h-full">
+      <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-1">
+        <UserPlus size={16} className="text-indigo-600" /> Crear empleado
+      </p>
+      <p className="text-[11px] text-gray-400 mb-2">Solo para quienes cobran. Se genera un usuario a partir del nombre.</p>
+      <div className="space-y-2">
+        <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre del empleado" className="h-10 text-sm" />
+        <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Contraseña (mín. 6)" className="h-10 text-sm" />
+        <Button onClick={create} disabled={isPending} className="w-full h-10 bg-gradient-to-r from-indigo-600 to-violet-600 hover:opacity-90">
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus size={16} className="mr-1.5" /> Crear empleado</>}
+        </Button>
+      </div>
+      {lastCreated && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm mt-2">
+          <p className="font-medium text-green-800 flex items-center gap-1.5"><Check size={15} /> Empleado creado:</p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <code className="flex-1 bg-white border border-green-200 rounded px-2 py-1 text-xs text-gray-700 break-all">{lastCreated}</code>
+            <button onClick={() => copy(lastCreated)} className="text-green-700 hover:text-green-900"><Copy size={15} /></button>
+          </div>
+          <p className="text-[11px] text-green-700 mt-1">La contraseña es la que escribiste.</p>
+        </div>
+      )}
+    </div>
+  )
+
   if (!isPaid) {
     return (
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
@@ -66,34 +92,8 @@ export default function EmployeesSection({ plan }: { plan: string }) {
     <div className="grid lg:grid-cols-3 gap-4 items-start">
       {/* Columna principal */}
       <div className="lg:col-span-2 space-y-4">
-        {/* Crear empleado */}
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
-          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-1">
-            <UserPlus size={16} className="text-indigo-600" /> Crear empleado
-            <span className="text-[11px] font-normal text-gray-400">(solo para quienes cobran)</span>
-          </p>
-          <div className="grid sm:grid-cols-2 gap-2 mt-2">
-            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre del empleado" className="h-10 text-sm" />
-            <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Contraseña (mín. 6)" className="h-10 text-sm" />
-          </div>
-          <Button onClick={create} disabled={isPending} className="h-10 mt-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:opacity-90">
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus size={16} className="mr-1.5" /> Crear empleado</>}
-          </Button>
-          <p className="text-[11px] text-gray-400 mt-1.5">Sin correo: se genera un usuario a partir del nombre. El empleado entra con ese usuario y la contraseña, y solo verá el POS.</p>
-          {lastCreated && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm mt-2">
-              <p className="font-medium text-green-800 flex items-center gap-1.5"><Check size={15} /> Empleado creado. Comparte estos datos:</p>
-              <div className="mt-1.5 flex items-center gap-2">
-                <code className="flex-1 bg-white border border-green-200 rounded px-2 py-1 text-xs text-gray-700 break-all">{lastCreated}</code>
-                <button onClick={() => copy(lastCreated)} className="text-green-700 hover:text-green-900"><Copy size={15} /></button>
-              </div>
-              <p className="text-[11px] text-green-700 mt-1">Usuario de acceso · la contraseña es la que escribiste.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Nómina + KPIs + descuentos + resumen */}
-        <PayrollDashboard />
+        {/* Crear empleado + KPIs + Cartocena + nómina + descuentos + resumen */}
+        <PayrollDashboard createSlot={createCard} />
 
         {/* Gestión de cada empleado */}
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
