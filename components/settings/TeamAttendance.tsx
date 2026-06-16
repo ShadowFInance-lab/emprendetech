@@ -48,10 +48,10 @@ export default function TeamAttendance() {
   }
 
   return (
-    <div className="mt-5 pt-5 border-t border-gray-100">
+    <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
-          <CalendarClock size={14} /> Asistencia (últimos 7 días)
+        <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+          <CalendarClock size={15} className="text-indigo-600" /> Asistencia (últimos 7 días)
         </p>
         <button onClick={exportExcel}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100">

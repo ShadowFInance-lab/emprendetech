@@ -126,3 +126,69 @@ export async function getMyPayrollAction(period: PayrollPeriod): Promise<Payroll
     }
   } catch { return null }
 }
+
+// ─── Descuentos generales (ISR, Seguro Social, otros) ───────────────────────
+export interface PayrollDeduction {
+  id: string
+  concept: string
+  kind: 'percent' | 'amount'
+  value: number
+  description: string | null
+}
+
+/** Lista los descuentos generales del equipo (jefe o empleado vía RLS). */
+export async function getDeductionsAction(): Promise<PayrollDeduction[]> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+    const { data, error } = await supabase
+      .from('payroll_deductions')
+      .select('id, concept, kind, value, description')
+      .order('created_at', { ascending: true })
+    if (error) return []
+    return (data ?? []).map(d => ({
+      id: d.id as string,
+      concept: d.concept as string,
+      kind: (d.kind as 'percent' | 'amount') ?? 'percent',
+      value: Number(d.value) || 0,
+      description: (d.description as string) ?? null,
+    }))
+  } catch { return [] }
+}
+
+export async function saveDeductionAction(input: {
+  id?: string; concept: string; kind: 'percent' | 'amount'; value: number; description?: string
+}): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    if (!input.concept.trim()) return { success: false, error: 'Escribe el concepto' }
+    const payload = {
+      concept: input.concept.trim(),
+      kind: input.kind,
+      value: Math.max(0, input.value || 0),
+      description: input.description?.trim() || null,
+    }
+    if (input.id) {
+      const { error } = await supabase.from('payroll_deductions').update(payload).eq('id', input.id).eq('boss_id', user.id)
+      if (error) return { success: false, error: 'No se pudo guardar' }
+    } else {
+      const { error } = await supabase.from('payroll_deductions').insert({ ...payload, boss_id: user.id })
+      if (error) return { success: false, error: 'No se pudo guardar (¿migración 028?)' }
+    }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+export async function deleteDeductionAction(id: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { error } = await supabase.from('payroll_deductions').delete().eq('id', id).eq('boss_id', user.id)
+    if (error) return { success: false, error: 'No se pudo eliminar' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}

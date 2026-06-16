@@ -197,6 +197,8 @@ export default async function SubscriptionPage({
               {/* Glow decorativo */}
               <div className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/15 blur-3xl" />
               {isPopular && <div className="pointer-events-none absolute -bottom-24 -left-16 w-52 h-52 rounded-full bg-white/15 blur-3xl" />}
+              {/* Brillo que recorre la tarjeta al pasar el cursor */}
+              <div className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-[300%] transition-transform duration-700 ease-out" />
 
               {/* Banner "MÁS POPULAR" en la destacada */}
               {isPopular && (
@@ -212,13 +214,13 @@ export default async function SubscriptionPage({
 
               <div className="relative p-6 flex flex-col h-full">
                 {/* Icono grande */}
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 bg-white/20 backdrop-blur-sm shadow-inner">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 bg-white/20 backdrop-blur-sm shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
                   {style.icon}
                 </div>
 
                 {/* Nombre + precio */}
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">{plan.label}</p>
-                <p className="text-4xl font-black mt-1.5 tracking-tight leading-[1.05] text-white">{plan.price_label}</p>
+                <p className="text-4xl font-black mt-1.5 tracking-tight leading-[1.05] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]">{plan.price_label}</p>
                 <p className="text-xs font-medium mt-2 text-white/80">
                   {planId === 'vip_plus' ? 'Pago único · de por vida'
                     : planId === 'free' ? 'Gratis para siempre'

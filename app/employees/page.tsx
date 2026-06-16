@@ -15,7 +15,7 @@ export default async function EmployeesPage() {
   if (profile?.role === 'employee') redirect('/sales/new')
 
   return (
-    <div className="max-w-3xl space-y-6 pb-28">
+    <div className="max-w-[1500px] space-y-6 pb-28">
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
           <Users size={22} className="text-white" />
