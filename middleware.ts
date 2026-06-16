@@ -65,6 +65,8 @@ export async function middleware(request: NextRequest) {
     '/settings',
     '/subscription',
     '/onboarding',
+    '/quotes',
+    '/employees',
   ]
 
   const isProtected = protectedPrefixes.some(prefix =>

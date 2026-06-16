@@ -134,6 +134,9 @@ export async function createSaleAction(input: CreateSaleInput): Promise<ActionRe
     return { success: false, error: 'Error al crear la venta' }
   }
 
+  // Atribución del vendedor (best-effort; se ignora si falta la columna created_by)
+  await supabase.from('sales').update({ created_by: user.id }).eq('id', sale.id)
+
   // ─── Insertar items (los triggers descuentan stock) ──────
   const saleItems = items.map(item => ({
     sale_id: sale.id,

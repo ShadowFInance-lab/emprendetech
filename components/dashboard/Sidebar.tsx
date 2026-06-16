@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, ShoppingCart, Users,
   Settings, CreditCard, ExternalLink, Menu, X,
-  LogOut, Store, FileText, History,
+  LogOut, Store, FileText, History, UserCog,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/lib/actions/auth'
@@ -15,6 +15,7 @@ import type { Store as StoreType, Profile } from '@/lib/types'
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Ganancias', icon: LayoutDashboard },
   { href: '/quotes', label: 'Cotizaciones', icon: FileText },
+  { href: '/employees', label: 'Empleados', icon: UserCog },
   { href: '/inventory', label: 'Inventario', icon: Package },
   { href: '/sales/new', label: 'Ventas', icon: ShoppingCart },
   { href: '/customers', label: 'Clientes', icon: Users },

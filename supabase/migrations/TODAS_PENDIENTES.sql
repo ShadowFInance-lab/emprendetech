@@ -268,4 +268,39 @@ DROP POLICY IF EXISTS "att_boss" ON employee_attendance;
 CREATE POLICY "att_boss" ON employee_attendance FOR ALL
   USING (boss_id = auth.uid()) WITH CHECK (boss_id = auth.uid());
 
+-- ─── 024: Gestión avanzada de equipo ───────────────────────────────────────
+CREATE OR REPLACE FUNCTION my_employee_ids()
+RETURNS SETOF uuid LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+  SELECT id FROM profiles WHERE boss_id = auth.uid()
+$$;
+GRANT EXECUTE ON FUNCTION my_employee_ids() TO authenticated;
+
+CREATE TABLE IF NOT EXISTS employee_meta (
+  employee_id     UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  phone           TEXT, insurance_no TEXT, emergency_phone TEXT, branch TEXT,
+  salary          NUMERIC, updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE employee_meta ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "meta_self" ON employee_meta;
+CREATE POLICY "meta_self" ON employee_meta FOR SELECT USING (employee_id = auth.uid());
+DROP POLICY IF EXISTS "meta_boss" ON employee_meta;
+CREATE POLICY "meta_boss" ON employee_meta FOR ALL
+  USING (employee_id IN (SELECT my_employee_ids())) WITH CHECK (employee_id IN (SELECT my_employee_ids()));
+
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS created_by UUID;
+
+CREATE TABLE IF NOT EXISTS team_messages (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  boss_id     UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  employee_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  from_role   TEXT NOT NULL CHECK (from_role IN ('boss','employee')),
+  message     TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE team_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tm_access" ON team_messages;
+CREATE POLICY "tm_access" ON team_messages FOR ALL
+  USING (boss_id = auth.uid() OR employee_id = auth.uid())
+  WITH CHECK (boss_id = auth.uid() OR employee_id = auth.uid());
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

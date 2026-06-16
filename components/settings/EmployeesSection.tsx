@@ -3,13 +3,11 @@
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Users, UserPlus, Trash2, Send, Loader2, Lock, Crown, Check, Copy } from 'lucide-react'
+import { Users, UserPlus, Loader2, Lock, Crown, Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  createEmployeeAction, listEmployeesAction, deleteEmployeeAction, notifyEmployeeAction,
-  type Employee,
-} from '@/lib/actions/employees'
+import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/actions/employees'
+import EmployeeManageCard from './EmployeeManageCard'
 import TeamAttendance from './TeamAttendance'
 
 const PAID = ['emprendedor', 'negocio', 'vip_plus']
@@ -21,8 +19,6 @@ export default function EmployeesSection({ plan }: { plan: string }) {
   const [isPending, startTransition] = useTransition()
   const [form, setForm] = useState({ name: '', password: '' })
   const [lastCreated, setLastCreated] = useState<string | null>(null)
-  const [notifyFor, setNotifyFor] = useState<string | null>(null)
-  const [notifyMsg, setNotifyMsg] = useState('')
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -43,22 +39,6 @@ export default function EmployeesSection({ plan }: { plan: string }) {
       } else toast.error(res.error ?? 'Error', { duration: 6000 })
     })
   }
-  function remove(id: string) {
-    if (!confirm('¿Quitar el acceso de este empleado?')) return
-    startTransition(async () => {
-      const res = await deleteEmployeeAction(id)
-      if (res.success) { toast.success('Acceso quitado'); refresh() }
-      else toast.error(res.error ?? 'Error')
-    })
-  }
-  function send(id: string) {
-    if (!notifyMsg.trim()) { toast.error('Escribe un mensaje'); return }
-    startTransition(async () => {
-      const res = await notifyEmployeeAction(id, notifyMsg)
-      if (res.success) { toast.success('Notificación enviada'); setNotifyFor(null); setNotifyMsg('') }
-      else toast.error(res.error ?? 'Error')
-    })
-  }
   function copy(text: string) {
     navigator.clipboard?.writeText(text).then(() => toast.success('Usuario copiado')).catch(() => {})
   }
@@ -70,8 +50,8 @@ export default function EmployeesSection({ plan }: { plan: string }) {
           <Users size={17} className="text-white" />
         </span>
         <div>
-          <p className="font-semibold text-gray-900 text-[15px] leading-tight">Equipo · Jefe y Empleados</p>
-          <p className="text-xs text-gray-400">Crea cuentas para tu personal. Los empleados solo acceden al POS (Ventas) y ven el stock.</p>
+          <p className="font-semibold text-gray-900 text-[15px] leading-tight">Empleados</p>
+          <p className="text-xs text-gray-400">Crea cuentas, gestiona datos, ventas, asistencia y chatea con tu personal.</p>
         </div>
       </div>
 
@@ -117,43 +97,17 @@ export default function EmployeesSection({ plan }: { plan: string }) {
             )}
           </div>
 
-          {/* Lista */}
+          {/* Lista de empleados (gestión completa) */}
           {loading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>
           ) : employees.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">Aún no tienes empleados.</p>
           ) : (
             <div className="space-y-2">
-              {employees.map(emp => (
-                <div key={emp.id} className="border border-gray-100 rounded-xl p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                      {(emp.name || '?').charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{emp.name || 'Empleado'}</p>
-                      <p className="text-xs text-gray-400 truncate">Usuario: {emp.email ?? '—'}</p>
-                    </div>
-                    <button onClick={() => { setNotifyFor(notifyFor === emp.id ? null : emp.id); setNotifyMsg('') }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-50">
-                      <Send size={13} /> Notificar
-                    </button>
-                    <button onClick={() => remove(emp.id)} disabled={isPending}
-                      className="text-gray-300 hover:text-red-500 p-1" title="Quitar acceso"><Trash2 size={15} /></button>
-                  </div>
-                  {notifyFor === emp.id && (
-                    <div className="mt-2.5 flex items-center gap-2">
-                      <Input value={notifyMsg} onChange={e => setNotifyMsg(e.target.value)} placeholder="Mensaje para el empleado…"
-                        className="h-9 text-sm" onKeyDown={e => { if (e.key === 'Enter') send(emp.id) }} />
-                      <Button onClick={() => send(emp.id)} disabled={isPending} className="h-9 bg-indigo-600 hover:bg-indigo-700">
-                        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={15} />}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
+              {employees.map(emp => <EmployeeManageCard key={emp.id} emp={emp} onChange={refresh} />)}
             </div>
           )}
+
           <TeamAttendance />
         </div>
       )}

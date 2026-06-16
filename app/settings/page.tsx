@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { Plan } from '@/lib/types'
 import StoreSettingsForm from '@/components/settings/StoreSettingsForm'
-import EmployeesSection from '@/components/settings/EmployeesSection'
 import StorePaymentSection from '@/components/settings/StorePaymentSection'
 
 export default async function SettingsPage() {
@@ -29,7 +28,6 @@ export default async function SettingsPage() {
       </div>
       <StoreSettingsForm store={store} plan={plan} />
       <StorePaymentSection />
-      {profile?.role !== 'employee' && <EmployeesSection plan={plan} />}
     </div>
   )
 }

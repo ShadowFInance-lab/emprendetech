@@ -156,3 +156,63 @@ export async function markEmployeeNotificationRead(id: string): Promise<ActionRe
     return { success: false }
   }
 }
+
+// ─── Datos extra del empleado (tel, seguro, emergencia, sucursal, sueldo) ────
+export interface EmployeeMeta {
+  phone: string | null
+  insurance_no: string | null
+  emergency_phone: string | null
+  branch: string | null
+  salary: number | null
+}
+
+export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta | null> {
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('employee_meta')
+      .select('phone, insurance_no, emergency_phone, branch, salary')
+      .eq('employee_id', employeeId).maybeSingle()
+    return (data as EmployeeMeta) ?? null
+  } catch { return null }
+}
+
+export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeMeta): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { error } = await supabase.from('employee_meta').upsert({
+      employee_id: employeeId,
+      phone: meta.phone || null,
+      insurance_no: meta.insurance_no || null,
+      emergency_phone: meta.emergency_phone || null,
+      branch: meta.branch || null,
+      salary: meta.salary ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    if (error) return { success: false, error: 'No se pudo guardar (¿migración 024?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+/** Ventas del día y la semana hechas por un empleado (atribución created_by). */
+export async function getEmployeeStats(employeeId: string): Promise<{ todayCount: number; todayTotal: number; weekTotal: number }> {
+  try {
+    const supabase = await createClient()
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
+    const weekStart = new Date(Date.now() - 7 * 86400000)
+    const { data, error } = await supabase
+      .from('sales')
+      .select('total, created_at, status')
+      .eq('created_by', employeeId).eq('status', 'completed')
+      .gte('created_at', weekStart.toISOString())
+    if (error || !data) return { todayCount: 0, todayTotal: 0, weekTotal: 0 }
+    let todayCount = 0, todayTotal = 0, weekTotal = 0
+    for (const s of data) {
+      weekTotal += Number(s.total)
+      if (new Date(s.created_at) >= dayStart) { todayCount++; todayTotal += Number(s.total) }
+    }
+    return { todayCount, todayTotal, weekTotal }
+  } catch { return { todayCount: 0, todayTotal: 0, weekTotal: 0 } }
+}
