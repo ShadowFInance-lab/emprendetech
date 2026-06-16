@@ -397,4 +397,38 @@ DROP POLICY IF EXISTS "tf_employee_read" ON team_fund;
 CREATE POLICY "tf_employee_read" ON team_fund FOR SELECT
   USING (boss_id = my_team_boss());
 
+-- ─── 030: Empleados "solo registro" (sin login) ────────────────────────────
+CREATE TABLE IF NOT EXISTS staff (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  boss_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name            TEXT NOT NULL,
+  phone           TEXT, emergency_phone TEXT, insurance_no TEXT, branch TEXT,
+  salary          NUMERIC NOT NULL DEFAULT 0,
+  days_worked     INTEGER NOT NULL DEFAULT 0,
+  absences        INTEGER NOT NULL DEFAULT 0,
+  discount        NUMERIC NOT NULL DEFAULT 0,
+  note            TEXT,
+  active          BOOLEAN NOT NULL DEFAULT true,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "staff_boss" ON staff;
+CREATE POLICY "staff_boss" ON staff FOR ALL
+  USING (boss_id = auth.uid()) WITH CHECK (boss_id = auth.uid());
+
+-- ─── 031: Cartocena con aportes por empleado ───────────────────────────────
+CREATE TABLE IF NOT EXISTS team_fund_contributions (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  boss_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  contributor TEXT NOT NULL,
+  amount      NUMERIC NOT NULL DEFAULT 0,
+  week_start  DATE NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE team_fund_contributions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tfc_boss" ON team_fund_contributions;
+CREATE POLICY "tfc_boss" ON team_fund_contributions FOR ALL
+  USING (boss_id = auth.uid()) WITH CHECK (boss_id = auth.uid());
+CREATE INDEX IF NOT EXISTS idx_tfc_boss_week ON team_fund_contributions(boss_id, week_start);
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

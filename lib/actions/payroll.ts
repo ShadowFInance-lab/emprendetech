@@ -193,8 +193,9 @@ export async function deleteDeductionAction(id: string): Promise<ActionResult> {
   } catch { return { success: false, error: 'Error' } }
 }
 
-// ─── Cartocena (fondo/colecta del equipo, semanal) ──────────────────────────
+// ─── Cartocena (fondo del equipo, semanal con aportes por empleado) ─────────
 export interface TeamFund { goal: number; accumulated: number; contributors: number }
+export interface FundContribution { id: string; contributor: string; amount: number; created_at: string }
 
 function mondayISO(): string {
   const now = new Date()
@@ -203,38 +204,64 @@ function mondayISO(): string {
   return mon.toISOString().slice(0, 10)
 }
 
-/** Lee la cartocena de esta semana (acumulado se reinicia cada lunes; la meta se conserva). */
-export async function getTeamFundAction(): Promise<TeamFund> {
+/** Cartocena de esta semana: meta + acumulado y aportantes derivados de los aportes. */
+export async function getTeamFundAction(): Promise<TeamFund & { items: FundContribution[] }> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { goal: 0, accumulated: 0, contributors: 0 }
-    const { data } = await supabase.from('team_fund')
-      .select('goal, accumulated, contributors, week_start').eq('boss_id', user.id).maybeSingle()
-    if (!data) return { goal: 0, accumulated: 0, contributors: 0 }
-    const sameWeek = data.week_start === mondayISO()
-    return {
-      goal: Number(data.goal) || 0,
-      accumulated: sameWeek ? Number(data.accumulated) || 0 : 0,
-      contributors: sameWeek ? Number(data.contributors) || 0 : 0,
-    }
-  } catch { return { goal: 0, accumulated: 0, contributors: 0 } }
+    if (!user) return { goal: 0, accumulated: 0, contributors: 0, items: [] }
+    const monday = mondayISO()
+    const [{ data: tf }, { data: contrib }] = await Promise.all([
+      supabase.from('team_fund').select('goal').eq('boss_id', user.id).maybeSingle(),
+      supabase.from('team_fund_contributions').select('id, contributor, amount, created_at')
+        .eq('boss_id', user.id).eq('week_start', monday).order('created_at', { ascending: false }),
+    ])
+    const items: FundContribution[] = (contrib ?? []).map(c => ({
+      id: c.id as string, contributor: c.contributor as string, amount: Number(c.amount) || 0, created_at: c.created_at as string,
+    }))
+    const accumulated = items.reduce((s, i) => s + i.amount, 0)
+    const contributors = new Set(items.map(i => i.contributor)).size
+    return { goal: Number(tf?.goal) || 0, accumulated, contributors, items }
+  } catch { return { goal: 0, accumulated: 0, contributors: 0, items: [] } }
 }
 
-export async function saveTeamFundAction(input: TeamFund): Promise<ActionResult> {
+/** Guarda solo la meta semanal de la cartocena. */
+export async function saveTeamFundGoalAction(goal: number): Promise<ActionResult> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
     const { error } = await supabase.from('team_fund').upsert({
-      boss_id: user.id,
-      goal: Math.max(0, input.goal || 0),
-      accumulated: Math.max(0, input.accumulated || 0),
-      contributors: Math.max(0, Math.round(input.contributors || 0)),
-      week_start: mondayISO(),
-      updated_at: new Date().toISOString(),
+      boss_id: user.id, goal: Math.max(0, goal || 0), week_start: mondayISO(), updated_at: new Date().toISOString(),
     }, { onConflict: 'boss_id' })
     if (error) return { success: false, error: 'No se pudo guardar (¿migración 029?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+/** Registra un aporte de un empleado a la cartocena de esta semana. */
+export async function addFundContributionAction(contributor: string, amount: number): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    if (!contributor.trim()) return { success: false, error: 'Elige quién aporta' }
+    if (!(amount > 0)) return { success: false, error: 'Monto inválido' }
+    const { error } = await supabase.from('team_fund_contributions').insert({
+      boss_id: user.id, contributor: contributor.trim(), amount, week_start: mondayISO(),
+    })
+    if (error) return { success: false, error: 'No se pudo registrar (¿migración 031?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+export async function deleteFundContributionAction(id: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { error } = await supabase.from('team_fund_contributions').delete().eq('id', id).eq('boss_id', user.id)
+    if (error) return { success: false, error: 'No se pudo eliminar' }
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
 }

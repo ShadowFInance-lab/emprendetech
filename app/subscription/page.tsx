@@ -17,10 +17,10 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
 }
 
 const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
-  free:        { bar: 'from-slate-400 to-slate-600',                  icon: '🆓' },
-  emprendedor: { bar: 'from-blue-500 via-blue-600 to-indigo-700',     icon: '🚀' },
+  free:        { bar: 'from-teal-500 via-cyan-600 to-sky-700',         icon: '🆓' },
+  emprendedor: { bar: 'from-blue-500 via-indigo-600 to-violet-700',    icon: '🚀' },
   negocio:     { bar: 'from-fuchsia-500 via-purple-600 to-indigo-700', icon: '🏢' },
-  vip_plus:    { bar: 'from-amber-400 via-orange-500 to-rose-600',    icon: '👑' },
+  vip_plus:    { bar: 'from-amber-400 via-orange-500 to-rose-600',     icon: '👑' },
 }
 
 export default async function SubscriptionPage({

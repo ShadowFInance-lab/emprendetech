@@ -3,10 +3,11 @@
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, Lock, Crown, Check, Copy, Users } from 'lucide-react'
+import { UserPlus, Loader2, Lock, Crown, Check, Copy, Users, ClipboardList } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/actions/employees'
+import { createStaffAction } from '@/lib/actions/staff'
 import EmployeeManageCard from './EmployeeManageCard'
 import TeamAttendance from './TeamAttendance'
 import PayrollDashboard from './PayrollDashboard'
@@ -21,6 +22,7 @@ export default function EmployeesSection({ plan }: { plan: string }) {
   const [isPending, startTransition] = useTransition()
   const [form, setForm] = useState({ name: '', password: '' })
   const [lastCreated, setLastCreated] = useState<string | null>(null)
+  const [signal, setSignal] = useState(0)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -37,7 +39,18 @@ export default function EmployeesSection({ plan }: { plan: string }) {
         toast.success('Empleado creado')
         setLastCreated(res.loginEmail ?? null)
         setForm({ name: '', password: '' })
-        refresh()
+        refresh(); setSignal(s => s + 1)
+      } else toast.error(res.error ?? 'Error', { duration: 6000 })
+    })
+  }
+  function createStaff() {
+    if (!form.name.trim()) { toast.error('Escribe el nombre'); return }
+    startTransition(async () => {
+      const res = await createStaffAction(form.name)
+      if (res.success) {
+        toast.success('Empleado de registro creado')
+        setForm({ name: '', password: '' })
+        setSignal(s => s + 1)
       } else toast.error(res.error ?? 'Error', { duration: 6000 })
     })
   }
@@ -50,13 +63,16 @@ export default function EmployeesSection({ plan }: { plan: string }) {
       <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-1">
         <UserPlus size={16} className="text-indigo-600" /> Crear empleado
       </p>
-      <p className="text-[11px] text-gray-400 mb-2">Solo para quienes cobran. Se genera un usuario a partir del nombre.</p>
+      <p className="text-[11px] text-gray-400 mb-2">Con contraseña = entra al POS. Sin contraseña = solo aparece en nómina/asistencia.</p>
       <div className="space-y-2">
         <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre del empleado" className="h-10 text-sm" />
-        <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Contraseña (mín. 6)" className="h-10 text-sm" />
+        <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Contraseña (mín. 6) — opcional" className="h-10 text-sm" />
         <Button onClick={create} disabled={isPending} className="w-full h-10 bg-gradient-to-r from-indigo-600 to-violet-600 hover:opacity-90">
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus size={16} className="mr-1.5" /> Crear empleado</>}
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserPlus size={16} className="mr-1.5" /> Crear con acceso (POS)</>}
         </Button>
+        <button onClick={createStaff} disabled={isPending} className="w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 disabled:opacity-50">
+          <ClipboardList size={15} /> Solo registro (sin login)
+        </button>
       </div>
       {lastCreated && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm mt-2">
@@ -93,7 +109,7 @@ export default function EmployeesSection({ plan }: { plan: string }) {
       {/* Columna principal */}
       <div className="lg:col-span-2 space-y-4">
         {/* Crear empleado + KPIs + Cartocena + nómina + descuentos + resumen */}
-        <PayrollDashboard createSlot={createCard} />
+        <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} />
 
         {/* Gestión de cada empleado */}
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
