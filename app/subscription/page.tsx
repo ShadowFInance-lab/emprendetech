@@ -188,7 +188,7 @@ export default async function SubscriptionPage({
           return (
             <div
               key={planId}
-              className={`group relative rounded-3xl overflow-hidden text-white transition-all duration-300 hover:-translate-y-1.5 bg-gradient-to-br ${style.bar} ${
+              className={`group relative rounded-3xl overflow-hidden text-white transition-all duration-300 hover:-translate-y-2 hover:brightness-110 bg-gradient-to-br ${style.bar} ${
                 isPopular
                   ? `shadow-2xl shadow-orange-500/40 ${isCurrent ? 'ring-4 ring-white/70' : 'ring-2 ring-white/50'} sm:scale-[1.05] hover:shadow-orange-500/50`
                   : `shadow-xl ${isCurrent ? 'ring-4 ring-white/70' : 'ring-1 ring-white/15'} hover:shadow-2xl`
@@ -200,7 +200,7 @@ export default async function SubscriptionPage({
 
               {/* Banner "MÁS POPULAR" en la destacada */}
               {isPopular && (
-                <div className="w-full bg-white/20 backdrop-blur-sm text-center py-1.5 text-[11px] font-extrabold tracking-[0.18em]">
+                <div className="w-full bg-white text-orange-600 text-center py-2 text-xs font-extrabold tracking-[0.2em] shadow-md">
                   ⭐ MÁS POPULAR
                 </div>
               )}

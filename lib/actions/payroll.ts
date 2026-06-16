@@ -11,6 +11,8 @@ export interface PayrollRow {
   name: string | null
   phone: string | null
   emergency: string | null
+  branch: string | null
+  notes: string
   daysPresent: number
   base: number
   discount: number
@@ -47,7 +49,7 @@ export async function getPayrollAction(period: PayrollPeriod): Promise<PayrollRe
     const [{ data: att }, { data: metas }, { data: pays }] = await Promise.all([
       supabase.from('employee_attendance').select('employee_id, work_date, check_in, check_out, note')
         .eq('boss_id', user.id).gte('work_date', pStart),
-      supabase.from('employee_meta').select('employee_id, phone, emergency_phone, salary').in('employee_id', ids),
+      supabase.from('employee_meta').select('employee_id, phone, emergency_phone, branch, salary').in('employee_id', ids),
       supabase.from('payroll').select('employee_id, discount').eq('boss_id', user.id).eq('period_start', pStart),
     ])
 
@@ -70,6 +72,8 @@ export async function getPayrollAction(period: PayrollPeriod): Promise<PayrollRe
         name: e.full_name,
         phone: meta?.phone ?? null,
         emergency: meta?.emergency_phone ?? null,
+        branch: meta?.branch ?? null,
+        notes: days.filter(d => d.note).map(d => `${d.date.slice(5)}: ${d.note}`).join(' · '),
         daysPresent: days.filter(d => d.checkIn).length,
         base, discount, net: Math.max(0, base - discount),
         days,
@@ -105,7 +109,7 @@ export async function getMyPayrollAction(period: PayrollPeriod): Promise<Payroll
     const [{ data: att }, { data: meta }, { data: pay }] = await Promise.all([
       supabase.from('employee_attendance').select('work_date, check_in, check_out, note')
         .eq('employee_id', user.id).gte('work_date', pStart),
-      supabase.from('employee_meta').select('phone, emergency_phone, salary').eq('employee_id', user.id).maybeSingle(),
+      supabase.from('employee_meta').select('phone, emergency_phone, branch, salary').eq('employee_id', user.id).maybeSingle(),
       supabase.from('payroll').select('discount').eq('employee_id', user.id).eq('period_start', pStart).maybeSingle(),
     ])
     const days: PayrollDay[] = (att ?? []).map(a => ({ date: a.work_date, checkIn: a.check_in, checkOut: a.check_out, note: a.note }))
@@ -114,6 +118,8 @@ export async function getMyPayrollAction(period: PayrollPeriod): Promise<Payroll
     const discount = Number(pay?.discount ?? 0)
     return {
       employeeId: user.id, name: null, phone: meta?.phone ?? null, emergency: meta?.emergency_phone ?? null,
+      branch: meta?.branch ?? null,
+      notes: days.filter(d => d.note).map(d => `${d.date.slice(5)}: ${d.note}`).join(' · '),
       daysPresent: days.filter(d => d.checkIn).length, base, discount, net: Math.max(0, base - discount), days,
     }
   } catch { return null }

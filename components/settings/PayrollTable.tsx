@@ -46,11 +46,12 @@ export default function PayrollTable() {
     const wb = XLSX.utils.book_new()
     // Resumen de nómina
     const resumen = rows.map(r => ({
-      Empleado: r.name ?? '', Teléfono: r.phone ?? '', Emergencia: r.emergency ?? '',
+      Empleado: r.name ?? '', Teléfono: r.phone ?? '', Emergencia: r.emergency ?? '', Sucursal: r.branch ?? '',
       'Días presente': r.daysPresent, 'Sueldo base': r.base, Descuento: parseFloat(discounts[r.employeeId] ?? '0') || 0, Neto: net(r),
+      Observaciones: r.notes ?? '',
     }))
-    const ws = XLSX.utils.json_to_sheet(resumen.length ? resumen : [{ Empleado: '', Teléfono: '', Emergencia: '', 'Días presente': '', 'Sueldo base': '', Descuento: '', Neto: '' }])
-    ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }]
+    const ws = XLSX.utils.json_to_sheet(resumen.length ? resumen : [{ Empleado: '', Teléfono: '', Emergencia: '', Sucursal: '', 'Días presente': '', 'Sueldo base': '', Descuento: '', Neto: '', Observaciones: '' }])
+    ws['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 40 }]
     XLSX.utils.book_append_sheet(wb, ws, 'Nómina')
     // Detalle de asistencia por día
     const detalle: Record<string, string | number>[] = []
@@ -75,9 +76,9 @@ export default function PayrollTable() {
     doc.text(`Periodo: ${periodLabel} · desde ${periodStart}`, 14, 25)
     autoTable(doc, {
       startY: 31,
-      head: [['Empleado', 'Tel.', 'Emergencia', 'Días', 'Base', 'Descuento', 'Neto']],
+      head: [['Empleado', 'Tel.', 'Emergencia', 'Sucursal', 'Días', 'Base', 'Descuento', 'Neto']],
       body: rows.map(r => [
-        r.name ?? '', r.phone ?? '—', r.emergency ?? '—', r.daysPresent,
+        r.name ?? '', r.phone ?? '—', r.emergency ?? '—', r.branch ?? '—', r.daysPresent,
         formatCurrency(r.base), formatCurrency(parseFloat(discounts[r.employeeId] ?? '0') || 0), formatCurrency(net(r)),
       ]),
       styles: { fontSize: 8, cellPadding: 2 },
@@ -116,25 +117,29 @@ export default function PayrollTable() {
         <p className="text-sm text-gray-400 text-center py-4">Sin empleados para la nómina.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
-            <thead className="bg-gray-50 text-gray-500 text-xs">
+          <table className="w-full text-sm min-w-[820px] border border-gray-100 rounded-lg overflow-hidden">
+            <thead className="bg-indigo-50 text-indigo-900 text-xs">
               <tr>
-                <th className="text-left px-3 py-2 font-medium">Empleado</th>
-                <th className="text-left px-2 py-2 font-medium">Teléfono</th>
-                <th className="text-center px-2 py-2 font-medium">Días</th>
-                <th className="text-right px-2 py-2 font-medium">Base</th>
-                <th className="text-center px-2 py-2 font-medium">Descuento</th>
-                <th className="text-right px-3 py-2 font-medium">Neto</th>
+                <th className="text-left px-3 py-2 font-semibold">Empleado</th>
+                <th className="text-left px-2 py-2 font-semibold">Teléfono</th>
+                <th className="text-left px-2 py-2 font-semibold">Emergencia</th>
+                <th className="text-left px-2 py-2 font-semibold">Sucursal</th>
+                <th className="text-center px-2 py-2 font-semibold">Días</th>
+                <th className="text-right px-2 py-2 font-semibold">Base</th>
+                <th className="text-center px-2 py-2 font-semibold">Descuento</th>
+                <th className="text-right px-3 py-2 font-semibold">Neto</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody>
               {rows.map(r => (
-                <tr key={r.employeeId}>
+                <tr key={r.employeeId} className="odd:bg-white even:bg-gray-50/60 border-t border-gray-100">
                   <td className="px-3 py-2">
                     <p className="font-medium text-gray-900">{r.name ?? 'Empleado'}</p>
-                    {r.emergency && <p className="text-[11px] text-gray-400">Emerg.: {r.emergency}</p>}
+                    {r.notes && <p className="text-[11px] text-gray-400 truncate max-w-[200px]" title={r.notes}>{r.notes}</p>}
                   </td>
                   <td className="px-2 py-2 text-gray-500">{r.phone ?? '—'}</td>
+                  <td className="px-2 py-2 text-gray-500">{r.emergency ?? '—'}</td>
+                  <td className="px-2 py-2 text-gray-500">{r.branch ?? '—'}</td>
                   <td className="px-2 py-2 text-center">{r.daysPresent}</td>
                   <td className="px-2 py-2 text-right">{formatCurrency(r.base)}</td>
                   <td className="px-2 py-2">
