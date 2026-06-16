@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Bell, Plus, Check, Trash2, Loader2, CalendarClock, AlertCircle } from 'lucide-react'
+import { Bell, Plus, Check, Trash2, Loader2, CalendarClock, AlertCircle, UserCheck } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import {
   deleteReminderAction,
   type Reminder,
 } from '@/lib/actions/reminders'
+import { listEmployeesAction, type Employee } from '@/lib/actions/employees'
 
 interface Props {
   customerId: string
@@ -24,7 +25,15 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [assignTo, setAssignTo] = useState<string[]>([])
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => { listEmployeesAction().then(setEmployees).catch(() => {}) }, [])
+  const empName = (id: string | null) => id ? (employees.find(e => e.id === id)?.name ?? 'Empleado') : null
+  function toggleAssign(id: string) {
+    setAssignTo(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
 
   function add() {
     if (!title.trim()) {
@@ -32,16 +41,23 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
       return
     }
     startTransition(async () => {
-      const result = await createReminderAction({
-        customer_id: customerId,
-        title: title.trim(),
-        due_date: dueDate || undefined,
-        due_time: dueTime || undefined,
-      })
-      if (result.success) {
+      // Sin empleados seleccionados → 1 recordatorio general (lo ve el jefe).
+      // Con empleados → 1 recordatorio por empleado (solo ése recibe la alarma).
+      const targets = assignTo.length ? assignTo : [null]
+      const results = await Promise.all(targets.map(t =>
+        createReminderAction({
+          customer_id: customerId,
+          title: title.trim(),
+          due_date: dueDate || undefined,
+          due_time: dueTime || undefined,
+          assigned_to: t || undefined,
+        })
+      ))
+      const ok = results.filter(r => r.success).length
+      if (ok > 0) {
         // Optimista: agregar a la lista (se confirma al refrescar)
         setReminders(prev => [
-          {
+          ...targets.map(t => ({
             id: crypto.randomUUID(),
             store_id: '',
             customer_id: customerId,
@@ -49,16 +65,18 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
             due_date: dueDate || null,
             due_time: dueTime || null,
             done: false,
+            assigned_to: t,
             created_at: new Date().toISOString(),
-          },
+          })),
           ...prev,
         ])
         setTitle('')
         setDueDate('')
         setDueTime('')
-        toast.success('Recordatorio agregado')
+        setAssignTo([])
+        toast.success(assignTo.length ? `Asignado a ${ok} empleado(s)` : 'Recordatorio agregado')
       } else {
-        toast.error(result.error ?? 'Error al guardar')
+        toast.error(results[0]?.error ?? 'Error al guardar')
       }
     })
   }
@@ -146,6 +164,31 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
               </Button>
             </div>
 
+            {/* Asignar a empleados (solo ése recibe la alarma) */}
+            {employees.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-medium text-gray-500 flex items-center gap-1">
+                  <UserCheck size={13} /> Asignar a:
+                </span>
+                {employees.map(e => {
+                  const on = assignTo.includes(e.id)
+                  return (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => toggleAssign(e.id)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                        on ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300'
+                      }`}
+                    >
+                      {on && <Check size={11} className="inline mr-0.5 -mt-0.5" />}{e.name || 'Empleado'}
+                    </button>
+                  )
+                })}
+                {assignTo.length === 0 && <span className="text-[11px] text-gray-400">(nadie = solo tú lo ves)</span>}
+              </div>
+            )}
+
             {/* Lista */}
             {reminders.length > 0 ? (
               <div className="space-y-1.5">
@@ -172,16 +215,23 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
                         <p className={`text-sm ${r.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                           {r.title}
                         </p>
-                        {(d || r.due_time) && (
-                          <span
-                            className={`inline-flex items-center gap-1 text-[11px] font-medium ${
-                              r.done ? 'text-gray-300' : d?.urgent ? 'text-red-500' : 'text-gray-400'
-                            }`}
-                          >
-                            <CalendarClock size={11} />
-                            {d ? d.label : 'Sin fecha'}{r.due_time ? ` · ${r.due_time.slice(0, 5)}` : ''}
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          {(d || r.due_time) && (
+                            <span
+                              className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+                                r.done ? 'text-gray-300' : d?.urgent ? 'text-red-500' : 'text-gray-400'
+                              }`}
+                            >
+                              <CalendarClock size={11} />
+                              {d ? d.label : 'Sin fecha'}{r.due_time ? ` · ${r.due_time.slice(0, 5)}` : ''}
+                            </span>
+                          )}
+                          {r.assigned_to && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 rounded px-1.5 py-0.5">
+                              <UserCheck size={10} /> {empName(r.assigned_to)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <button
                         type="button"

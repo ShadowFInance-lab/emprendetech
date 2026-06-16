@@ -81,3 +81,47 @@ export async function markBossMessagesReadAction(): Promise<ActionResult> {
     return { success: true }
   } catch { return { success: false } }
 }
+
+// ─── Chat grupal del equipo (un hilo compartido jefe + empleados) ───────────
+export interface GroupMessage {
+  id: string
+  boss_id: string
+  sender_id: string
+  sender_name: string | null
+  sender_role: string
+  message: string
+  created_at: string
+}
+
+/** Hilo grupal del equipo + id del usuario actual (para alinear sus mensajes). */
+export async function getGroupThreadAction(): Promise<{ meId: string | null; messages: GroupMessage[] }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { meId: null, messages: [] }
+    // RLS limita las filas al equipo del usuario (boss_id = my_team_boss()).
+    const { data } = await supabase.from('team_group_messages')
+      .select('*').order('created_at', { ascending: true }).limit(100)
+    return { meId: user.id, messages: (data ?? []) as GroupMessage[] }
+  } catch { return { meId: null, messages: [] } }
+}
+
+/** Envía un mensaje al chat grupal del equipo (lo escribe jefe o empleado). */
+export async function sendGroupMessageAction(message: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    if (!message.trim()) return { success: false, error: 'Escribe un mensaje' }
+    const { data: prof } = await supabase.from('profiles').select('role, boss_id').eq('id', user.id).maybeSingle()
+    const role = prof?.role === 'employee' ? 'employee' : 'boss'
+    const bossId = role === 'employee' ? prof?.boss_id : user.id
+    if (!bossId) return { success: false, error: 'No tienes un equipo asignado' }
+    const name = (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Usuario'
+    const { error } = await supabase.from('team_group_messages').insert({
+      boss_id: bossId, sender_id: user.id, sender_name: name, sender_role: role, message: message.trim(),
+    })
+    if (error) return { success: false, error: 'No se pudo enviar (¿migración 026?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}

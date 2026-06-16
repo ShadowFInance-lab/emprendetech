@@ -10,6 +10,7 @@ import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/
 import EmployeeManageCard from './EmployeeManageCard'
 import TeamAttendance from './TeamAttendance'
 import PayrollTable from './PayrollTable'
+import TeamGroupChat from '@/components/team/TeamGroupChat'
 
 const PAID = ['emprendedor', 'negocio', 'vip_plus']
 
@@ -109,6 +110,7 @@ export default function EmployeesSection({ plan }: { plan: string }) {
             </div>
           )}
 
+          <TeamGroupChat />
           <TeamAttendance />
           <PayrollTable />
         </div>

@@ -6,6 +6,8 @@ import POSInterface from '@/components/sales/POSInterface'
 import EmployeeNotices from '@/components/sales/EmployeeNotices'
 import EmployeeClock from '@/components/sales/EmployeeClock'
 import MyPayrollCard from '@/components/sales/MyPayrollCard'
+import EmployeeReminders from '@/components/sales/EmployeeReminders'
+import TeamGroupChat from '@/components/team/TeamGroupChat'
 
 export default async function NewSalePage({
   searchParams,
@@ -61,8 +63,10 @@ export default async function NewSalePage({
         </Link>
       </div>
       {isEmployee && <EmployeeClock />}
+      {isEmployee && <EmployeeReminders />}
       {isEmployee && <MyPayrollCard />}
       <EmployeeNotices />
+      {isEmployee && <TeamGroupChat compact />}
       <POSInterface presetCustomer={presetCustomer} />
     </div>
   )

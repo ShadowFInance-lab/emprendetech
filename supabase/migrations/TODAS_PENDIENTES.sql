@@ -322,4 +322,44 @@ DROP POLICY IF EXISTS "payroll_employee_read" ON payroll;
 CREATE POLICY "payroll_employee_read" ON payroll FOR SELECT
   USING (employee_id = auth.uid());
 
+-- ─── 026: Chat grupal del equipo (jefe + empleados) ────────────────────────
+-- Devuelve el id del "jefe" del equipo del usuario actual: su propio id si es
+-- dueño, o boss_id si es empleado. SECURITY DEFINER evita recursión de RLS.
+CREATE OR REPLACE FUNCTION my_team_boss()
+RETURNS uuid LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$
+  SELECT COALESCE(
+    (SELECT boss_id FROM profiles WHERE id = auth.uid() AND role = 'employee'),
+    auth.uid()
+  )
+$$;
+GRANT EXECUTE ON FUNCTION my_team_boss() TO authenticated;
+
+CREATE TABLE IF NOT EXISTS team_group_messages (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  boss_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  sender_id   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  sender_name TEXT,
+  sender_role TEXT NOT NULL DEFAULT 'employee',
+  message     TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE team_group_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tgm_read" ON team_group_messages;
+CREATE POLICY "tgm_read" ON team_group_messages FOR SELECT
+  USING (boss_id = my_team_boss());
+DROP POLICY IF EXISTS "tgm_insert" ON team_group_messages;
+CREATE POLICY "tgm_insert" ON team_group_messages FOR INSERT
+  WITH CHECK (sender_id = auth.uid() AND boss_id = my_team_boss());
+CREATE INDEX IF NOT EXISTS idx_tgm_boss ON team_group_messages(boss_id, created_at);
+
+-- ─── 027: Recordatorios asignados a un empleado específico ──────────────────
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS assigned_to UUID;
+DROP POLICY IF EXISTS "reminders_assignee_read" ON reminders;
+CREATE POLICY "reminders_assignee_read" ON reminders FOR SELECT
+  USING (assigned_to = auth.uid());
+DROP POLICY IF EXISTS "reminders_assignee_update" ON reminders;
+CREATE POLICY "reminders_assignee_update" ON reminders FOR UPDATE
+  USING (assigned_to = auth.uid()) WITH CHECK (assigned_to = auth.uid());
+CREATE INDEX IF NOT EXISTS idx_reminders_assigned ON reminders(assigned_to) WHERE assigned_to IS NOT NULL;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.
