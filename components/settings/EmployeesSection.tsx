@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/actions/employees'
 import EmployeeManageCard from './EmployeeManageCard'
 import TeamAttendance from './TeamAttendance'
+import PayrollTable from './PayrollTable'
 
 const PAID = ['emprendedor', 'negocio', 'vip_plus']
 
@@ -109,6 +110,7 @@ export default function EmployeesSection({ plan }: { plan: string }) {
           )}
 
           <TeamAttendance />
+          <PayrollTable />
         </div>
       )}
     </div>

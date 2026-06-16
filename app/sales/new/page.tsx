@@ -5,6 +5,7 @@ import { getMyRole } from '@/lib/actions/employees'
 import POSInterface from '@/components/sales/POSInterface'
 import EmployeeNotices from '@/components/sales/EmployeeNotices'
 import EmployeeClock from '@/components/sales/EmployeeClock'
+import MyPayrollCard from '@/components/sales/MyPayrollCard'
 
 export default async function NewSalePage({
   searchParams,
@@ -60,6 +61,7 @@ export default async function NewSalePage({
         </Link>
       </div>
       {isEmployee && <EmployeeClock />}
+      {isEmployee && <MyPayrollCard />}
       <EmployeeNotices />
       <POSInterface presetCustomer={presetCustomer} />
     </div>
