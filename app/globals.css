@@ -114,3 +114,29 @@ html.translated-ltr body, html.translated-rtl body { top: 0 !important; }
 .goog-text-highlight { background: none !important; box-shadow: none !important; }
 font[style] { background: transparent !important; box-shadow: none !important; }
 }
+
+/* ─── Tema del panel: aplica los colores de la tienda a la marca del admin ─── */
+/* Se activa con la clase .mb-theme + variables --brand / --brand-2 / --brand-btn  */
+.mb-theme .from-indigo-500,
+.mb-theme .from-indigo-600,
+.mb-theme .from-violet-500,
+.mb-theme .from-violet-600 { --tw-gradient-from: var(--brand) var(--tw-gradient-from-position) !important; }
+.mb-theme .via-violet-600 { --tw-gradient-via: var(--brand-2) var(--tw-gradient-via-position) !important; }
+.mb-theme .to-violet-600,
+.mb-theme .to-violet-700,
+.mb-theme .to-indigo-600,
+.mb-theme .to-indigo-700 { --tw-gradient-to: var(--brand-2) var(--tw-gradient-to-position) !important; }
+.mb-theme .bg-indigo-500,
+.mb-theme .bg-indigo-600,
+.mb-theme .bg-blue-600 { background-color: var(--brand-btn) !important; }
+.mb-theme .hover\:bg-indigo-700:hover,
+.mb-theme .hover\:bg-indigo-800:hover,
+.mb-theme .hover\:bg-blue-700:hover { background-color: var(--brand-btn) !important; filter: brightness(0.9); }
+.mb-theme .text-indigo-600,
+.mb-theme .text-indigo-700,
+.mb-theme .text-blue-600 { color: var(--brand) !important; }
+.mb-theme .ring-indigo-400,
+.mb-theme .ring-indigo-500 { --tw-ring-color: var(--brand) !important; }
+.mb-theme .border-indigo-500,
+.mb-theme .border-indigo-600 { border-color: var(--brand) !important; }
+.mb-theme .accent-indigo-600 { accent-color: var(--brand) !important; }

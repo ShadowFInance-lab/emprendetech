@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { CSSProperties } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import Header from '@/components/dashboard/Header'
@@ -30,8 +31,14 @@ export default async function AdminLayout({
   if (!isEmployee && (!profile?.onboarding_done || !store)) redirect('/onboarding')
   if (!store) redirect('/login') // empleado sin tienda asignada (caso raro)
 
+  const themeVars = {
+    '--brand': store.primary_color || '#4f46e5',
+    '--brand-2': store.secondary_color || '#7c3aed',
+    '--brand-btn': store.button_color || '#4f46e5',
+  } as CSSProperties
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex mb-theme" style={themeVars}>
       <Sidebar store={store} profile={profile} />
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         <Header store={store} />

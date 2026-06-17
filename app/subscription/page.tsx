@@ -183,59 +183,70 @@ export default async function SubscriptionPage({
           const plan = PLAN_LIMITS[planId]
           const isCurrent = planId === currentPlan
           const style = PLAN_STYLE[planId]
-          const isPopular = planId === 'vip_plus'
+          const isPopular = planId === 'emprendedor'
+          const isPremium = planId === 'vip_plus'
+          const dark = isPremium
 
           return (
             <div
               key={planId}
               className={`relative rounded-3xl border p-6 flex flex-col transition-all duration-300 ${
-                isPopular
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-2xl shadow-slate-900/30 lg:scale-[1.03]'
-                  : 'bg-white text-slate-900 border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1'
-              } ${isCurrent ? 'ring-2 ring-indigo-500' : ''}`}
+                isPremium
+                  ? 'bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white border-transparent shadow-2xl shadow-orange-500/30 lg:scale-[1.03]'
+                  : isPopular
+                    ? 'bg-white text-slate-900 border-2 border-indigo-500 shadow-lg lg:scale-[1.02]'
+                    : 'bg-white text-slate-900 border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1'
+              } ${isCurrent ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}`}
             >
               {isPopular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 text-[10px] font-extrabold tracking-wider px-3 py-1 rounded-full shadow">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-extrabold tracking-wider px-3 py-1 rounded-full shadow">
                   MÁS POPULAR
                 </span>
               )}
+              {isPremium && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white text-orange-600 text-[10px] font-extrabold tracking-wider px-3 py-1 rounded-full shadow">
+                  ★ PREMIUM
+                </span>
+              )}
               {isCurrent && (
-                <span className={`absolute top-4 right-4 text-[10px] font-bold px-2.5 py-1 rounded-full ${isPopular ? 'bg-white/15 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
+                <span className={`absolute top-4 right-4 text-[10px] font-bold px-2.5 py-1 rounded-full ${dark ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
                   TU PLAN
                 </span>
               )}
 
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-4 ${isPopular ? 'bg-white/10' : 'bg-slate-100'}`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-4 ${dark ? 'bg-white/15' : 'bg-slate-100'}`}>
                 {style.icon}
               </div>
 
-              <p className={`text-xs font-bold uppercase tracking-[0.18em] ${isPopular ? 'text-white/60' : 'text-slate-400'}`}>{plan.label}</p>
-              <p className={`text-4xl font-black mt-1.5 tracking-tight leading-[1.05] ${isPopular ? 'text-white' : 'text-slate-900'}`}>{plan.price_label}</p>
-              <p className={`text-xs font-medium mt-2 ${isPopular ? 'text-white/60' : 'text-slate-400'}`}>
+              <p className={`text-xs font-bold uppercase tracking-[0.18em] ${dark ? 'text-white/70' : 'text-slate-400'}`}>{plan.label}</p>
+              <p className={`text-4xl font-black mt-1.5 tracking-tight leading-[1.05] ${dark ? 'text-white' : 'text-slate-900'}`}>{plan.price_label}</p>
+              <p className={`text-xs font-medium mt-2 ${dark ? 'text-white/70' : 'text-slate-400'}`}>
                 {planId === 'vip_plus' ? 'Pago único · de por vida'
                   : planId === 'free' ? 'Gratis para siempre'
                   : 'Facturación mensual'}
               </p>
 
-              <div className={`mt-5 pt-5 space-y-3 border-t ${isPopular ? 'border-white/15' : 'border-gray-100'}`}>
+              <div className={`mt-5 pt-5 space-y-3 border-t ${dark ? 'border-white/20' : 'border-gray-100'}`}>
                 {PLAN_FEATURES[planId].map((feature, i) => (
                   <div key={i} className="flex items-start gap-2.5 text-[13px]">
-                    <span className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isPopular ? 'bg-amber-400/20' : 'bg-emerald-50'}`}>
-                      <Check size={12} strokeWidth={3} className={isPopular ? 'text-amber-300' : 'text-emerald-600'} />
+                    <span className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${dark ? 'bg-white/20' : 'bg-emerald-50'}`}>
+                      <Check size={12} strokeWidth={3} className={dark ? 'text-white' : 'text-emerald-600'} />
                     </span>
-                    <span className={isPopular ? 'text-white/90' : 'text-slate-600'}>{feature}</span>
+                    <span className={dark ? 'text-white/90' : 'text-slate-600'}>{feature}</span>
                   </div>
                 ))}
               </div>
 
               <div className="pt-6 mt-auto">
                 {isCurrent ? (
-                  <div className={`text-center text-sm font-semibold py-3 rounded-xl ${isPopular ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-600'}`}>✓ Tu plan actual</div>
+                  <div className={`text-center text-sm font-semibold py-3 rounded-xl ${dark ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>✓ Tu plan actual</div>
                 ) : planId === 'free' ? (
-                  <div className={`text-center text-xs py-3 ${isPopular ? 'text-white/60' : 'text-slate-400'}`}>Tu punto de partida</div>
+                  <div className={`text-center text-xs py-3 ${dark ? 'text-white/70' : 'text-slate-400'}`}>Tu punto de partida</div>
                 ) : (
                   <UpgradeButton plan={planId} label={`Elegir ${plan.label}`}
-                    accent={isPopular ? 'bg-amber-400 !text-slate-900 hover:bg-amber-300 font-bold shadow-lg' : 'bg-slate-900 !text-white hover:bg-slate-800 font-bold shadow-sm'} />
+                    accent={isPremium ? 'bg-white !text-orange-600 hover:bg-white/90 font-bold shadow-lg'
+                      : isPopular ? 'bg-indigo-600 !text-white hover:bg-indigo-700 font-bold shadow-sm'
+                      : 'bg-slate-900 !text-white hover:bg-slate-800 font-bold shadow-sm'} />
                 )}
               </div>
             </div>

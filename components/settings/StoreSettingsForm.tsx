@@ -651,6 +651,24 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   ))}
                 </div>
                 <p className="text-[11px] text-gray-400 mt-2">Toca el color para el picker (deslizador + RGB) o escribe el HEX.</p>
+
+                {/* Vista previa del PANEL (en vivo con tus 3 tonos) */}
+                <p className="text-xs font-medium text-gray-600 mt-4 mb-1.5">Vista previa del panel</p>
+                <div className="rounded-xl border border-gray-200 overflow-hidden flex h-28 text-[10px]">
+                  <div className="w-20 flex-shrink-0 p-2 text-white flex flex-col gap-1" style={{ backgroundColor: primaryColor }}>
+                    <div className="font-bold mb-0.5">Menú</div>
+                    <div className="rounded px-1.5 py-1 bg-white/15">Ganancias</div>
+                    <div className="rounded px-1.5 py-1 font-semibold" style={{ backgroundColor: buttonColor }}>Activo</div>
+                    <div className="rounded px-1.5 py-1 bg-white/10">Ventas</div>
+                  </div>
+                  <div className="flex-1 bg-gray-50 p-2">
+                    <div className="h-6 rounded-md mb-2" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }} />
+                    <div className="bg-white rounded-md p-2 shadow-sm">
+                      <div className="h-1.5 w-14 bg-gray-200 rounded mb-2" />
+                      <button type="button" className="text-white rounded px-2 py-1 text-[9px] font-semibold" style={{ backgroundColor: buttonColor }}>Botón</button>
+                    </div>
+                  </div>
+                </div>
               </details>
 
               {/* Fondo del catálogo + estilo de botones — libres para todos */}
