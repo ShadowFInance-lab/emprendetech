@@ -13,7 +13,6 @@ import { getPlanLimits } from '@/lib/constants/plans'
 import { SUPPORTED_CURRENCIES } from '@/lib/utils/format'
 import type { Store, Plan } from '@/lib/types'
 import { Lock, Share2, MessageCircle } from 'lucide-react'
-import { InstagramIcon, TikTokIcon } from '@/components/catalog/SocialIcons'
 import { createClient } from '@/lib/supabase/client'
 import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
@@ -81,9 +80,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [skin, setSkin] = useState(store.skin)
   const [fontFamily, setFontFamily] = useState(store.font_family)
   const [productOrder, setProductOrder] = useState(store.product_order)
-  const [primaryColor, setPrimaryColor] = useState(store.primary_color)
-  const [secondaryColor, setSecondaryColor] = useState(store.secondary_color)
-  const [buttonColor, setButtonColor] = useState(store.button_color)
+  const [primaryColor, setPrimaryColor] = useState(store.primary_color || '#2563eb')
+  const [secondaryColor, setSecondaryColor] = useState(store.secondary_color || '#7c3aed')
+  const [buttonColor, setButtonColor] = useState(store.button_color || '#2563eb')
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
   const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
   const [buttonStyle, setButtonStyle] = useState(store.button_style ?? 'redondeado')
@@ -129,11 +128,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         options: { redirectTo: `${window.location.origin}/auth/callback?next=/settings` },
       })
       if (error) {
-        const msg = /manual linking/i.test(error.message)
-          ? 'Google requiere activarse en Supabase (Authentication → Settings → Manual Linking).'
-          : /not enabled|unsupported|provider/i.test(error.message)
-            ? 'Google aún no está habilitado en Supabase → Authentication → Providers.'
-            : `No se pudo conectar: ${error.message}`
+        const msg = /manual linking|not enabled|unsupported|provider/i.test(error.message)
+          ? 'Para activar Google, habilítalo una vez en Supabase (Authentication → Providers).'
+          : `No se pudo conectar: ${error.message}`
         toast(msg, {
           duration: 6000,
           icon: 'ℹ️',
@@ -167,10 +164,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const SOCIALS: { name: string; type: 'handle' | 'login'; label: string; prefix: string; placeholder: string; field: string; icon: React.ReactNode; bg: string }[] = [
     { name: 'whatsapp', type: 'handle', label: 'WhatsApp', prefix: '', placeholder: '55 1234 5678', field: 'Tu número de WhatsApp (con lada)',
       icon: <MessageCircle size={24} className="text-white" />, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
-    { name: 'instagram', type: 'handle', label: 'Instagram', prefix: 'instagram.com/', placeholder: 'tu_tienda', field: 'Solo nombre de usuario (ej. instagram.com/tu_tienda)',
-      icon: <InstagramIcon size={24} className="text-white" />, bg: 'bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600' },
-    { name: 'tiktok', type: 'handle', label: 'TikTok', prefix: 'tiktok.com/@', placeholder: 'tu_tienda', field: 'Solo nombre de usuario (ej. tiktok.com/@tu_tienda)',
-      icon: <TikTokIcon size={22} className="text-white" />, bg: 'bg-gradient-to-br from-gray-800 to-black' },
     { name: 'google', type: 'login', label: 'Google', prefix: '', placeholder: '', field: '',
       icon: <GoogleGlyph />, bg: 'bg-white border border-gray-200' },
   ]
@@ -255,10 +248,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </span>
           <div>
             <p className="font-semibold text-gray-900 text-[15px] leading-tight">Redes sociales</p>
-            <p className="text-xs text-gray-400">WhatsApp, Instagram y TikTok: solo tu @usuario. Google: inicia sesión real.</p>
+            <p className="text-xs text-gray-400">Tu número de WhatsApp y tu acceso con Google.</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 max-w-xs">
           {SOCIALS.map(soc => {
             const isLogin = soc.type === 'login'
             const connected = isLogin ? identities.some(i => i.provider === soc.name) : !!socialVals[soc.name]
@@ -284,11 +277,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         {SOCIALS.filter(soc => soc.type === 'handle').map(soc => (
           <input key={soc.name} type="hidden" name={soc.name} value={socialVals[soc.name]} readOnly />
         ))}
-        <p className="text-[11px] text-gray-400 mt-3">
-          Google abre el inicio de sesión real; requiere configurarse una sola vez en{' '}
-          <span className="font-medium">Supabase → Authentication → Providers</span> (ver{' '}
-          <code className="bg-gray-100 px-1 rounded">INTEGRACIONES.md</code>).
-        </p>
+        <p className="text-[11px] text-gray-400 mt-3">Google abre el inicio de sesión real de tu cuenta.</p>
       </div>
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
@@ -644,16 +633,18 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     { label: 'Secundario', value: secondaryColor, onChange: setSecondaryColor },
                     { label: 'Botones', value: buttonColor, onChange: setButtonColor },
                   ].map(({ label, value, onChange }) => (
-                    <div key={label} className="text-center">
-                      <label className="relative cursor-pointer inline-block">
-                        <span className="block w-full h-12 rounded-xl shadow-sm ring-1 ring-black/5" style={{ backgroundColor: value }} />
+                    <div key={label} className="rounded-xl border border-gray-100 p-2.5 text-center">
+                      <label className="relative cursor-pointer block">
+                        <span className="block w-full h-16 rounded-lg shadow-sm ring-1 ring-black/10" style={{ backgroundColor: value }} />
                         <input type="color" value={value} onChange={e => onChange(e.target.value)}
                           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                       </label>
-                      <p className="text-[11px] text-gray-500 mt-1">{label}</p>
+                      <p className="text-xs font-medium text-gray-700 mt-1.5">{label}</p>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">{value}</p>
                     </div>
                   ))}
                 </div>
+                <p className="text-[11px] text-gray-400 mt-2">Toca un tono para elegir cualquier color (picker libre).</p>
               </details>
 
               {/* Fondo del catálogo + estilo de botones — libres para todos */}

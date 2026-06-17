@@ -493,4 +493,10 @@ BEGIN
 END $$;
 GRANT EXECUTE ON FUNCTION set_employee_name(uuid, text) TO authenticated;
 
+-- ─── 035: Perfil completo para empleados de registro (sin login) ───────────
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS rfc       TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS position  TEXT;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS hire_date DATE;
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

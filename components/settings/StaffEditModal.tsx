@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2 } from 'lucide-react'
+import { X, Loader2, Save, Trash2, UserRound, ClipboardList } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { saveStaffAction, deleteStaffAction, type Staff } from '@/lib/actions/staff'
 import { useBossGate } from './BossGate'
@@ -21,8 +21,8 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
     startTransition(async () => {
       const r = await saveStaffAction(s.id, {
         name: s.name, phone: s.phone, emergency_phone: s.emergency_phone, insurance_no: s.insurance_no,
-        branch: s.branch, salary: s.salary, days_worked: s.days_worked, absences: s.absences,
-        discount: s.discount, bonus: s.bonus, paid: s.paid, note: s.note,
+        rfc: s.rfc, position: s.position, branch: s.branch, hire_date: s.hire_date, photo_url: s.photo_url,
+        salary: s.salary, days_worked: s.days_worked, absences: s.absences, discount: s.discount, bonus: s.bonus, paid: s.paid, note: s.note,
       })
       if (r.success) { toast.success('Empleado actualizado'); onSaved(); onClose() } else toast.error(r.error ?? 'Error')
     })
@@ -37,54 +37,80 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
     })
   }
 
+  type StrKey = 'name' | 'phone' | 'emergency_phone' | 'insurance_no' | 'rfc' | 'position' | 'branch' | 'hire_date' | 'photo_url'
+  const txt = (k: StrKey, label: string, ph = '', type = 'text') => (
+    <div>
+      <label className="text-[11px] font-medium text-gray-500 mb-1 block">{label}</label>
+      <Input type={type} value={s[k] ?? ''} onChange={e => set(k, e.target.value)} className="h-9 text-sm" placeholder={ph} />
+    </div>
+  )
   const num = (k: 'salary' | 'days_worked' | 'absences' | 'discount' | 'bonus', label: string, step = '1') => (
     <div>
       <label className="text-[11px] font-medium text-gray-500 mb-1 block">{label}</label>
-      <Input type="number" min="0" step={step} value={s[k] ?? 0} onChange={e => set(k, (step === '1' ? parseInt(e.target.value) : parseFloat(e.target.value)) || 0)} className="h-9 text-sm" />
-    </div>
-  )
-  const txt = (k: 'phone' | 'emergency_phone' | 'insurance_no' | 'branch', label: string, ph: string) => (
-    <div>
-      <label className="text-[11px] font-medium text-gray-500 mb-1 block">{label}</label>
-      <Input value={s[k] ?? ''} onChange={e => set(k, e.target.value)} className="h-9 text-sm" placeholder={ph} />
+      <Input type="number" min="0" step={step} value={s[k] ?? 0}
+        onChange={e => set(k, (step === '1' ? parseInt(e.target.value) : parseFloat(e.target.value)) || 0)} className="h-9 text-sm" />
     </div>
   )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-600 to-slate-800">
-          <div>
-            <p className="text-sm font-bold text-white leading-tight">Editar empleado (registro)</p>
-            <p className="text-[11px] text-white/70">Sin login · solo nómina y asistencia</p>
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-500 to-violet-600">
+          <div className="flex items-center gap-3">
+            {s.photo_url
+              ? <img src={s.photo_url} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-white/40" />
+              : <span className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center font-bold">{(s.name || '?').charAt(0).toUpperCase()}</span>}
+            <div>
+              <p className="text-sm font-bold text-white leading-tight">{s.name || 'Empleado'}</p>
+              <p className="text-[11px] text-white/75">{s.position || 'Editar empleado'}</p>
+            </div>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
         </div>
-        <div className="p-5 space-y-3 max-h-[72vh] overflow-y-auto">
+
+        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          {/* Datos + perfil (idéntico al de empleados con login) */}
           <div>
-            <label className="text-[11px] font-medium text-gray-500 mb-1 block">Nombre</label>
-            <Input value={s.name} onChange={e => set('name', e.target.value)} className="h-9 text-sm" placeholder="Nombre del empleado" />
+            <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><UserRound size={13} /> Datos y perfil</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Nombre</label>
+                <Input value={s.name} onChange={e => set('name', e.target.value)} className="h-9 text-sm" placeholder="Nombre del empleado" />
+              </div>
+              {txt('phone', 'Teléfono', '55 1234 5678')}
+              {txt('emergency_phone', 'Tel. emergencia', '55 8765 4321')}
+              {txt('insurance_no', 'N° Seguro Social (NSS)', '12345678901')}
+              {txt('rfc', 'RFC', 'XXXX000000XXX')}
+              {txt('position', 'Puesto', 'Cajero')}
+              {txt('branch', 'Sucursal / caja', 'Centro')}
+              {txt('hire_date', 'Fecha de ingreso', '', 'date')}
+              {txt('photo_url', 'Foto (URL)', 'https://…')}
+              {num('salary', 'Sueldo base', '0.01')}
+              {num('discount', 'Descuento', '0.01')}
+              {num('bonus', 'Bonos', '0.01')}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {txt('phone', 'Teléfono', '55 1234 5678')}
-            {txt('emergency_phone', 'Tel. emergencia', '55 8765 4321')}
-            {txt('insurance_no', 'N° Seguro Social', '12345678901')}
-            {txt('branch', 'Sucursal / caja', 'Centro')}
-            {num('salary', 'Sueldo base', '0.01')}
-            {num('bonus', 'Bonos', '0.01')}
-            {num('days_worked', 'Días trabajados')}
-            {num('absences', 'Faltas')}
-            {num('discount', 'Descuento', '0.01')}
+
+          {/* Registro (sin login) */}
+          <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+            <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-1"><ClipboardList size={13} /> Empleado de registro</p>
+            <p className="text-[11px] text-gray-400">No inicia sesión en el POS. Su asistencia se captura manualmente (días y faltas).</p>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {num('days_worked', 'Días trabajados')}
+              {num('absences', 'Faltas')}
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mt-2">
+              <input type="checkbox" checked={s.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4 rounded accent-emerald-600" />
+              Marcar como <span className="font-medium">pagado</span> este periodo
+            </label>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input type="checkbox" checked={s.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4 rounded accent-emerald-600" />
-            Marcar como <span className="font-medium">pagado</span> este periodo
-          </label>
+
           <div>
             <label className="text-[11px] font-medium text-gray-500 mb-1 block">Descripción / nota</label>
             <Input value={s.note ?? ''} onChange={e => set('note', e.target.value)} className="h-9 text-sm" placeholder="Ej. llegó tarde, cita médica…" />
           </div>
+
           <button onClick={save} disabled={isPending} className="w-full h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
             {isPending ? <Loader2 size={16} className="animate-spin" /> : <><Save size={15} /> Guardar cambios</>}
           </button>
