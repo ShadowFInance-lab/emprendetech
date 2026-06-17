@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
-export type PayrollPeriod = 'week' | 'fortnight' | 'month'
+export type PayrollPeriod = 'week' | 'biweekly' | 'fortnight' | 'month'
 
 export interface PayrollDay { date: string; checkIn: string | null; checkOut: string | null; note: string | null }
 export interface PayrollRow {
@@ -17,6 +17,8 @@ export interface PayrollRow {
   daysPresent: number
   base: number
   discount: number
+  bonus: number
+  paid: boolean
   net: number
   days: PayrollDay[]
 }
@@ -28,6 +30,13 @@ function periodStartDate(period: PayrollPeriod): string {
   if (period === 'fortnight') {
     const d = now.getDate() <= 15 ? 1 : 16
     return new Date(now.getFullYear(), now.getMonth(), d).toISOString().slice(0, 10)
+  }
+  if (period === 'biweekly') {
+    // Catorcena: bloques de 14 días anclados a un lunes de referencia.
+    const anchor = new Date(Date.UTC(2024, 0, 1)) // 2024-01-01 fue lunes
+    const days = Math.floor((now.getTime() - anchor.getTime()) / 86400000)
+    const start = new Date(anchor); start.setUTCDate(anchor.getUTCDate() + Math.floor(days / 14) * 14)
+    return start.toISOString().slice(0, 10)
   }
   const dow = (now.getDay() + 6) % 7 // 0 = lunes
   const mon = new Date(now); mon.setDate(now.getDate() - dow)
@@ -51,11 +60,11 @@ export async function getPayrollAction(period: PayrollPeriod): Promise<PayrollRe
       supabase.from('employee_attendance').select('employee_id, work_date, check_in, check_out, note')
         .eq('boss_id', user.id).gte('work_date', pStart),
       supabase.from('employee_meta').select('employee_id, phone, emergency_phone, insurance_no, branch, salary').in('employee_id', ids),
-      supabase.from('payroll').select('employee_id, discount').eq('boss_id', user.id).eq('period_start', pStart),
+      supabase.from('payroll').select('employee_id, discount, bonus, paid').eq('boss_id', user.id).eq('period_start', pStart),
     ])
 
     const metaMap = new Map((metas ?? []).map(m => [m.employee_id, m]))
-    const discMap = new Map((pays ?? []).map(p => [p.employee_id, Number(p.discount)]))
+    const payMap = new Map((pays ?? []).map(p => [p.employee_id, p]))
     const attByEmp = new Map<string, PayrollDay[]>()
     for (const a of att ?? []) {
       const arr = attByEmp.get(a.employee_id) ?? []
@@ -67,7 +76,8 @@ export async function getPayrollAction(period: PayrollPeriod): Promise<PayrollRe
       const meta = metaMap.get(e.id)
       const days = (attByEmp.get(e.id) ?? []).sort((a, b) => a.date.localeCompare(b.date))
       const base = Number(meta?.salary ?? 0)
-      const discount = discMap.get(e.id) ?? 0
+      const pay = payMap.get(e.id)
+      const discount = Number(pay?.discount) || 0
       return {
         employeeId: e.id,
         name: e.full_name,
@@ -77,7 +87,7 @@ export async function getPayrollAction(period: PayrollPeriod): Promise<PayrollRe
         branch: meta?.branch ?? null,
         notes: days.filter(d => d.note).map(d => `${d.date.slice(5)}: ${d.note}`).join(' · '),
         daysPresent: days.filter(d => d.checkIn).length,
-        base, discount, net: Math.max(0, base - discount),
+        base, discount, bonus: Number(pay?.bonus) || 0, paid: !!pay?.paid, net: Math.max(0, base - discount),
         days,
       }
     })
@@ -101,6 +111,22 @@ export async function savePayrollDiscountAction(employeeId: string, periodStart:
   } catch { return { success: false, error: 'Error' } }
 }
 
+/** Guarda descuento/bono/estado de un empleado con login para el periodo. */
+export async function savePayrollRowAction(employeeId: string, periodStart: string, fields: { discount?: number; bonus?: number; paid?: boolean }): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const row: Record<string, unknown> = { employee_id: employeeId, boss_id: user.id, period_start: periodStart, updated_at: new Date().toISOString() }
+    if (fields.discount !== undefined) row.discount = Math.max(0, fields.discount || 0)
+    if (fields.bonus !== undefined) row.bonus = Math.max(0, fields.bonus || 0)
+    if (fields.paid !== undefined) row.paid = fields.paid
+    const { error } = await supabase.from('payroll').upsert(row, { onConflict: 'employee_id,period_start' })
+    if (error) return { success: false, error: 'No se pudo guardar (¿migración 032?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
 /** Empleado: su propia nómina del periodo (solo lectura). */
 export async function getMyPayrollAction(period: PayrollPeriod): Promise<PayrollRow | null> {
   try {
@@ -112,7 +138,7 @@ export async function getMyPayrollAction(period: PayrollPeriod): Promise<Payroll
       supabase.from('employee_attendance').select('work_date, check_in, check_out, note')
         .eq('employee_id', user.id).gte('work_date', pStart),
       supabase.from('employee_meta').select('phone, emergency_phone, insurance_no, branch, salary').eq('employee_id', user.id).maybeSingle(),
-      supabase.from('payroll').select('discount').eq('employee_id', user.id).eq('period_start', pStart).maybeSingle(),
+      supabase.from('payroll').select('discount, bonus, paid').eq('employee_id', user.id).eq('period_start', pStart).maybeSingle(),
     ])
     const days: PayrollDay[] = (att ?? []).map(a => ({ date: a.work_date, checkIn: a.check_in, checkOut: a.check_out, note: a.note }))
       .sort((a, b) => a.date.localeCompare(b.date))
@@ -122,7 +148,7 @@ export async function getMyPayrollAction(period: PayrollPeriod): Promise<Payroll
       employeeId: user.id, name: null, phone: meta?.phone ?? null, emergency: meta?.emergency_phone ?? null,
       insurance: meta?.insurance_no ?? null, branch: meta?.branch ?? null,
       notes: days.filter(d => d.note).map(d => `${d.date.slice(5)}: ${d.note}`).join(' · '),
-      daysPresent: days.filter(d => d.checkIn).length, base, discount, net: Math.max(0, base - discount), days,
+      daysPresent: days.filter(d => d.checkIn).length, base, discount, bonus: Number(pay?.bonus) || 0, paid: !!pay?.paid, net: Math.max(0, base - discount), days,
     }
   } catch { return null }
 }

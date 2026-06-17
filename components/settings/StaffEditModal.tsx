@@ -19,7 +19,8 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
     startTransition(async () => {
       const r = await saveStaffAction(s.id, {
         name: s.name, phone: s.phone, emergency_phone: s.emergency_phone, insurance_no: s.insurance_no,
-        branch: s.branch, salary: s.salary, days_worked: s.days_worked, absences: s.absences, discount: s.discount, note: s.note,
+        branch: s.branch, salary: s.salary, days_worked: s.days_worked, absences: s.absences,
+        discount: s.discount, bonus: s.bonus, paid: s.paid, note: s.note,
       })
       if (r.success) { toast.success('Empleado actualizado'); onSaved(); onClose() } else toast.error(r.error ?? 'Error')
     })
@@ -32,7 +33,7 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
     })
   }
 
-  const num = (k: 'salary' | 'days_worked' | 'absences' | 'discount', label: string, step = '1') => (
+  const num = (k: 'salary' | 'days_worked' | 'absences' | 'discount' | 'bonus', label: string, step = '1') => (
     <div>
       <label className="text-[11px] font-medium text-gray-500 mb-1 block">{label}</label>
       <Input type="number" min="0" step={step} value={s[k] ?? 0} onChange={e => set(k, (step === '1' ? parseInt(e.target.value) : parseFloat(e.target.value)) || 0)} className="h-9 text-sm" />
@@ -67,10 +68,15 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
             {txt('insurance_no', 'N° Seguro Social', '12345678901')}
             {txt('branch', 'Sucursal / caja', 'Centro')}
             {num('salary', 'Sueldo base', '0.01')}
+            {num('bonus', 'Bonos', '0.01')}
             {num('days_worked', 'Días trabajados')}
             {num('absences', 'Faltas')}
             {num('discount', 'Descuento', '0.01')}
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={s.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4 rounded accent-emerald-600" />
+            Marcar como <span className="font-medium">pagado</span> este periodo
+          </label>
           <div>
             <label className="text-[11px] font-medium text-gray-500 mb-1 block">Descripción / nota</label>
             <Input value={s.note ?? ''} onChange={e => set('note', e.target.value)} className="h-9 text-sm" placeholder="Ej. llegó tarde, cita médica…" />

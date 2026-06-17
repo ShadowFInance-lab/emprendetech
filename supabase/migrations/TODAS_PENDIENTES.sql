@@ -431,4 +431,10 @@ CREATE POLICY "tfc_boss" ON team_fund_contributions FOR ALL
   USING (boss_id = auth.uid()) WITH CHECK (boss_id = auth.uid());
 CREATE INDEX IF NOT EXISTS idx_tfc_boss_week ON team_fund_contributions(boss_id, week_start);
 
+-- ─── 032: Bonos + estado de pago en nómina ─────────────────────────────────
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS bonus NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE payroll ADD COLUMN IF NOT EXISTS paid  BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE staff   ADD COLUMN IF NOT EXISTS bonus NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE staff   ADD COLUMN IF NOT EXISTS paid  BOOLEAN NOT NULL DEFAULT false;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.
