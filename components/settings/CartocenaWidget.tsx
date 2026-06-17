@@ -66,8 +66,8 @@ export default function CartocenaWidget({ names, totalCount }: { names: string[]
     <>
       <button onClick={() => setOpen(true)} title="Gestionar cartocena (fondo del equipo)"
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-colors">
-        <PiggyBank size={15} /> Cartocena {formatCurrency(fund.accumulated)}
-        <span className="text-[10px] font-normal text-amber-600/70">· {periodLabel} · {pct}%</span>
+        <PiggyBank size={15} /> Periodo de Pago
+        <span className="text-[10px] font-normal text-amber-600/70">· {periodLabel} · {formatCurrency(fund.accumulated)}</span>
       </button>
 
       {open && (
@@ -75,7 +75,7 @@ export default function CartocenaWidget({ names, totalCount }: { names: string[]
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-amber-400 to-orange-500">
-              <div className="flex items-center gap-2"><PiggyBank size={18} className="text-white" /><p className="text-sm font-bold text-white">Cartocena · esta semana</p></div>
+              <div className="flex items-center gap-2"><PiggyBank size={18} className="text-white" /><p className="text-sm font-bold text-white">Periodo de Pago · Cartocena</p></div>
               <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
             </div>
             <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">

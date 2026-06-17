@@ -275,16 +275,17 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
           <p className="text-sm text-gray-400 text-center py-6">Sin empleados para la nómina.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1700px] border-separate border-spacing-0">
+            <table className="w-full text-sm min-w-[1920px] border-separate border-spacing-0">
               <thead className="bg-indigo-50 text-indigo-900 text-xs">
                 <tr>
                   <th className="text-left px-3 py-2.5 font-semibold sticky left-0 bg-indigo-50 z-20 border-b border-indigo-100">Empleado</th>
-                  {['Teléfono', 'Emergencia', 'NSS', 'Entrada', 'Salida', 'Horas'].map(h => <th key={h} className="text-left px-2 py-2.5 font-semibold border-b border-indigo-100 whitespace-nowrap">{h}</th>)}
+                  {['Teléfono', 'Emergencia', 'NSS', 'Sucursal', 'Entrada', 'Salida', 'Horas'].map(h => <th key={h} className="text-left px-2 py-2.5 font-semibold border-b border-indigo-100 whitespace-nowrap">{h}</th>)}
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Días (L-D)</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100">Pago base</th>
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Bonos</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100">ISR</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100 whitespace-nowrap">Seg. Social</th>
+                  <th className="text-left px-2 py-2.5 font-semibold border-b border-indigo-100">Descripción</th>
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Descuentos</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100">Neto</th>
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Estado</th>
@@ -308,6 +309,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.phone ?? '—'}</td>
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.emergency ?? '—'}</td>
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.insurance ?? '—'}</td>
+                      <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.branch ?? '—'}</td>
                       <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkIn ?? null)}</td>
                       <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkOut ?? null)}</td>
                       <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtH(hours)}</td>
@@ -331,6 +333,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       </td>
                       <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(r.base) > 0 ? `-${formatCurrency(isrFor(r.base))}` : '—'}</td>
                       <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(r.base) > 0 ? `-${formatCurrency(imssFor(r.base))}` : '—'}</td>
+                      <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[160px]"><span className="line-clamp-1" title={r.notes || 'Sin incidencias'}>{r.notes || 'Sin incidencias'}</span></td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1 justify-center">
                           <Input type="number" min="0" value={discounts[r.employeeId] ?? '0'} onChange={e => setDiscounts(d => ({ ...d, [r.employeeId]: e.target.value }))} className="w-20 h-8 text-right text-xs" />
@@ -358,6 +361,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.phone ?? '—'}</td>
                     <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.emergency_phone ?? '—'}</td>
                     <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.insurance_no ?? '—'}</td>
+                    <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.branch ?? '—'}</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
@@ -373,6 +377,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     </td>
                     <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(s.salary) > 0 ? `-${formatCurrency(isrFor(s.salary))}` : '—'}</td>
                     <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(s.salary) > 0 ? `-${formatCurrency(imssFor(s.salary))}` : '—'}</td>
+                    <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[160px]"><span className="line-clamp-1" title={s.note || '—'}>{s.note || '—'}</span></td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-center">
                         <Input type="number" min="0" value={s.discount} onChange={e => setStaffField(s.id, { discount: parseFloat(e.target.value) || 0 })} className="w-20 h-8 text-right text-xs" />
@@ -390,11 +395,12 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
               </tbody>
               <tfoot>
                 <tr className="bg-indigo-50/70 font-semibold text-gray-800">
-                  <td className="px-3 py-2.5 sticky left-0 bg-indigo-50 z-10" colSpan={8}>Totales · {totalCount} empleado(s)</td>
+                  <td className="px-3 py-2.5 sticky left-0 bg-indigo-50 z-10" colSpan={9}>Totales · {totalCount} empleado(s)</td>
                   <td className="px-2 py-2.5 text-right">{formatCurrency(totals.bruto)}</td>
                   <td className="px-2 py-2.5" />
                   <td className="px-2 py-2.5 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
                   <td className="px-2 py-2.5 text-right text-rose-600">-{formatCurrency(totals.imss)}</td>
+                  <td className="px-2 py-2.5" />
                   <td className="px-2 py-2.5" />
                   <td className="px-2 py-2.5 text-right text-indigo-700">{formatCurrency(totals.neto)}</td>
                   <td className="px-2 py-2.5" /><td className="px-3 py-2.5" />
