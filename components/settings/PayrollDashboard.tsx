@@ -262,7 +262,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Wallet size={16} className="text-indigo-600" /> Nómina · {periodLabel}</p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <CartocenaWidget names={names} totalCount={totalCount} />
             <button onClick={() => requireUnlock(exportExcel)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100"><FileSpreadsheet size={13} /> Excel</button>
             <button onClick={() => requireUnlock(exportPDF)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100"><FileText size={13} /> PDF</button>
           </div>
@@ -313,10 +314,14 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       <td className="px-2 py-2 border-b border-gray-100">
                         <div className="flex items-center justify-center gap-1">
                           {week.map((date, i) => {
-                            const d = dayMap.get(date); const ok = !!d?.checkIn, ab = !!d && !d.checkIn
-                            const late = ok && !!d?.note && d.note.toLowerCase().includes('tarde')
-                            const cls = late ? 'bg-amber-100 text-amber-600' : ok ? 'bg-emerald-100 text-emerald-600' : ab ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-300'
-                            return <span key={date} title={`${WD[i]} ${date.slice(5)}${late ? ' · llegada tarde' : ''}`} className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] ${cls}`}>{late ? <Clock4 size={10} /> : ok ? <Check size={11} /> : ab ? <X size={11} /> : '·'}</span>
+                            const d = dayMap.get(date); const ok = !!d?.checkIn
+                            const note = (d?.note ?? '').toLowerCase()
+                            const late = ok && note.includes('tarde')
+                            const just = !!d && !d.checkIn && note.includes('justific')
+                            const ab = !!d && !d.checkIn && !just
+                            const cls = late ? 'bg-amber-100 text-amber-600' : ok ? 'bg-emerald-100 text-emerald-600' : just ? 'bg-blue-100 text-blue-500' : ab ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-300'
+                            const tip = late ? ' · llegada tarde' : just ? ' · falta justificada' : ab ? ' · falta' : ''
+                            return <span key={date} title={`${WD[i]} ${date.slice(5)}${tip}`} className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] ${cls}`}>{late ? <Clock4 size={10} /> : ok ? <Check size={11} /> : just ? <Check size={10} /> : ab ? <X size={11} /> : '·'}</span>
                           })}
                         </div>
                       </td>
@@ -440,11 +445,6 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
             <div className="flex items-center justify-between rounded-xl bg-indigo-50 px-3 py-2.5 mt-1"><span className="text-sm font-semibold text-indigo-900">Total neto a pagar</span><span className="text-lg font-bold text-indigo-700">{formatCurrency(totals.neto)}</span></div>
           </div>
         </div>
-      </div>
-
-      {/* Cartocena (fondo del equipo) */}
-      <div className="grid sm:grid-cols-3 gap-4">
-        <CartocenaWidget names={names} totalCount={totalCount} />
       </div>
 
       {editing && <EmployeeEditModal employeeId={editing.id} employeeName={editing.name} periodStart={periodStart} initialDiscount={editing.discount} onClose={() => setEditing(null)} onSaved={() => refresh(period)} />}

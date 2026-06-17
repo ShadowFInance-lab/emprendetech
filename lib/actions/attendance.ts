@@ -88,7 +88,7 @@ export async function saveAttendanceNoteAction(id: string, note: string): Promis
 }
 
 // ─── Asistencia manual (el jefe marca/edita días de un empleado con login) ───
-export type DayState = 'present' | 'absent' | 'none'
+export type DayState = 'present' | 'absent' | 'justified' | 'none'
 
 /** Jefe: la semana (lun-dom) de asistencia de un empleado. */
 export async function getEmployeeWeekAction(employeeId: string): Promise<AttendanceRow[]> {
@@ -116,16 +116,16 @@ export async function setEmployeeDayAction(employeeId: string, date: string, sta
       await supabase.from('employee_attendance').delete().eq('boss_id', user.id).eq('employee_id', employeeId).eq('work_date', date)
       return { success: true }
     }
+    const payload = state === 'present' ? { check_in: `${date}T09:00:00`, note: null }
+      : state === 'justified' ? { check_in: null, check_out: null, note: 'Falta justificada' }
+      : { check_in: null, check_out: null, note: null } // absent
     const { data: ex } = await supabase.from('employee_attendance')
-      .select('id, check_in').eq('employee_id', employeeId).eq('work_date', date).maybeSingle()
-    const checkIn = state === 'present' ? `${date}T09:00:00` : null
+      .select('id').eq('employee_id', employeeId).eq('work_date', date).maybeSingle()
     if (!ex) {
-      const { error } = await supabase.from('employee_attendance').insert({ employee_id: employeeId, boss_id: user.id, work_date: date, check_in: checkIn })
+      const { error } = await supabase.from('employee_attendance').insert({ employee_id: employeeId, boss_id: user.id, work_date: date, ...payload })
       if (error) return { success: false, error: 'No se pudo guardar (¿migración 023?)' }
-    } else if (state === 'present' && !ex.check_in) {
-      await supabase.from('employee_attendance').update({ check_in: checkIn }).eq('id', ex.id).eq('boss_id', user.id)
-    } else if (state === 'absent') {
-      await supabase.from('employee_attendance').update({ check_in: null, check_out: null }).eq('id', ex.id).eq('boss_id', user.id)
+    } else {
+      await supabase.from('employee_attendance').update(payload).eq('id', ex.id).eq('boss_id', user.id)
     }
     return { success: true }
   } catch { return { success: false, error: 'Error' } }

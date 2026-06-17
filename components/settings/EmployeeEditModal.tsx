@@ -49,8 +49,13 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
   }, [employeeId])
 
   const weekMap = new Map(week.map(r => [r.work_date, r]))
-  const stateOf = (date: string): DayState => { const r = weekMap.get(date); return r?.check_in ? 'present' : r ? 'absent' : 'none' }
-  const nextState = (s: DayState): DayState => s === 'none' ? 'present' : s === 'present' ? 'absent' : 'none'
+  const stateOf = (date: string): DayState => {
+    const r = weekMap.get(date)
+    if (r?.check_in) return 'present'
+    if (!r) return 'none'
+    return (r.note ?? '').toLowerCase().includes('justific') ? 'justified' : 'absent'
+  }
+  const nextState = (s: DayState): DayState => s === 'none' ? 'present' : s === 'present' ? 'absent' : s === 'absent' ? 'justified' : 'none'
 
   function cycleDay(date: string) {
     const next = nextState(stateOf(date))
@@ -154,16 +159,20 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
               <div className="flex items-center justify-between gap-1 mb-2">
                 {days.map((date, i) => {
                   const st = stateOf(date)
-                  const cls = st === 'present' ? 'bg-emerald-100 text-emerald-600 border-emerald-200' : st === 'absent' ? 'bg-red-100 text-red-500 border-red-200' : 'bg-white text-gray-300 border-gray-200'
+                  const cls = st === 'present' ? 'bg-emerald-100 text-emerald-600 border-emerald-200'
+                    : st === 'absent' ? 'bg-red-100 text-red-500 border-red-200'
+                    : st === 'justified' ? 'bg-blue-100 text-blue-500 border-blue-200'
+                    : 'bg-white text-gray-300 border-gray-200'
                   return (
-                    <button key={date} onClick={() => cycleDay(date)} disabled={isPending} title={`${date} (clic: presente/ausente/ninguno)`}
+                    <button key={date} onClick={() => cycleDay(date)} disabled={isPending} title={`${date} (clic: presente → falta → justificada → ninguno)`}
                       className={`flex-1 flex flex-col items-center gap-0.5 rounded-lg border py-1.5 ${cls}`}>
                       <span className="text-[9px] font-semibold">{WD[i]}</span>
-                      {st === 'present' ? <Check size={13} /> : st === 'absent' ? <X size={13} /> : <span className="text-xs">·</span>}
+                      {st === 'present' ? <Check size={13} /> : st === 'absent' ? <X size={13} /> : st === 'justified' ? <Check size={12} /> : <span className="text-xs">·</span>}
                     </button>
                   )
                 })}
               </div>
+              <p className="text-[10px] text-gray-400 mb-2">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
               <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <label className="text-[10px] text-gray-400">Día</label>

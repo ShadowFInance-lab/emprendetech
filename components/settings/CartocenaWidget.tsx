@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import { toast } from 'sonner'
-import { PiggyBank, Pencil, X, Plus, Trash2, Loader2, Target } from 'lucide-react'
+import { PiggyBank, X, Plus, Trash2, Loader2, Target } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   getTeamFundAction, saveTeamFundGoalAction, addFundContributionAction, deleteFundContributionAction,
@@ -64,16 +64,11 @@ export default function CartocenaWidget({ names, totalCount }: { names: string[]
 
   return (
     <>
-      <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/50 shadow-sm p-3.5 col-span-2 sm:col-span-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center"><PiggyBank size={17} className="text-white" /></span>
-          <button onClick={() => setOpen(true)} className="text-amber-600 hover:text-amber-800" title="Gestionar cartocena"><Pencil size={14} /></button>
-        </div>
-        <p className="text-[11px] text-amber-700/80 font-medium">Cartocena ({periodLabel})</p>
-        <p className="text-lg font-bold text-amber-700 leading-tight">{formatCurrency(fund.accumulated)}</p>
-        <div className="h-1.5 bg-amber-100 rounded-full overflow-hidden mt-1.5"><div className="h-full bg-amber-500 rounded-full" style={{ width: `${pct}%` }} /></div>
-        <p className="text-[10px] text-amber-700/70 mt-1">Meta {formatCurrency(fund.goal)} · {fund.contributors}/{totalCount} aportes</p>
-      </div>
+      <button onClick={() => setOpen(true)} title="Gestionar cartocena (fondo del equipo)"
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-colors">
+        <PiggyBank size={15} /> Cartocena {formatCurrency(fund.accumulated)}
+        <span className="text-[10px] font-normal text-amber-600/70">· {periodLabel} · {pct}%</span>
+      </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
