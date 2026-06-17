@@ -1,6 +1,7 @@
 import { MessageSquare } from 'lucide-react'
 import EmployeeNotices from '@/components/sales/EmployeeNotices'
 import EmployeeReminders from '@/components/sales/EmployeeReminders'
+import MyTasks from '@/components/sales/MyTasks'
 import TeamGroupChat from '@/components/team/TeamGroupChat'
 
 /**
@@ -19,6 +20,7 @@ export default function MensajesPage() {
           <p className="text-gray-500 text-sm">Chat con tu jefe, el equipo y tus entregas asignadas</p>
         </div>
       </div>
+      <MyTasks />
       <EmployeeReminders />
       <EmployeeNotices />
       <TeamGroupChat />

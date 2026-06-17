@@ -32,9 +32,11 @@ export default function Sidebar({ store, profile }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Empleados: solo POS + historial de ventas. El dueño ve todo.
-  const isEmployee = profile.role === 'employee'
-  const navItems = isEmployee
+  // Empleados/supervisores: POS + historial + mensajes. El dueño ve todo.
+  const role = profile.role
+  const isStaff = role === 'employee' || role === 'supervisor'
+  const brand = store.primary_color || '#2563eb'
+  const navItems = isStaff
     ? [
         { href: '/sales/new', label: 'Ventas (POS)', icon: ShoppingCart },
         { href: '/sales', label: 'Historial', icon: History },
@@ -61,7 +63,7 @@ export default function Sidebar({ store, profile }: SidebarProps) {
       {/* Logo */}
       <div className="p-5 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: brand }}>
             <span className="text-white font-bold text-sm">M</span>
           </div>
           <span className="font-bold text-gray-900 text-lg">Mercanta Business</span>
@@ -83,9 +85,11 @@ export default function Sidebar({ store, profile }: SidebarProps) {
             <p className="font-semibold text-gray-900 text-sm truncate">{store.name}</p>
             <span className={cn(
               'text-xs px-2 py-0.5 rounded-full font-medium',
-              isEmployee ? 'bg-emerald-100 text-emerald-700' : (planBadgeColor[profile.plan] ?? planBadgeColor.free)
+              role === 'supervisor' ? 'bg-indigo-100 text-indigo-700'
+                : role === 'employee' ? 'bg-emerald-100 text-emerald-700'
+                : (planBadgeColor[profile.plan] ?? planBadgeColor.free)
             )}>
-              {isEmployee ? 'Empleado' : (planLabel[profile.plan] ?? 'Gratis')}
+              {role === 'supervisor' ? 'Supervisor' : role === 'employee' ? 'Empleado' : (planLabel[profile.plan] ?? 'Gratis')}
             </span>
           </div>
         </div>
@@ -103,10 +107,9 @@ export default function Sidebar({ store, profile }: SidebarProps) {
               onClick={() => setMobileOpen(false)}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
-                isActive
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                isActive ? 'text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
+              style={isActive ? { backgroundColor: brand } : undefined}
             >
               <item.icon size={18} />
               {item.label}

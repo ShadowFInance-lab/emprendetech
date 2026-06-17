@@ -17,6 +17,7 @@ import { formatCurrency } from '@/lib/utils/format'
 import EmployeeEditModal from './EmployeeEditModal'
 import StaffEditModal from './StaffEditModal'
 import CartocenaWidget from './CartocenaWidget'
+import { useBossGate } from './BossGate'
 
 const PERIODS: { id: PayrollPeriod; label: string }[] = [
   { id: 'week', label: 'Semanal' }, { id: 'biweekly', label: 'Catorcenal' },
@@ -60,6 +61,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState<{ id: string; name: string; discount: number } | null>(null)
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
+  const { requireUnlock, gate } = useBossGate()
 
   const refresh = useCallback(async (p: PayrollPeriod) => {
     setLoading(true)
@@ -261,8 +263,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Wallet size={16} className="text-indigo-600" /> Nómina · {periodLabel}</p>
           <div className="flex items-center gap-2">
-            <button onClick={exportExcel} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100"><FileSpreadsheet size={13} /> Excel</button>
-            <button onClick={exportPDF} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100"><FileText size={13} /> PDF</button>
+            <button onClick={() => requireUnlock(exportExcel)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100"><FileSpreadsheet size={13} /> Excel</button>
+            <button onClick={() => requireUnlock(exportPDF)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100"><FileText size={13} /> PDF</button>
           </div>
         </div>
 
@@ -447,6 +449,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
 
       {editing && <EmployeeEditModal employeeId={editing.id} employeeName={editing.name} periodStart={periodStart} initialDiscount={editing.discount} onClose={() => setEditing(null)} onSaved={() => refresh(period)} />}
       {editingStaff && <StaffEditModal staff={editingStaff} onClose={() => setEditingStaff(null)} onSaved={() => refresh(period)} />}
+      {gate}
     </div>
   )
 }

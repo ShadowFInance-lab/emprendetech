@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/actions/employees'
 import { createStaffAction } from '@/lib/actions/staff'
 import PayrollDashboard from './PayrollDashboard'
+import TasksManager from './TasksManager'
 import TeamChatPanel from '@/components/team/TeamChatPanel'
 
 const PAID = ['emprendedor', 'negocio', 'vip_plus']
@@ -105,6 +106,7 @@ export default function EmployeesSection({ plan }: { plan: string }) {
       <div className="lg:col-span-2 space-y-4">
         {/* Crear empleado + KPIs + Cartocena + nómina + descuentos + resumen */}
         <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} />
+        <TasksManager employees={employees} />
       </div>
 
       {/* Columna derecha: chats */}

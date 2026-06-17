@@ -5,12 +5,14 @@ import { toast } from 'sonner'
 import { X, Loader2, Save, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { saveStaffAction, deleteStaffAction, type Staff } from '@/lib/actions/staff'
+import { useBossGate } from './BossGate'
 
 interface Props { staff: Staff; onClose: () => void; onSaved: () => void }
 
 export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
   const [s, setS] = useState<Staff>(staff)
   const [isPending, startTransition] = useTransition()
+  const { requireUnlock, gate } = useBossGate()
 
   function set<K extends keyof Staff>(k: K, v: Staff[K]) { setS(prev => ({ ...prev, [k]: v })) }
 
@@ -26,10 +28,12 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
     })
   }
   function remove() {
-    if (!confirm('¿Eliminar este empleado de registro?')) return
-    startTransition(async () => {
-      const r = await deleteStaffAction(s.id)
-      if (r.success) { toast.success('Eliminado'); onSaved(); onClose() } else toast.error(r.error ?? 'Error')
+    requireUnlock(() => {
+      if (!confirm('¿Eliminar este empleado de registro?')) return
+      startTransition(async () => {
+        const r = await deleteStaffAction(s.id)
+        if (r.success) { toast.success('Eliminado'); onSaved(); onClose() } else toast.error(r.error ?? 'Error')
+      })
     })
   }
 
@@ -87,6 +91,7 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
           <button onClick={remove} disabled={isPending} className="w-full inline-flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-red-600"><Trash2 size={13} /> Eliminar empleado</button>
         </div>
       </div>
+      {gate}
     </div>
   )
 }

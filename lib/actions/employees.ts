@@ -9,6 +9,7 @@ export interface Employee {
   name: string | null
   email: string | null
   created_at: string
+  role?: 'owner' | 'employee' | 'supervisor'
 }
 
 const PAID_PLANS = ['emprendedor', 'negocio', 'vip_plus']
@@ -90,10 +91,14 @@ export async function listEmployeesAction(): Promise<Employee[]> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
-    const { data, error } = await supabase.rpc('list_my_employees')
+    const [{ data, error }, { data: roles }] = await Promise.all([
+      supabase.rpc('list_my_employees'),
+      supabase.rpc('my_employee_roles'),
+    ])
     if (error || !data) return []
+    const roleMap = new Map((roles ?? []).map((r: { id: string; role: string }) => [r.id, r.role]))
     return (data as { id: string; full_name: string | null; email: string | null; created_at: string }[])
-      .map(e => ({ id: e.id, name: e.full_name, email: e.email, created_at: e.created_at }))
+      .map(e => ({ id: e.id, name: e.full_name, email: e.email, created_at: e.created_at, role: (roleMap.get(e.id) as 'employee' | 'supervisor') ?? 'employee' }))
   } catch {
     return []
   }
@@ -164,6 +169,10 @@ export interface EmployeeMeta {
   emergency_phone: string | null
   branch: string | null
   salary: number | null
+  rfc: string | null
+  position: string | null
+  hire_date: string | null
+  photo_url: string | null
 }
 
 export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta | null> {
@@ -171,7 +180,7 @@ export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta 
     const supabase = await createClient()
     const { data } = await supabase
       .from('employee_meta')
-      .select('phone, insurance_no, emergency_phone, branch, salary')
+      .select('phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url')
       .eq('employee_id', employeeId).maybeSingle()
     return (data as EmployeeMeta) ?? null
   } catch { return null }
@@ -189,9 +198,40 @@ export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeM
       emergency_phone: meta.emergency_phone || null,
       branch: meta.branch || null,
       salary: meta.salary ?? null,
+      rfc: meta.rfc || null,
+      position: meta.position || null,
+      hire_date: meta.hire_date || null,
+      photo_url: meta.photo_url || null,
       updated_at: new Date().toISOString(),
     })
     if (error) return { success: false, error: 'No se pudo guardar (¿migración 024?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+/** Jefe: cambia el rol de un empleado (empleado ↔ supervisor). */
+export async function setEmployeeRoleAction(employeeId: string, role: 'employee' | 'supervisor'): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { error } = await supabase.rpc('set_employee_role', { emp_id: employeeId, new_role: role })
+    if (error) return { success: false, error: 'No se pudo cambiar el rol (¿migración 033?)' }
+    revalidatePath('/employees')
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+/** Verifica la contraseña del jefe sin tocar su sesión (cliente anónimo). */
+export async function verifyBossPasswordAction(password: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) return { success: false, error: 'No autenticado' }
+    if (!password) return { success: false, error: 'Escribe tu contraseña' }
+    const anon = createPublicClient()
+    const { error } = await anon.auth.signInWithPassword({ email: user.email, password })
+    if (error) return { success: false, error: 'Contraseña incorrecta' }
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
 }

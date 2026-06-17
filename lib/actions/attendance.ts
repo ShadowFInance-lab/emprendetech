@@ -86,3 +86,63 @@ export async function saveAttendanceNoteAction(id: string, note: string): Promis
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
 }
+
+// ─── Asistencia manual (el jefe marca/edita días de un empleado con login) ───
+export type DayState = 'present' | 'absent' | 'none'
+
+/** Jefe: la semana (lun-dom) de asistencia de un empleado. */
+export async function getEmployeeWeekAction(employeeId: string): Promise<AttendanceRow[]> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+    const now = new Date(); const dow = (now.getDay() + 6) % 7
+    const mon = new Date(now); mon.setDate(now.getDate() - dow)
+    const since = mon.toISOString().slice(0, 10)
+    const { data } = await supabase.from('employee_attendance')
+      .select('id, employee_id, work_date, check_in, check_out, note')
+      .eq('boss_id', user.id).eq('employee_id', employeeId).gte('work_date', since)
+    return (data ?? []) as AttendanceRow[]
+  } catch { return [] }
+}
+
+/** Jefe: marca un día como presente / ausente / sin registro. */
+export async function setEmployeeDayAction(employeeId: string, date: string, state: DayState): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    if (state === 'none') {
+      await supabase.from('employee_attendance').delete().eq('boss_id', user.id).eq('employee_id', employeeId).eq('work_date', date)
+      return { success: true }
+    }
+    const { data: ex } = await supabase.from('employee_attendance')
+      .select('id, check_in').eq('employee_id', employeeId).eq('work_date', date).maybeSingle()
+    const checkIn = state === 'present' ? `${date}T09:00:00` : null
+    if (!ex) {
+      const { error } = await supabase.from('employee_attendance').insert({ employee_id: employeeId, boss_id: user.id, work_date: date, check_in: checkIn })
+      if (error) return { success: false, error: 'No se pudo guardar (¿migración 023?)' }
+    } else if (state === 'present' && !ex.check_in) {
+      await supabase.from('employee_attendance').update({ check_in: checkIn }).eq('id', ex.id).eq('boss_id', user.id)
+    } else if (state === 'absent') {
+      await supabase.from('employee_attendance').update({ check_in: null, check_out: null }).eq('id', ex.id).eq('boss_id', user.id)
+    }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+/** Jefe: edita la hora de entrada/salida de un día (formato HH:MM). */
+export async function setEmployeeDayTimesAction(employeeId: string, date: string, checkIn: string, checkOut: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { error } = await supabase.from('employee_attendance').upsert({
+      employee_id: employeeId, boss_id: user.id, work_date: date,
+      check_in: checkIn ? `${date}T${checkIn}:00` : null,
+      check_out: checkOut ? `${date}T${checkOut}:00` : null,
+    }, { onConflict: 'employee_id,work_date' })
+    if (error) return { success: false, error: 'No se pudo guardar' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}

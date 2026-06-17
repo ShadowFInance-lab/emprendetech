@@ -95,8 +95,8 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Empleados: acceso restringido al POS / ventas y a Mensajes
-    if (profile?.role === 'employee') {
+    // Empleados y supervisores: acceso restringido al POS / ventas y a Mensajes
+    if (profile?.role === 'employee' || profile?.role === 'supervisor') {
       const allowed = pathname.startsWith('/sales') || pathname.startsWith('/mensajes')
       if (!allowed) {
         return NextResponse.redirect(new URL('/sales/new', request.url))
