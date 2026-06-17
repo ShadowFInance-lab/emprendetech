@@ -11,7 +11,8 @@ import {
 import { formatCurrency } from '@/lib/utils/format'
 
 const FUND_PERIODS: { id: PayrollPeriod; label: string }[] = [
-  { id: 'week', label: 'Semana' }, { id: 'fortnight', label: 'Quincena' }, { id: 'month', label: 'Mes' },
+  { id: 'week', label: 'Semanal' }, { id: 'biweekly', label: 'Catorcenal' },
+  { id: 'fortnight', label: 'Quincenal' }, { id: 'month', label: 'Mensual' },
 ]
 
 /**

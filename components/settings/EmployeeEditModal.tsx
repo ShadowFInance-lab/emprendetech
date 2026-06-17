@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, type EmployeeMeta } from '@/lib/actions/employees'
+import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { savePayrollDiscountAction } from '@/lib/actions/payroll'
 import { getEmployeeWeekAction, setEmployeeDayAction, setEmployeeDayTimesAction, type AttendanceRow, type DayState } from '@/lib/actions/attendance'
 import { useBossGate } from './BossGate'
@@ -30,6 +30,7 @@ interface Props {
 
 export default function EmployeeEditModal({ employeeId, employeeName, periodStart, initialDiscount, onClose, onSaved }: Props) {
   const [meta, setMeta] = useState<EmployeeMeta>(EMPTY)
+  const [name, setName] = useState(employeeName)
   const [discount, setDiscount] = useState(String(initialDiscount || 0))
   const [week, setWeek] = useState<AttendanceRow[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -61,8 +62,14 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
   }
   function save() {
     startTransition(async () => {
-      const [m, d] = await Promise.all([saveEmployeeMetaAction(employeeId, meta), savePayrollDiscountAction(employeeId, periodStart, parseFloat(discount) || 0)])
-      if (m.success && d.success) { toast.success('Empleado actualizado'); onSaved(); onClose() } else toast.error(m.error || d.error || 'Error')
+      const ops: Promise<{ success: boolean; error?: string }>[] = [
+        saveEmployeeMetaAction(employeeId, meta),
+        savePayrollDiscountAction(employeeId, periodStart, parseFloat(discount) || 0),
+      ]
+      if (name.trim() && name.trim() !== employeeName) ops.push(setEmployeeNameAction(employeeId, name))
+      const res = await Promise.all(ops)
+      if (res.every(r => r.success)) { toast.success('Empleado actualizado'); onSaved(); onClose() }
+      else toast.error(res.find(r => !r.success)?.error || 'Error')
     })
   }
   function setRole(role: 'employee' | 'supervisor') {
@@ -108,6 +115,10 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
             <div>
               <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><UserRound size={13} /> Datos y perfil</p>
               <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Nombre</label>
+                  <Input value={name} onChange={e => setName(e.target.value)} className="h-9 text-sm" placeholder="Nombre del empleado" />
+                </div>
                 {txt('phone', 'Teléfono', '55 1234 5678')}
                 {txt('emergency_phone', 'Tel. emergencia', '55 8765 4321')}
                 {txt('insurance_no', 'N° Seguro Social (NSS)', '12345678901')}

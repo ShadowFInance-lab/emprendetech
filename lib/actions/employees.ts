@@ -222,6 +222,20 @@ export async function setEmployeeRoleAction(employeeId: string, role: 'employee'
   } catch { return { success: false, error: 'Error' } }
 }
 
+/** Jefe: renombra a un empleado con login. */
+export async function setEmployeeNameAction(employeeId: string, name: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    if (!name.trim()) return { success: false, error: 'Escribe el nombre' }
+    const { error } = await supabase.rpc('set_employee_name', { emp_id: employeeId, new_name: name.trim() })
+    if (error) return { success: false, error: 'No se pudo renombrar (¿migración 034?)' }
+    revalidatePath('/employees')
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
 /** Verifica la contraseña del jefe sin tocar su sesión (cliente anónimo). */
 export async function verifyBossPasswordAction(password: string): Promise<ActionResult> {
   try {

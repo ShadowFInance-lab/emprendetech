@@ -483,4 +483,14 @@ CREATE POLICY "tasks_assignee_update" ON tasks FOR UPDATE
   USING (assigned_to = auth.uid()) WITH CHECK (assigned_to = auth.uid());
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to) WHERE assigned_to IS NOT NULL;
 
+-- ─── 034: Nombre del empleado editable por el jefe ─────────────────────────
+CREATE OR REPLACE FUNCTION set_employee_name(emp_id uuid, new_name text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = emp_id AND boss_id = auth.uid()) THEN RETURN; END IF;
+  UPDATE profiles SET full_name = new_name WHERE id = emp_id;
+  UPDATE auth.users SET raw_user_meta_data = jsonb_set(coalesce(raw_user_meta_data, '{}'::jsonb), '{full_name}', to_jsonb(new_name)) WHERE id = emp_id;
+END $$;
+GRANT EXECUTE ON FUNCTION set_employee_name(uuid, text) TO authenticated;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.
