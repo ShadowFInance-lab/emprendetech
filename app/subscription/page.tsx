@@ -188,67 +188,55 @@ export default async function SubscriptionPage({
           return (
             <div
               key={planId}
-              className={`group relative rounded-3xl overflow-hidden text-white transition-all duration-300 hover:-translate-y-2 hover:brightness-110 bg-gradient-to-br ${style.bar} ${
+              className={`relative rounded-3xl border p-6 flex flex-col transition-all duration-300 ${
                 isPopular
-                  ? `shadow-2xl shadow-orange-500/40 ${isCurrent ? 'ring-4 ring-white/70' : 'ring-2 ring-white/50'} sm:scale-[1.05] hover:shadow-orange-500/50`
-                  : `shadow-xl ${isCurrent ? 'ring-4 ring-white/70' : 'ring-1 ring-white/15'} hover:shadow-2xl`
-              }`}
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-2xl shadow-slate-900/30 lg:scale-[1.03]'
+                  : 'bg-white text-slate-900 border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1'
+              } ${isCurrent ? 'ring-2 ring-indigo-500' : ''}`}
             >
-              {/* Glow decorativo */}
-              <div className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full bg-white/15 blur-3xl" />
-              {isPopular && <div className="pointer-events-none absolute -bottom-24 -left-16 w-52 h-52 rounded-full bg-white/15 blur-3xl" />}
-              {/* Brillo que recorre la tarjeta al pasar el cursor */}
-              <div className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-[300%] transition-transform duration-700 ease-out" />
-
-              {/* Banner "MÁS POPULAR" en la destacada */}
               {isPopular && (
-                <div className="w-full bg-white text-orange-600 text-center py-2 text-xs font-extrabold tracking-[0.2em] shadow-md">
-                  ⭐ MÁS POPULAR
-                </div>
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 text-[10px] font-extrabold tracking-wider px-3 py-1 rounded-full shadow">
+                  MÁS POPULAR
+                </span>
               )}
               {isCurrent && (
-                <span className="absolute top-3 right-3 z-10 text-[10px] font-extrabold px-3 py-1 rounded-full shadow bg-white text-gray-900">
+                <span className={`absolute top-4 right-4 text-[10px] font-bold px-2.5 py-1 rounded-full ${isPopular ? 'bg-white/15 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
                   TU PLAN
                 </span>
               )}
 
-              <div className="relative p-6 flex flex-col h-full">
-                {/* Icono grande */}
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 bg-white/20 backdrop-blur-sm shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
-                  {style.icon}
-                </div>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-4 ${isPopular ? 'bg-white/10' : 'bg-slate-100'}`}>
+                {style.icon}
+              </div>
 
-                {/* Nombre + precio */}
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">{plan.label}</p>
-                <p className="text-4xl font-black mt-1.5 tracking-tight leading-[1.05] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]">{plan.price_label}</p>
-                <p className="text-xs font-medium mt-2 text-white/80">
-                  {planId === 'vip_plus' ? 'Pago único · de por vida'
-                    : planId === 'free' ? 'Gratis para siempre'
-                    : 'Facturación mensual'}
-                </p>
+              <p className={`text-xs font-bold uppercase tracking-[0.18em] ${isPopular ? 'text-white/60' : 'text-slate-400'}`}>{plan.label}</p>
+              <p className={`text-4xl font-black mt-1.5 tracking-tight leading-[1.05] ${isPopular ? 'text-white' : 'text-slate-900'}`}>{plan.price_label}</p>
+              <p className={`text-xs font-medium mt-2 ${isPopular ? 'text-white/60' : 'text-slate-400'}`}>
+                {planId === 'vip_plus' ? 'Pago único · de por vida'
+                  : planId === 'free' ? 'Gratis para siempre'
+                  : 'Facturación mensual'}
+              </p>
 
-                {/* Features */}
-                <div className="mt-5 pt-5 space-y-3 border-t border-white/25">
-                  {PLAN_FEATURES[planId].map((feature, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-[13px]">
-                      <span className="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 bg-white/25">
-                        <Check size={12} strokeWidth={3} className="text-white" />
-                      </span>
-                      <span className="text-white/95">{feature}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className={`mt-5 pt-5 space-y-3 border-t ${isPopular ? 'border-white/15' : 'border-gray-100'}`}>
+                {PLAN_FEATURES[planId].map((feature, i) => (
+                  <div key={i} className="flex items-start gap-2.5 text-[13px]">
+                    <span className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${isPopular ? 'bg-amber-400/20' : 'bg-emerald-50'}`}>
+                      <Check size={12} strokeWidth={3} className={isPopular ? 'text-amber-300' : 'text-emerald-600'} />
+                    </span>
+                    <span className={isPopular ? 'text-white/90' : 'text-slate-600'}>{feature}</span>
+                  </div>
+                ))}
+              </div>
 
-                {/* CTA */}
-                <div className="pt-6 mt-auto">
-                  {isCurrent ? (
-                    <div className="text-center text-sm font-semibold py-3 rounded-xl bg-white/20 text-white">✓ Tu plan actual</div>
-                  ) : planId === 'free' ? (
-                    <div className="text-center text-xs text-white/70 py-3">Tu punto de partida</div>
-                  ) : (
-                    <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} accent="bg-white !text-gray-900 hover:bg-white/90 font-bold shadow-lg" />
-                  )}
-                </div>
+              <div className="pt-6 mt-auto">
+                {isCurrent ? (
+                  <div className={`text-center text-sm font-semibold py-3 rounded-xl ${isPopular ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-600'}`}>✓ Tu plan actual</div>
+                ) : planId === 'free' ? (
+                  <div className={`text-center text-xs py-3 ${isPopular ? 'text-white/60' : 'text-slate-400'}`}>Tu punto de partida</div>
+                ) : (
+                  <UpgradeButton plan={planId} label={`Elegir ${plan.label}`}
+                    accent={isPopular ? 'bg-amber-400 !text-slate-900 hover:bg-amber-300 font-bold shadow-lg' : 'bg-slate-900 !text-white hover:bg-slate-800 font-bold shadow-sm'} />
+                )}
               </div>
             </div>
           )

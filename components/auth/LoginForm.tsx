@@ -23,7 +23,7 @@ export default function LoginForm({ redirectTo, showResetSuccess, oauthError }: 
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(
     oauthError
-      ? 'No se pudo iniciar sesión con Google/Facebook (puede que aún no estén activados). Entra con tu correo y contraseña.'
+      ? 'No se pudo iniciar sesión con Google (puede que aún no esté activado). Entra con tu correo y contraseña.'
       : null
   )
 
