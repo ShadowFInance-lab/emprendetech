@@ -633,18 +633,24 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     { label: 'Secundario', value: secondaryColor, onChange: setSecondaryColor },
                     { label: 'Botones', value: buttonColor, onChange: setButtonColor },
                   ].map(({ label, value, onChange }) => (
-                    <div key={label} className="rounded-xl border border-gray-100 p-2.5 text-center">
+                    <div key={label} className="rounded-2xl border border-gray-100 bg-gray-50/40 p-3 text-center shadow-sm">
                       <label className="relative cursor-pointer block">
-                        <span className="block w-full h-16 rounded-lg shadow-sm ring-1 ring-black/10" style={{ backgroundColor: value }} />
+                        <span className="block w-full h-16 rounded-xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
                         <input type="color" value={value} onChange={e => onChange(e.target.value)}
                           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                       </label>
-                      <p className="text-xs font-medium text-gray-700 mt-1.5">{label}</p>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">{value}</p>
+                      <p className="text-xs font-semibold text-gray-700 mt-2">{label}</p>
+                      <input
+                        value={value}
+                        onChange={e => { const v = e.target.value.trim(); onChange(v.startsWith('#') || v === '' ? v : `#${v}`) }}
+                        maxLength={7}
+                        className="w-full mt-1 text-[11px] text-center uppercase font-mono border border-gray-200 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        placeholder="#000000"
+                      />
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-2">Toca un tono para elegir cualquier color (picker libre).</p>
+                <p className="text-[11px] text-gray-400 mt-2">Toca el color para el picker (deslizador + RGB) o escribe el HEX.</p>
               </details>
 
               {/* Fondo del catálogo + estilo de botones — libres para todos */}
