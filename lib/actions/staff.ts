@@ -22,6 +22,7 @@ export interface Staff {
   position: string | null
   hire_date: string | null
   photo_url: string | null
+  week_attendance: Record<string, string>
 }
 
 export async function listStaffAction(): Promise<Staff[]> {
@@ -38,6 +39,7 @@ export async function listStaffAction(): Promise<Staff[]> {
       salary: Number(s.salary) || 0, days_worked: Number(s.days_worked) || 0, absences: Number(s.absences) || 0,
       discount: Number(s.discount) || 0, bonus: Number(s.bonus) || 0, paid: !!s.paid, note: s.note ?? null,
       rfc: s.rfc ?? null, position: s.position ?? null, hire_date: s.hire_date ?? null, photo_url: s.photo_url ?? null,
+      week_attendance: (s.week_attendance as Record<string, string>) ?? {},
     }))
   } catch { return [] }
 }
@@ -59,7 +61,7 @@ export async function saveStaffAction(id: string, fields: Partial<Omit<Staff, 'i
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
-    const keys = ['name', 'phone', 'emergency_phone', 'insurance_no', 'branch', 'salary', 'days_worked', 'absences', 'discount', 'bonus', 'paid', 'note', 'rfc', 'position', 'hire_date', 'photo_url'] as const
+    const keys = ['name', 'phone', 'emergency_phone', 'insurance_no', 'branch', 'salary', 'days_worked', 'absences', 'discount', 'bonus', 'paid', 'note', 'rfc', 'position', 'hire_date', 'photo_url', 'week_attendance'] as const
     const payload: Record<string, unknown> = {}
     for (const k of keys) if (fields[k] !== undefined) payload[k] = fields[k]
     if (Object.keys(payload).length === 0) return { success: true }

@@ -31,7 +31,7 @@ export default function MinimalistaSkin({
         backgroundColor: store.bg_color || undefined,
         ...(store.background_url ? {
           backgroundImage: `url(${store.background_url})`,
-          backgroundSize: 'cover',
+          backgroundSize: ((store as { bg_fit?: string }).bg_fit === 'contain' ? 'contain' : (store as { bg_fit?: string }).bg_fit === 'center' ? 'auto' : 'cover'),
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         } : {}),

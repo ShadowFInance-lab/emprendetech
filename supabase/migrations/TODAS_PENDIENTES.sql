@@ -499,4 +499,11 @@ ALTER TABLE staff ADD COLUMN IF NOT EXISTS position  TEXT;
 ALTER TABLE staff ADD COLUMN IF NOT EXISTS hire_date DATE;
 ALTER TABLE staff ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
+-- ─── 036: Colores del panel (separados del catálogo) + ajuste de fondo + asistencia staff ─
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS panel_primary   TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS panel_secondary TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS panel_button    TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS bg_fit          TEXT DEFAULT 'cover';
+ALTER TABLE staff  ADD COLUMN IF NOT EXISTS week_attendance JSONB NOT NULL DEFAULT '{}'::jsonb;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

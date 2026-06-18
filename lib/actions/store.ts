@@ -87,6 +87,7 @@ export async function updateStoreAction(
     'name', 'description', 'tagline', 'whatsapp',
     'facebook', 'instagram', 'tiktok', 'youtube',
     'skin', 'primary_color', 'secondary_color', 'button_color',
+    'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit',
     'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices',
     'bg_color', 'button_style', 'background_url',
   ]
@@ -131,7 +132,7 @@ export async function updateStoreAction(
     /column|schema cache/i.test(error.message ?? '')
   )
   if (isMissingColumn) {
-    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style', 'background_url']) {
+    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style', 'background_url', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit']) {
       delete (updates as Record<string, unknown>)[k]
     }
     const retry = await supabase

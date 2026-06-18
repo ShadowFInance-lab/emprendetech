@@ -31,10 +31,11 @@ export default async function AdminLayout({
   if (!isEmployee && (!profile?.onboarding_done || !store)) redirect('/onboarding')
   if (!store) redirect('/login') // empleado sin tienda asignada (caso raro)
 
+  const s = store as typeof store & { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null }
   const themeVars = {
-    '--brand': store.primary_color || '#4f46e5',
-    '--brand-2': store.secondary_color || '#7c3aed',
-    '--brand-btn': store.button_color || '#4f46e5',
+    '--brand': s.panel_primary || store.primary_color || '#4f46e5',
+    '--brand-2': s.panel_secondary || store.secondary_color || '#7c3aed',
+    '--brand-btn': s.panel_button || store.button_color || '#4f46e5',
   } as CSSProperties
 
   return (

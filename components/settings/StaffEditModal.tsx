@@ -2,10 +2,19 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, UserRound, ClipboardList } from 'lucide-react'
+import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { saveStaffAction, deleteStaffAction, type Staff } from '@/lib/actions/staff'
 import { useBossGate } from './BossGate'
+
+const WD = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const pad = (n: number) => String(n).padStart(2, '0')
+const toISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+function weekDates(): string[] {
+  const now = new Date(); const dow = (now.getDay() + 6) % 7
+  const mon = new Date(now); mon.setDate(now.getDate() - dow)
+  return Array.from({ length: 7 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return toISO(d) })
+}
 
 interface Props { staff: Staff; onClose: () => void; onSaved: () => void }
 
@@ -13,8 +22,16 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
   const [s, setS] = useState<Staff>(staff)
   const [isPending, startTransition] = useTransition()
   const { requireUnlock, gate } = useBossGate()
+  const days = weekDates()
 
   function set<K extends keyof Staff>(k: K, v: Staff[K]) { setS(prev => ({ ...prev, [k]: v })) }
+  function cycleDay(date: string) {
+    const cur = s.week_attendance?.[date] || 'none'
+    const next = cur === 'none' ? 'present' : cur === 'present' ? 'absent' : cur === 'absent' ? 'justified' : 'none'
+    const wa = { ...(s.week_attendance || {}) }
+    if (next === 'none') delete wa[date]; else wa[date] = next
+    set('week_attendance', wa)
+  }
 
   function save() {
     if (!s.name.trim()) { toast.error('Escribe el nombre'); return }
@@ -104,6 +121,26 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
               <input type="checkbox" checked={s.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4 rounded accent-emerald-600" />
               Marcar como <span className="font-medium">pagado</span> este periodo
             </label>
+
+            {/* Asistencia de la semana (igual que empleados con login) */}
+            <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mt-3 mb-2"><CalendarClock size={13} /> Asistencia de la semana</p>
+            <div className="flex items-center justify-between gap-1">
+              {days.map((date, i) => {
+                const st = s.week_attendance?.[date] || 'none'
+                const cls = st === 'present' ? 'bg-emerald-100 text-emerald-600 border-emerald-200'
+                  : st === 'absent' ? 'bg-red-100 text-red-500 border-red-200'
+                  : st === 'justified' ? 'bg-blue-100 text-blue-500 border-blue-200'
+                  : 'bg-white text-gray-300 border-gray-200'
+                return (
+                  <button key={date} type="button" onClick={() => cycleDay(date)} title={`${date} (clic: presente → falta → justificada → ninguno)`}
+                    className={`flex-1 flex flex-col items-center gap-0.5 rounded-lg border py-1.5 ${cls}`}>
+                    <span className="text-[9px] font-semibold">{WD[i]}</span>
+                    {st === 'present' ? <Check size={13} /> : st === 'absent' ? <X size={13} /> : st === 'justified' ? <Check size={12} /> : <span className="text-xs">·</span>}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
           </div>
 
           <div>
