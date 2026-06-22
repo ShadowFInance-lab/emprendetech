@@ -109,10 +109,10 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
             </div>
           </div>
 
-          {/* Registro (sin login) */}
+          {/* Registro (sin login) — equivalente al bloque "Rol / permisos" del de login */}
           <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
             <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-1"><ClipboardList size={13} /> Empleado de registro</p>
-            <p className="text-[11px] text-gray-400">No inicia sesión en el POS. Su asistencia se captura manualmente (días y faltas).</p>
+            <p className="text-[10px] text-gray-400">No inicia sesión en el POS. Su asistencia se captura manualmente.</p>
             <div className="grid grid-cols-2 gap-3 mt-2">
               {num('days_worked', 'Días trabajados')}
               {num('absences', 'Faltas')}
@@ -121,10 +121,12 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
               <input type="checkbox" checked={s.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4 rounded accent-emerald-600" />
               Marcar como <span className="font-medium">pagado</span> este periodo
             </label>
+          </div>
 
-            {/* Asistencia de la semana (igual que empleados con login) */}
-            <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mt-3 mb-2"><CalendarClock size={13} /> Asistencia de la semana</p>
-            <div className="flex items-center justify-between gap-1">
+          {/* Asistencia de la semana — MISMO bloque destacado que los empleados con login */}
+          <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+            <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><CalendarClock size={13} /> Asistencia de la semana</p>
+            <div className="flex items-center justify-between gap-1 mb-2">
               {days.map((date, i) => {
                 const st = s.week_attendance?.[date] || 'none'
                 const cls = st === 'present' ? 'bg-emerald-100 text-emerald-600 border-emerald-200'
@@ -140,7 +142,7 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
                 )
               })}
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
+            <p className="text-[10px] text-gray-400">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
           </div>
 
           <div>

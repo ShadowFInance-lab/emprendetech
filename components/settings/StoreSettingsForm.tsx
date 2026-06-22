@@ -622,8 +622,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </div>
 
               {/* Más paletas */}
-              <Label className="block">Más paletas</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <Label className="block">Más paletas (toca una para aplicarla)</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {COLOR_PALETTES.map((palette) => {
                   const isActive = primaryColor === palette.p && buttonColor === palette.b
                   const isLocked = false
@@ -639,8 +639,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                           : 'border-transparent hover:border-gray-300 hover:shadow-md'
                       }`}
                     >
-                      <div className="h-14 flex" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
-                        <span className="self-end m-1.5 w-5 h-5 rounded-full ring-2 ring-white" style={{ backgroundColor: palette.b }} />
+                      <div className="h-20 flex" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
+                        <span className="self-end m-1.5 w-6 h-6 rounded-full ring-2 ring-white" style={{ backgroundColor: palette.b }} />
                       </div>
                       <div className="py-1.5 px-2 bg-white flex items-center justify-between">
                         <span className="text-xs font-medium text-gray-700">{palette.name}</span>
@@ -652,12 +652,14 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 })}
               </div>
 
-              {/* Colores del CATÁLOGO (3 tonos) */}
-              <details className="group" open>
-                <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1.5">
-                  <Palette size={14} /> Colores del catálogo (principal, secundario, botones)
-                </summary>
-                <div className="grid grid-cols-3 gap-3 mt-3">
+              {/* ── Tus 6 colores ── */}
+              <p className="text-sm font-bold text-gray-800 pt-1">🎨 Tus 6 colores</p>
+
+              {/* Colores del CATÁLOGO (3 tonos) — siempre visible */}
+              <div className="rounded-2xl border-2 border-gray-100 bg-white p-4">
+                <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Palette size={15} className="text-indigo-500" /> Colores del catálogo <span className="text-[11px] font-normal text-gray-400">— tu tienda pública</span></p>
+                <p className="text-[11px] text-gray-400 mb-3">Toca un color para abrir el <strong>deslizador</strong>, o escribe el <strong>HEX</strong>.</p>
+                <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: 'Principal', value: primaryColor, onChange: setPrimaryColor },
                     { label: 'Secundario', value: secondaryColor, onChange: setSecondaryColor },
@@ -665,24 +667,22 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   ].map(({ label, value, onChange }) => (
                     <div key={label} className="rounded-2xl border border-gray-100 bg-gray-50/40 p-3 text-center shadow-sm">
                       <label className="relative cursor-pointer block">
-                        <span className="block w-full h-16 rounded-xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
+                        <span className="block w-full h-20 rounded-2xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
                         <input type="color" value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                       </label>
                       <p className="text-xs font-semibold text-gray-700 mt-2">{label}</p>
                       <input value={value} onChange={e => { const v = e.target.value.trim(); onChange(v.startsWith('#') || v === '' ? v : `#${v}`) }} maxLength={7}
-                        className="w-full mt-1 text-[11px] text-center uppercase font-mono border border-gray-200 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="#000000" />
+                        className="w-full mt-1.5 text-xs text-center uppercase font-mono border-2 border-gray-200 rounded-lg px-1 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="#000000" />
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-2">Estos pintan tu catálogo público. Toca el color (deslizador + RGB) o escribe el HEX.</p>
-              </details>
+              </div>
 
-              {/* Colores del PANEL de administración (3 tonos independientes) */}
-              <details className="group" open>
-                <summary className="cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1.5">
-                  <Palette size={14} /> Colores del panel de administración
-                </summary>
-                <div className="grid grid-cols-3 gap-3 mt-3">
+              {/* Colores del PANEL de administración (3 tonos independientes) — siempre visible */}
+              <div className="rounded-2xl border-2 border-gray-100 bg-white p-4">
+                <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Palette size={15} className="text-violet-500" /> Colores del panel <span className="text-[11px] font-normal text-gray-400">— administración</span></p>
+                <p className="text-[11px] text-gray-400 mb-3">Pintan tu menú, encabezados y botones del panel. Guarda y recarga para aplicarlos.</p>
+                <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: 'Principal', value: panelPrimary, onChange: setPanelPrimary },
                     { label: 'Secundario', value: panelSecondary, onChange: setPanelSecondary },
@@ -690,19 +690,18 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   ].map(({ label, value, onChange }) => (
                     <div key={label} className="rounded-2xl border border-gray-100 bg-gray-50/40 p-3 text-center shadow-sm">
                       <label className="relative cursor-pointer block">
-                        <span className="block w-full h-16 rounded-xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
+                        <span className="block w-full h-20 rounded-2xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
                         <input type="color" value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                       </label>
                       <p className="text-xs font-semibold text-gray-700 mt-2">{label}</p>
                       <input value={value} onChange={e => { const v = e.target.value.trim(); onChange(v.startsWith('#') || v === '' ? v : `#${v}`) }} maxLength={7}
-                        className="w-full mt-1 text-[11px] text-center uppercase font-mono border border-gray-200 rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="#000000" />
+                        className="w-full mt-1.5 text-xs text-center uppercase font-mono border-2 border-gray-200 rounded-lg px-1 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="#000000" />
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-2">Pintan tu panel (menú, botones, encabezados). Guarda y recarga para verlo aplicado.</p>
 
                 {/* Vista previa del PANEL en vivo */}
-                <p className="text-xs font-medium text-gray-600 mt-4 mb-1.5">Vista previa del panel</p>
+                <p className="text-xs font-bold text-gray-700 mt-4 mb-1.5">🖥️ Así se verá tu panel</p>
                 <div className="rounded-xl border border-gray-200 overflow-hidden flex h-28 text-[10px]">
                   <div className="w-20 flex-shrink-0 p-2 text-white flex flex-col gap-1" style={{ backgroundColor: panelPrimary }}>
                     <div className="font-bold mb-0.5">Menú</div>
@@ -718,7 +717,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     </div>
                   </div>
                 </div>
-              </details>
+              </div>
 
               {/* Fondo del catálogo + estilo de botones — libres para todos */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
@@ -783,7 +782,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
 
               {/* Preview GRANDE del catálogo */}
               <div>
-                <Label className="text-xs text-gray-500 mb-2 block">Vista previa</Label>
+                <Label className="text-xs font-bold text-gray-700 mb-2 block">🛍️ Así se verá tu catálogo</Label>
                 <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
                   <div className="px-5 py-4 flex items-center justify-between"
                     style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
