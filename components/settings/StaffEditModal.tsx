@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check, Upload } from 'lucide-react'
+import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check, Upload, KeyRound } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { saveStaffAction, deleteStaffAction, setStaffDayAction, type Staff } from '@/lib/actions/staff'
-import { uploadEmployeePhotoAction } from '@/lib/actions/employees'
+import { uploadEmployeePhotoAction, createEmployeeAction } from '@/lib/actions/employees'
 import { useBossGate } from './BossGate'
 
 const WD = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -25,6 +25,7 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
   const { requireUnlock, gate } = useBossGate()
   const days = weekDates()
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [newLoginPw, setNewLoginPw] = useState('')
 
   function set<K extends keyof Staff>(k: K, v: Staff[K]) { setS(prev => ({ ...prev, [k]: v })) }
   function cycleDay(date: string) {
@@ -41,14 +42,29 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
     const file = e.target.files?.[0]
     if (!file) return
     setUploadingPhoto(true)
-    const res = await uploadEmployeePhotoAction(s.id, file, true)
+    const fd = new FormData(); fd.set('id', s.id); fd.set('isStaff', 'true'); fd.set('file', file)
+    const res = await uploadEmployeePhotoAction(fd)
     if (res.success && res.url) {
       set('photo_url', res.url)
       toast.success('Foto actualizada')
+      onSaved()
     } else {
       toast.error(res.error || 'Error subiendo foto')
     }
     setUploadingPhoto(false)
+    e.target.value = ''
+  }
+
+  function createLogin() {
+    if (newLoginPw.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return }
+    if (!confirm(`¿Crear acceso (login) para ${s.name}? Se convertirá en empleado con cuenta y se quitará de "solo registro".`)) return
+    startTransition(async () => {
+      const r = await createEmployeeAction({ name: s.name, password: newLoginPw })
+      if (!r.success) { toast.error(r.error ?? 'No se pudo crear el acceso'); return }
+      await deleteStaffAction(s.id)
+      toast.success(`Acceso creado. Usuario: ${r.loginEmail ?? s.name}`)
+      onSaved(); onClose()
+    })
   }
 
   function save() {
@@ -132,7 +148,7 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
                       <Upload size={18} /> {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
                       <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto || isPending} className="hidden" />
                     </label>
-                    <input type="text" value={s.photo_url ?? ''} onChange={e => set('photo_url', e.target.value)} placeholder="O pega una URL: https://..." className="mt-2 w-full h-8 text-xs border border-gray-200 rounded-lg px-2" />
+                    <p className="mt-2 text-[10px] text-gray-400 text-center">JPG, PNG o WebP · máx 3MB</p>
                   </div>
                 </div>
               </div>
@@ -154,6 +170,16 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
               <input type="checkbox" checked={s.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4 rounded accent-emerald-600" />
               Marcar como <span className="font-medium">pagado</span> este periodo
             </label>
+          </div>
+
+          {/* Crear acceso (login) para este empleado de registro */}
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+            <p className="text-[11px] font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1.5 mb-1"><KeyRound size={13} /> Crear acceso (login)</p>
+            <p className="text-[10px] text-gray-500 mb-2">Genera una cuenta para que <strong>{s.name || 'este empleado'}</strong> entre al POS. Tú defines la contraseña y la puedes cambiar después.</p>
+            <div className="flex gap-2">
+              <Input type="text" value={newLoginPw} onChange={e => setNewLoginPw(e.target.value)} placeholder="Contraseña (mín. 6)" className="h-9 text-sm flex-1" />
+              <button type="button" onClick={createLogin} disabled={isPending || newLoginPw.length < 6} className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 shrink-0">Crear acceso</button>
+            </div>
           </div>
 
           {/* Asistencia de la Semana — bloque destacado morado unificado */}

@@ -50,14 +50,17 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
     const file = e.target.files?.[0]
     if (!file) return
     setUploadingPhoto(true)
-    const res = await uploadEmployeePhotoAction(employeeId, file, false)
+    const fd = new FormData(); fd.set('id', employeeId); fd.set('isStaff', 'false'); fd.set('file', file)
+    const res = await uploadEmployeePhotoAction(fd)
     if (res.success && res.url) {
       setMeta(m => ({ ...m, photo_url: res.url! }))
       toast.success('Foto actualizada')
+      onSaved()
     } else {
       toast.error(res.error || 'Error subiendo foto')
     }
     setUploadingPhoto(false)
+    e.target.value = ''
   }
   useEffect(() => {
     Promise.all([getEmployeeMeta(employeeId), getEmployeeWeekAction(employeeId)]).then(([m, w]) => {
@@ -170,7 +173,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                         <Upload size={18} /> {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
                         <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
                       </label>
-                      <input type="text" value={meta.photo_url ?? ''} onChange={e => setMeta(m => ({...m, photo_url: e.target.value}))} placeholder="O pega una URL: https://..." className="mt-2 w-full h-8 text-xs border border-gray-200 rounded-lg px-2" />
+                      <p className="mt-2 text-[10px] text-gray-400 text-center">JPG, PNG o WebP · máx 3MB</p>
                     </div>
                   </div>
                 </div>

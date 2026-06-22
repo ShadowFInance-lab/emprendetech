@@ -190,26 +190,41 @@ export async function markEmployeeNotificationRead(id: string): Promise<ActionRe
   }
 }
 
-/** Sube foto de empleado/staff al storage y devuelve URL pública. */
-export async function uploadEmployeePhotoAction(employeeOrStaffId: string, file: File, isStaff = false): Promise<{ success: boolean; url?: string; error?: string }> {
+/**
+ * Sube la foto de un empleado/staff al storage, GUARDA el enlace en la BD y
+ * devuelve la URL pública. Recibe FormData (un File posicional puede llegar
+ * vacío al Server Action — por eso fallaba/colgaba la subida).
+ */
+export async function uploadEmployeePhotoAction(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
 
-    const valid = ['image/jpeg', 'image/png', 'image/webp']
-    if (!valid.includes(file.type) || file.size > 3 * 1024 * 1024) {
-      return { success: false, error: 'Imagen JPG/PNG/WebP máx 3MB' }
-    }
+    const id = formData.get('id') as string
+    const isStaff = formData.get('isStaff') === 'true'
+    const file = formData.get('file') as File
+    if (!id || !file || !file.size) return { success: false, error: 'No se recibió la imagen' }
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    const valid = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!valid.includes(file.type)) return { success: false, error: 'Formato no válido. Usa JPG, PNG o WebP.' }
+    if (file.size > 3 * 1024 * 1024) return { success: false, error: 'La imagen supera 3MB.' }
+
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
     const folder = isStaff ? 'staff' : 'employees'
-    const path = `${folder}/${employeeOrStaffId}/photo-${Date.now()}.${ext}`
+    const path = `${folder}/${id}/photo-${Date.now()}.${ext}`
 
     const { error: upErr } = await supabase.storage.from('public-assets').upload(path, file, { upsert: true, contentType: file.type })
-    if (upErr) return { success: false, error: 'No se pudo subir la foto. Verifica bucket public-assets.' }
+    if (upErr) return { success: false, error: `No se pudo subir. Verifica el bucket public-assets. ${upErr.message}` }
 
     const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(path)
+
+    // Guardar el enlace en la BD de inmediato (persistente, sin pulsar "Guardar").
+    if (isStaff) {
+      await supabase.from('staff').update({ photo_url: publicUrl }).eq('id', id).eq('boss_id', user.id)
+    } else {
+      await supabase.from('employee_meta').upsert({ employee_id: id, photo_url: publicUrl, updated_at: new Date().toISOString() })
+    }
     return { success: true, url: publicUrl }
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Error subiendo foto'

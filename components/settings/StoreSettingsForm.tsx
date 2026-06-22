@@ -16,6 +16,7 @@ import { Lock, Share2, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
+import ColorPickerField from './ColorPickerField'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -660,44 +661,18 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 <div className="rounded-2xl border-2 border-gray-200 bg-white p-4">
                   <div className="text-sm font-semibold mb-3">Colores catálogo (público)</div>
                   <div className="space-y-3">
-                    {[
-                      {label: 'Principal', val: primaryColor, setter: setPrimaryColor},
-                      {label: 'Secundario', val: secondaryColor, setter: setSecondaryColor},
-                      {label: 'Botones', val: buttonColor, setter: setButtonColor}
-                    ].map(c => (
-                      <div key={c.label} className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-14 h-14 rounded-2xl border-2 shadow-inner" style={{background: c.val}} />
-                          <input type="color" value={c.val} onChange={e=>c.setter(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">{c.label}</div>
-                          <input value={c.val} onChange={e=>c.setter(e.target.value)} className="font-mono text-xs border rounded px-2 py-0.5 w-full" />
-                        </div>
-                      </div>
-                    ))}
+                    <ColorPickerField label="Principal" value={primaryColor} onChange={setPrimaryColor} />
+                    <ColorPickerField label="Secundario" value={secondaryColor} onChange={setSecondaryColor} />
+                    <ColorPickerField label="Botones" value={buttonColor} onChange={setButtonColor} />
                   </div>
                 </div>
 
                 <div className="rounded-2xl border-2 border-gray-200 bg-white p-4">
                   <div className="text-sm font-semibold mb-3">Colores panel admin</div>
                   <div className="space-y-3">
-                    {[
-                      {label: 'Principal', val: panelPrimary, setter: setPanelPrimary},
-                      {label: 'Secundario', val: panelSecondary, setter: setPanelSecondary},
-                      {label: 'Botones', val: panelButton, setter: setPanelButton}
-                    ].map(c => (
-                      <div key={c.label} className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-14 h-14 rounded-2xl border-2 shadow-inner" style={{background: c.val}} />
-                          <input type="color" value={c.val} onChange={e=>c.setter(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">{c.label}</div>
-                          <input value={c.val} onChange={e=>c.setter(e.target.value)} className="font-mono text-xs border rounded px-2 py-0.5 w-full" />
-                        </div>
-                      </div>
-                    ))}
+                    <ColorPickerField label="Principal" value={panelPrimary} onChange={setPanelPrimary} />
+                    <ColorPickerField label="Secundario" value={panelSecondary} onChange={setPanelSecondary} />
+                    <ColorPickerField label="Botones" value={panelButton} onChange={setPanelButton} />
                   </div>
                 </div>
               </div>
