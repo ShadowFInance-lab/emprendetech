@@ -81,16 +81,36 @@ export default async function ProductDetailPage({ params }: PageProps) {
     )
   }
 
-  // Productos relacionados (misma categoría)
-  const { data: related } = await supabase
+  // Productos recomendados / seguir viendo (4-6)
+  let relatedQuery = supabase
     .from('products')
     .select('*, product_images(*)')
     .eq('store_id', store.id)
     .eq('is_active', true)
-    .eq('category_id', product.category_id ?? '')
     .neq('id', product.id)
     .order('total_sold', { ascending: false })
-    .limit(4)
+    .limit(6)
+
+  if (product.category_id) {
+    relatedQuery = relatedQuery.eq('category_id', product.category_id)
+  }
+
+  const { data: related } = await relatedQuery
+
+  // Fallback: si pocos, agregar productos recientes del store
+  let finalRelated = related ?? []
+  if (finalRelated.length < 4) {
+    const { data: recent } = await supabase
+      .from('products')
+      .select('*, product_images(*)')
+      .eq('store_id', store.id)
+      .eq('is_active', true)
+      .neq('id', product.id)
+      .order('created_at', { ascending: false })
+      .limit(6 - finalRelated.length)
+    const recentIds = new Set(finalRelated.map((p: any) => p.id))
+    finalRelated = [...finalRelated, ...(recent ?? []).filter((p: any) => !recentIds.has(p.id))]
+  }
 
   // Schema.org JSON-LD
   const primaryImage = product.product_images?.find((i: { is_primary: boolean }) => i.is_primary)
@@ -130,7 +150,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         <ProductDetailView
           store={store}
           product={product}
-          related={related ?? []}
+          related={finalRelated}
         />
         <CartFab />
       </CartProvider>

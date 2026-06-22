@@ -79,15 +79,23 @@ export function CartProvider({
     startTransition(async () => {
       const c = await addToCartAction(storeId, p, 1)
       setItems(c.items)
-      toast.success('Agregado al carrito')
+      if (c.items.length > 0) {
+        toast.success('Agregado al carrito')
+      } else {
+        toast.error('No se pudo agregar el producto al carrito')
+      }
     })
   }
   function buyNow(p: ProductForCart) {
     startTransition(async () => {
       const c = await addToCartAction(storeId, p, 1)
       setItems(c.items)
-      setView('checkout')
-      setOpen(true)
+      if (c.items.length > 0) {
+        setView('checkout')
+        setOpen(true)
+      } else {
+        toast.error('No se pudo agregar el producto')
+      }
     })
   }
   function setQty(id: string, qty: number) {

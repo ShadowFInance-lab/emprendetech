@@ -162,6 +162,32 @@ export async function markEmployeeNotificationRead(id: string): Promise<ActionRe
   }
 }
 
+/** Sube foto de empleado/staff al storage y devuelve URL pública. */
+export async function uploadEmployeePhotoAction(employeeOrStaffId: string, file: File, isStaff = false): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+
+    const valid = ['image/jpeg', 'image/png', 'image/webp']
+    if (!valid.includes(file.type) || file.size > 3 * 1024 * 1024) {
+      return { success: false, error: 'Imagen JPG/PNG/WebP máx 3MB' }
+    }
+
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    const folder = isStaff ? 'staff' : 'employees'
+    const path = `${folder}/${employeeOrStaffId}/photo-${Date.now()}.${ext}`
+
+    const { error: upErr } = await supabase.storage.from('public-assets').upload(path, file, { upsert: true, contentType: file.type })
+    if (upErr) return { success: false, error: 'No se pudo subir la foto. Verifica bucket public-assets.' }
+
+    const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(path)
+    return { success: true, url: publicUrl }
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Error subiendo foto' }
+  }
+}
+
 // ─── Datos extra del empleado (tel, seguro, emergencia, sucursal, sueldo) ────
 export interface EmployeeMeta {
   phone: string | null

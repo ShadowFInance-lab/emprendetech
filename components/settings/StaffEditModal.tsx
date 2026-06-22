@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { saveStaffAction, deleteStaffAction, setStaffDayAction, type Staff } from '@/lib/actions/staff'
+import { uploadEmployeePhotoAction } from '@/lib/actions/employees'
 import { useBossGate } from './BossGate'
 
 const WD = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -23,6 +24,7 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
   const [isPending, startTransition] = useTransition()
   const { requireUnlock, gate } = useBossGate()
   const days = weekDates()
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   function set<K extends keyof Staff>(k: K, v: Staff[K]) { setS(prev => ({ ...prev, [k]: v })) }
   function cycleDay(date: string) {
@@ -33,6 +35,20 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
     set('week_attendance', wa)
     // Auto-guardado inmediato en la base de datos (no se pierde al recargar)
     startTransition(async () => { const r = await setStaffDayAction(s.id, date, next); if (!r.success) toast.error(r.error ?? 'Error'); else onSaved() })
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhoto(true)
+    const res = await uploadEmployeePhotoAction(s.id, file, true)
+    if (res.success && res.url) {
+      set('photo_url', res.url)
+      toast.success('Foto actualizada')
+    } else {
+      toast.error(res.error || 'Error subiendo foto')
+    }
+    setUploadingPhoto(false)
   }
 
   function save() {
@@ -104,7 +120,15 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
               {txt('position', 'Puesto', 'Cajero')}
               {txt('branch', 'Sucursal / caja', 'Centro')}
               {txt('hire_date', 'Fecha de ingreso', '', 'date')}
-              {txt('photo_url', 'Foto (URL)', 'https://…')}
+              <div>
+                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Foto</label>
+                <div className="flex items-center gap-2">
+                  {s.photo_url ? <img src={s.photo_url} alt="" className="w-9 h-9 rounded-full object-cover ring" /> : <div className="w-9 h-9 bg-gray-200 rounded-full" />}
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto || isPending} className="text-xs" />
+                  {uploadingPhoto && <span className="text-[10px]">...</span>}
+                </div>
+                <input type="text" value={s.photo_url ?? ''} onChange={e => set('photo_url', e.target.value)} placeholder="O URL" className="h-8 text-xs border rounded mt-1 w-full px-2" />
+              </div>
               {num('salary', 'Sueldo base', '0.01')}
               {num('discount', 'Descuento', '0.01')}
               {num('bonus', 'Bonos', '0.01')}

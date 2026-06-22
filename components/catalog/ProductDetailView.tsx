@@ -270,12 +270,13 @@ export default function ProductDetailView({ store, product, related }: Props) {
           </div>
         </div>
 
-        {/* ─── Productos relacionados ─────────────────────────── */}
+        {/* ─── Más productos recomendados / Seguir viendo ─────────────────────────── */}
         {related.length > 0 && (
           <div className="mt-16">
             <h2 className={`text-xl font-bold mb-6 ${isMinimalista ? 'font-serif' : ''}`}>
-              También te puede interesar
+              Más productos recomendados
             </h2>
+            <p className="text-xs text-gray-500 mb-4 font-sans">Seguir viendo en el catálogo</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {related.map(relProduct => {
                 const relImg = (relProduct.product_images as { url: string; is_primary: boolean }[])

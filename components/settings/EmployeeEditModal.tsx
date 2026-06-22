@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, type EmployeeMeta } from '@/lib/actions/employees'
+import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { savePayrollDiscountAction } from '@/lib/actions/payroll'
 import { getEmployeeWeekAction, setEmployeeDayAction, setEmployeeDayTimesAction, type AttendanceRow, type DayState } from '@/lib/actions/attendance'
 import { useBossGate } from './BossGate'
@@ -39,8 +39,23 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
   const days = useMemo(() => weekDates(), [])
   const [daySel, setDaySel] = useState(days[0])
   const [tIn, setTIn] = useState(''); const [tOut, setTOut] = useState('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   async function loadWeek() { setWeek(await getEmployeeWeekAction(employeeId)) }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhoto(true)
+    const res = await uploadEmployeePhotoAction(employeeId, file, false)
+    if (res.success && res.url) {
+      setMeta(m => ({ ...m, photo_url: res.url! }))
+      toast.success('Foto actualizada')
+    } else {
+      toast.error(res.error || 'Error subiendo foto')
+    }
+    setUploadingPhoto(false)
+  }
   useEffect(() => {
     Promise.all([getEmployeeMeta(employeeId), getEmployeeWeekAction(employeeId)]).then(([m, w]) => {
       if (m) setMeta({ ...EMPTY, ...m })
@@ -131,7 +146,20 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                 {txt('position', 'Puesto', 'Cajero')}
                 {txt('branch', 'Sucursal / caja', 'Centro')}
                 {txt('hire_date', 'Fecha de ingreso', '', 'date')}
-                {txt('photo_url', 'Foto (URL)', 'https://…')}
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Foto</label>
+                  <div className="flex items-center gap-2">
+                    {meta.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={meta.photo_url} alt="" className="w-10 h-10 rounded-full object-cover ring-1" />
+                    ) : <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">👤</div>}
+                    <div className="flex-1">
+                      <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="text-xs" />
+                      {uploadingPhoto && <span className="text-xs text-gray-500">Subiendo...</span>}
+                    </div>
+                  </div>
+                  <input type="text" value={meta.photo_url ?? ''} onChange={e => setMeta(m => ({...m, photo_url: e.target.value}))} placeholder="O pega URL" className="mt-1 w-full h-8 text-xs border rounded px-2" />
+                </div>
                 <div>
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Sueldo base</label>
                   <Input type="number" min="0" value={meta.salary ?? ''} onChange={e => setMeta(m => ({ ...m, salary: e.target.value ? parseFloat(e.target.value) : null }))} className="h-9 text-sm" placeholder="0.00" />

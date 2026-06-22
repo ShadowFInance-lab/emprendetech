@@ -56,21 +56,42 @@ export async function addToCartAction(
     let id = await getCartId()
     if (!id) {
       const { data: cart, error } = await supabase.from('carts').insert({ store_id: storeId }).select('id').single()
-      if (error || !cart) return { items: [] }
+      if (error || !cart) {
+        console.error('[cart] create cart error', error)
+        return { items: [] }
+      }
       id = cart.id as string
-      const store = await cookies()
-      store.set(COOKIE, id, { path: '/', maxAge: MAX_AGE, sameSite: 'lax' })
+      const cookieStore = await cookies()
+      const isProd = process.env.NODE_ENV === 'production'
+      cookieStore.set(COOKIE, id, { 
+        path: '/', 
+        maxAge: MAX_AGE, 
+        sameSite: 'lax',
+        secure: isProd 
+      })
     }
     // Si ya existe el mismo producto, suma cantidad.
-    const { data: existing } = await supabase
+    const { data: existing, error: existErr } = await supabase
       .from('cart_items').select('id, qty').eq('cart_id', id).eq('product_id', item.product_id).maybeSingle()
+    if (existErr) {
+      console.error('[cart] check existing error', existErr)
+      return { items: [] }
+    }
     if (existing) {
-      await supabase.from('cart_items').update({ qty: (Number(existing.qty) || 0) + qty }).eq('id', existing.id)
+      const { error: updErr } = await supabase.from('cart_items').update({ qty: (Number(existing.qty) || 0) + qty }).eq('id', existing.id)
+      if (updErr) {
+        console.error('[cart] update qty error', updErr)
+        return { items: [] }
+      }
     } else {
-      await supabase.from('cart_items').insert({
+      const { error: insErr } = await supabase.from('cart_items').insert({
         cart_id: id, product_id: item.product_id, name: item.name,
         price: item.price, qty, image_url: item.image_url ?? null,
       })
+      if (insErr) {
+        console.error('[cart] insert item error', insErr)
+        return { items: [] }
+      }
     }
     return { items: await readItems(id) }
   } catch { return { items: [] } }
@@ -82,13 +103,23 @@ export async function setCartItemQtyAction(itemId: string, qty: number): Promise
     const id = await getCartId()
     if (!id) return { items: [] }
     const supabase = createPublicClient()
+    let opError: any = null
     if (qty <= 0) {
-      await supabase.from('cart_items').delete().eq('id', itemId).eq('cart_id', id)
+      const { error } = await supabase.from('cart_items').delete().eq('id', itemId).eq('cart_id', id)
+      opError = error
     } else {
-      await supabase.from('cart_items').update({ qty }).eq('id', itemId).eq('cart_id', id)
+      const { error } = await supabase.from('cart_items').update({ qty }).eq('id', itemId).eq('cart_id', id)
+      opError = error
+    }
+    if (opError) {
+      console.error('[cart] setQty error', opError)
+      return { items: [] }
     }
     return { items: await readItems(id) }
-  } catch { return { items: [] } }
+  } catch (e) { 
+    console.error('[cart] setQty exception', e)
+    return { items: [] } 
+  }
 }
 
 /** Elimina un renglón del carrito. */
@@ -97,9 +128,16 @@ export async function removeCartItemAction(itemId: string): Promise<CartView> {
     const id = await getCartId()
     if (!id) return { items: [] }
     const supabase = createPublicClient()
-    await supabase.from('cart_items').delete().eq('id', itemId).eq('cart_id', id)
+    const { error } = await supabase.from('cart_items').delete().eq('id', itemId).eq('cart_id', id)
+    if (error) {
+      console.error('[cart] remove error', error)
+      return { items: [] }
+    }
     return { items: await readItems(id) }
-  } catch { return { items: [] } }
+  } catch (e) { 
+    console.error('[cart] remove exception', e)
+    return { items: [] } 
+  }
 }
 
 /** Vacía el carrito. */
@@ -108,9 +146,19 @@ export async function clearCartAction(): Promise<CartView> {
     const id = await getCartId()
     if (!id) return { items: [] }
     const supabase = createPublicClient()
-    await supabase.from('cart_items').delete().eq('cart_id', id)
+    const { error } = await supabase.from('cart_items').delete().eq('cart_id', id)
+    if (error) {
+      console.error('[cart] clear error', error)
+      return { items: [] }
+    }
+    const cookieStore = await cookies()
+    const isProd = process.env.NODE_ENV === 'production'
+    cookieStore.set(COOKIE, '', { path: '/', maxAge: 0, secure: isProd })
     return { items: [] }
-  } catch { return { items: [] } }
+  } catch (e) { 
+    console.error('[cart] clear exception', e)
+    return { items: [] } 
+  }
 }
 
 export interface CheckoutInput {
@@ -166,8 +214,9 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
 
     // Vaciar carrito + cerrar cookie
     await supabase.from('cart_items').delete().eq('cart_id', id)
-    const store = await cookies()
-    store.set(COOKIE, '', { path: '/', maxAge: 0 })
+    const cookieStore = await cookies()
+    const isProd = process.env.NODE_ENV === 'production'
+    cookieStore.set(COOKIE, '', { path: '/', maxAge: 0, secure: isProd })
     return { success: true, order_no }
   } catch { return { success: false, error: 'Error' } }
 }
