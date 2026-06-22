@@ -709,18 +709,18 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       onClick={() => { setPrimaryColor(palette.p); setSecondaryColor(palette.s); setButtonColor(palette.b) }}
                       className={`group relative flex flex-col rounded-3xl overflow-hidden border-2 transition-all shadow-sm ${isActive ? 'border-gray-900 ring-2 ring-gray-900 ring-offset-2 scale-[1.01]' : 'border-gray-200 hover:border-gray-400'}`}
                     >
-                      <div className="h-36 p-4 flex flex-col justify-between" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
+                      <div className="h-40 p-4 flex flex-col justify-between" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
                         <div className="flex items-center justify-between">
                           <div className="flex gap-2">
-                            <div className="w-7 h-7 rounded-full ring-2 ring-white/60" style={{ backgroundColor: palette.p }} />
-                            <div className="w-7 h-7 rounded-full ring-2 ring-white/60" style={{ backgroundColor: palette.s }} />
+                            <div className="w-8 h-8 rounded-full ring-2 ring-white/60" style={{ backgroundColor: palette.p }} />
+                            <div className="w-8 h-8 rounded-full ring-2 ring-white/60" style={{ backgroundColor: palette.s }} />
                           </div>
-                          <div className="w-7 h-7 rounded-full ring-2 ring-white/60" style={{ backgroundColor: palette.b }} />
+                          <div className="w-8 h-8 rounded-full ring-2 ring-white/60" style={{ backgroundColor: palette.b }} />
                         </div>
-                        <div className="text-white text-base font-bold drop-shadow-sm">{palette.name}</div>
+                        <div className="text-white text-lg font-bold drop-shadow-sm">{palette.name}</div>
                       </div>
-                      <div className={`py-2 text-center text-sm font-semibold ${isActive ? 'bg-gray-900 text-white' : 'bg-white text-gray-800 group-hover:bg-gray-50'}`}>
-                        {isActive ? '✓ Seleccionado' : 'Usar esta paleta'}
+                      <div className={`py-2.5 text-center text-sm font-semibold flex items-center justify-center gap-1 ${isActive ? 'bg-gray-900 text-white' : 'bg-white text-gray-800 group-hover:bg-gray-50'}`}>
+                        {isActive ? <><Check size={14} /> Seleccionado</> : 'Usar esta paleta'}
                       </div>
                     </button>
                   )

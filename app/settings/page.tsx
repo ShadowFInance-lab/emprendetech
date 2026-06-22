@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { Plan } from '@/lib/types'
 import StoreSettingsForm from '@/components/settings/StoreSettingsForm'
-import StorePaymentSection from '@/components/settings/StorePaymentSection'
-import OrderReceptionSection from '@/components/settings/OrderReceptionSection'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -28,8 +26,6 @@ export default async function SettingsPage() {
         </p>
       </div>
       <StoreSettingsForm store={store} plan={plan} />
-      <OrderReceptionSection />
-      <StorePaymentSection />
     </div>
   )
 }
