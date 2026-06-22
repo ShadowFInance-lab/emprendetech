@@ -67,6 +67,7 @@ export async function middleware(request: NextRequest) {
     '/onboarding',
     '/quotes',
     '/employees',
+    '/orders',
     '/mensajes',
   ]
 

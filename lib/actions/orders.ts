@@ -1,7 +1,27 @@
 'use server'
 
-import { createPublicClient } from '@/lib/supabase/server'
+import { createClient, createPublicClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
+
+export const ORDER_STATUSES = ['pendiente', 'confirmado', 'pagado', 'preparando', 'enviado', 'entregado', 'cancelado'] as const
+export type OrderStatus = typeof ORDER_STATUSES[number]
+
+export interface OnlineOrder {
+  id: string
+  customer_name: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  city: string | null
+  state: string | null
+  zip: string | null
+  notes: string | null
+  payment_method: string | null
+  items: { name: string; price: number; qty: number }[] | null
+  total: number | null
+  status: OrderStatus
+  created_at: string
+}
 
 export interface OnlineOrderInput {
   store_id: string
@@ -40,6 +60,43 @@ export async function createOnlineOrderAction(input: OnlineOrderInput): Promise<
       total: input.total ?? null,
     })
     if (error) return { success: false, error: 'No se pudo enviar el pedido (¿migración 037?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+/** Lista los pedidos online de la tienda del dueño (solo los suyos por RLS). */
+export async function listOnlineOrdersAction(): Promise<OnlineOrder[]> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+    const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).single()
+    if (!store) return []
+    const { data, error } = await supabase.from('online_orders').select('*')
+      .eq('store_id', store.id).order('created_at', { ascending: false })
+    if (error) return []
+    return (data ?? []).map(o => ({
+      id: o.id as string,
+      customer_name: o.customer_name ?? null, phone: o.phone ?? null, email: o.email ?? null,
+      address: o.address ?? null, city: o.city ?? null, state: o.state ?? null, zip: o.zip ?? null,
+      notes: o.notes ?? null, payment_method: o.payment_method ?? null,
+      items: (o.items as OnlineOrder['items']) ?? null, total: o.total == null ? null : Number(o.total),
+      status: (o.status as OrderStatus) ?? 'pendiente', created_at: o.created_at as string,
+    }))
+  } catch { return [] }
+}
+
+/** Cambia el estado de un pedido (auto-guardado). */
+export async function updateOnlineOrderStatusAction(id: string, status: OrderStatus): Promise<ActionResult> {
+  try {
+    if (!ORDER_STATUSES.includes(status)) return { success: false, error: 'Estado inválido' }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).single()
+    if (!store) return { success: false, error: 'Sin tienda' }
+    const { error } = await supabase.from('online_orders').update({ status }).eq('id', id).eq('store_id', store.id)
+    if (error) return { success: false, error: 'No se pudo actualizar' }
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
 }

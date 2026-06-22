@@ -65,8 +65,29 @@ export async function saveStaffAction(id: string, fields: Partial<Omit<Staff, 'i
     const payload: Record<string, unknown> = {}
     for (const k of keys) if (fields[k] !== undefined) payload[k] = fields[k]
     if (Object.keys(payload).length === 0) return { success: true }
-    const { error } = await supabase.from('staff').update(payload).eq('id', id).eq('boss_id', user.id)
+    let { error } = await supabase.from('staff').update(payload).eq('id', id).eq('boss_id', user.id)
+    // Si falta la columna week_attendance (migración 036 sin correr), reintenta sin ella
+    // para no perder el resto de los datos.
+    if (error && (error.code === '42703' || error.code === 'PGRST204' || /column|schema cache/i.test(error.message ?? ''))) {
+      delete payload.week_attendance
+      error = (await supabase.from('staff').update(payload).eq('id', id).eq('boss_id', user.id)).error
+    }
     if (error) return { success: false, error: 'No se pudo guardar' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
+/** Auto-guarda un día de asistencia del empleado de registro (sin pulsar "Guardar"). */
+export async function setStaffDayAction(id: string, date: string, state: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { data: row } = await supabase.from('staff').select('week_attendance').eq('id', id).eq('boss_id', user.id).single()
+    const wa = { ...((row?.week_attendance as Record<string, string>) ?? {}) }
+    if (state === 'none') delete wa[date]; else wa[date] = state
+    const { error } = await supabase.from('staff').update({ week_attendance: wa }).eq('id', id).eq('boss_id', user.id)
+    if (error) return { success: false, error: 'No se pudo guardar la asistencia. Corre la migración 036 en Supabase.' }
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
 }

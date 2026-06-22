@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, ShoppingCart, Users,
   Settings, CreditCard, ExternalLink, Menu, X,
-  LogOut, Store, FileText, History, UserCog, MessageCircle,
+  LogOut, Store, FileText, History, UserCog, MessageCircle, Inbox,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/lib/actions/auth'
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: '/employees', label: 'Empleados', icon: UserCog },
   { href: '/inventory', label: 'Inventario', icon: Package },
   { href: '/sales/new', label: 'Ventas', icon: ShoppingCart },
+  { href: '/orders', label: 'Pedidos', icon: Inbox },
   { href: '/customers', label: 'Clientes', icon: Users },
   { href: '/settings', label: 'Configuración', icon: Settings },
   { href: '/subscription', label: 'Suscripción', icon: CreditCard },

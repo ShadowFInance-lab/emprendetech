@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { saveStaffAction, deleteStaffAction, type Staff } from '@/lib/actions/staff'
+import { saveStaffAction, deleteStaffAction, setStaffDayAction, type Staff } from '@/lib/actions/staff'
 import { useBossGate } from './BossGate'
 
 const WD = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -31,6 +31,8 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
     const wa = { ...(s.week_attendance || {}) }
     if (next === 'none') delete wa[date]; else wa[date] = next
     set('week_attendance', wa)
+    // Auto-guardado inmediato en la base de datos (no se pierde al recargar)
+    startTransition(async () => { const r = await setStaffDayAction(s.id, date, next); if (!r.success) toast.error(r.error ?? 'Error'); else onSaved() })
   }
 
   function save() {
