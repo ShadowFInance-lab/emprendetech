@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock } from 'lucide-react'
+import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { savePayrollDiscountAction } from '@/lib/actions/payroll'
@@ -147,18 +147,21 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                 {txt('branch', 'Sucursal / caja', 'Centro')}
                 {txt('hire_date', 'Fecha de ingreso', '', 'date')}
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Foto</label>
-                  <div className="flex items-center gap-2">
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Foto del empleado</label>
+                  <div className="flex items-center gap-3">
                     {meta.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={meta.photo_url} alt="" className="w-10 h-10 rounded-full object-cover ring-1" />
-                    ) : <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">👤</div>}
-                    <label className="cursor-pointer text-xs px-2 py-1 border rounded hover:bg-gray-50">
-                      {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
+                      <img src={meta.photo_url} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-violet-200" />
+                    ) : <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"><UserRound size={20} /></div>}
+                    <label className="cursor-pointer flex-1 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition">
+                      <Upload size={16} /> {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
                       <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
                     </label>
                   </div>
-                  <input type="text" value={meta.photo_url ?? ''} onChange={e => setMeta(m => ({...m, photo_url: e.target.value}))} placeholder="O URL directa" className="mt-1 w-full h-8 text-xs border rounded px-2" />
+                  <div className="mt-1.5">
+                    <label className="text-[10px] text-gray-500">O URL de foto:</label>
+                    <input type="text" value={meta.photo_url ?? ''} onChange={e => setMeta(m => ({...m, photo_url: e.target.value}))} placeholder="https://..." className="mt-0.5 w-full h-8 text-xs border border-gray-300 rounded-lg px-2" />
+                  </div>
                 </div>
                 <div>
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Sueldo base</label>
@@ -181,7 +184,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
               <p className="text-[10px] text-gray-400 mt-1.5">Supervisor: además del POS puede ver el panel de Empleados.</p>
             </div>
 
-            {/* Asistencia de la Semana — bloque destacado morado unificado (igual que Staff) */}
+            {/* Asistencia de la Semana — bloque EXACTO idéntico (como en Juan David para Staff y Employee) */}
             <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-4">
               <p className="text-[11px] font-bold text-violet-700 uppercase tracking-wide flex items-center gap-1.5 mb-3"><CalendarClock size={13} /> Asistencia de la Semana</p>
               <div className="flex items-center justify-between gap-1 mb-2">
@@ -201,17 +204,18 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                 })}
               </div>
               <p className="text-[10px] text-violet-600/70 mb-2">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <label className="text-[10px] text-gray-400">Día</label>
-                  <select value={daySel} onChange={e => setDaySel(e.target.value)} className="w-full h-8 text-xs border border-gray-200 rounded-lg px-1 bg-white">
-                    {days.map((d, i) => <option key={d} value={d}>{WD[i]} {d.slice(5)}</option>)}
-                  </select>
-                </div>
-                <div><label className="text-[10px] text-gray-400">Entrada</label><Input type="time" value={tIn} onChange={e => setTIn(e.target.value)} className="h-8 text-xs w-28" /></div>
-                <div><label className="text-[10px] text-gray-400">Salida</label><Input type="time" value={tOut} onChange={e => setTOut(e.target.value)} className="h-8 text-xs w-28" /></div>
-                <button onClick={saveTimes} disabled={isPending} className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50">Guardar</button>
+            </div>
+
+            <div className="flex items-end gap-2 -mt-1">
+              <div className="flex-1">
+                <label className="text-[10px] text-gray-400">Día seleccionado</label>
+                <select value={daySel} onChange={e => setDaySel(e.target.value)} className="w-full h-8 text-xs border border-gray-200 rounded-lg px-1 bg-white">
+                  {days.map((d, i) => <option key={d} value={d}>{WD[i]} {d.slice(5)}</option>)}
+                </select>
               </div>
+              <div><label className="text-[10px] text-gray-400">Entrada</label><Input type="time" value={tIn} onChange={e => setTIn(e.target.value)} className="h-8 text-xs w-28" /></div>
+              <div><label className="text-[10px] text-gray-400">Salida</label><Input type="time" value={tOut} onChange={e => setTOut(e.target.value)} className="h-8 text-xs w-28" /></div>
+              <button onClick={saveTimes} disabled={isPending} className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50">Guardar horario</button>
             </div>
 
             <button onClick={save} disabled={isPending} className="w-full h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check } from 'lucide-react'
+import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check, Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { saveStaffAction, deleteStaffAction, setStaffDayAction, type Staff } from '@/lib/actions/staff'
 import { uploadEmployeePhotoAction } from '@/lib/actions/employees'
@@ -121,15 +121,18 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
               {txt('branch', 'Sucursal / caja', 'Centro')}
               {txt('hire_date', 'Fecha de ingreso', '', 'date')}
               <div>
-                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Foto</label>
-                <div className="flex items-center gap-2">
-                  {s.photo_url ? <img src={s.photo_url} alt="" className="w-9 h-9 rounded-full object-cover ring" /> : <div className="w-9 h-9 bg-gray-200 rounded-full" />}
-                  <label className="cursor-pointer text-xs px-2 py-1 border rounded hover:bg-gray-50">
-                    {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
+                <label className="text-[11px] font-medium text-gray-500 mb-1 block">Foto del empleado</label>
+                <div className="flex items-center gap-3">
+                  {s.photo_url ? <img src={s.photo_url} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-violet-200" /> : <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"><UserRound size={20} /></div>}
+                  <label className="cursor-pointer flex-1 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition">
+                    <Upload size={16} /> {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
                     <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto || isPending} className="hidden" />
                   </label>
                 </div>
-                <input type="text" value={s.photo_url ?? ''} onChange={e => set('photo_url', e.target.value)} placeholder="O URL" className="h-8 text-xs border rounded mt-1 w-full px-2" />
+                <div className="mt-1.5">
+                  <label className="text-[10px] text-gray-500">O URL de foto:</label>
+                  <input type="text" value={s.photo_url ?? ''} onChange={e => set('photo_url', e.target.value)} placeholder="https://..." className="mt-0.5 w-full h-8 text-xs border border-gray-300 rounded-lg px-2" />
+                </div>
               </div>
               {num('salary', 'Sueldo base', '0.01')}
               {num('discount', 'Descuento', '0.01')}
