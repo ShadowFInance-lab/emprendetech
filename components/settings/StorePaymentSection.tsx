@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Wallet, Loader2, Check, Trash2, Link2 } from 'lucide-react'
+import { Wallet, Loader2, Check, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getStorePaymentStatus, saveStorePaymentTokenAction, clearStorePaymentTokenAction } from '@/lib/actions/payments'
@@ -15,7 +15,6 @@ export default function StorePaymentSection() {
   const [configured, setConfigured] = useState(false)
   const [ready, setReady] = useState(false)
   const [token, setToken] = useState('')
-  const [showManual, setShowManual] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const refresh = useCallback(async () => {
@@ -42,7 +41,7 @@ export default function StorePaymentSection() {
     if (!token.trim()) { toast.error('Pega tu Access Token de Mercado Pago'); return }
     startTransition(async () => {
       const res = await saveStorePaymentTokenAction(token)
-      if (res.success) { toast.success('Cuenta de cobros guardada'); setToken(''); setShowManual(false); refresh() }
+      if (res.success) { toast.success('Cuenta de cobros guardada'); setToken(''); refresh() }
       else toast.error(res.error ?? 'Error', { duration: 6000 })
     })
   }
@@ -76,30 +75,16 @@ export default function StorePaymentSection() {
           </button>
         </div>
       ) : (
-        <>
-          {/* Botón OAuth (1 clic) */}
-          <a href="/api/oauth/mercadopago/start"
-            className="flex items-center justify-center gap-2 h-12 rounded-xl bg-[#009ee3] hover:bg-[#008fcc] text-white font-semibold transition-colors shadow-md">
-            <Link2 size={18} /> Conectar con Mercado Pago
-          </a>
-
-          {/* Alternativa: pegar token manualmente */}
-          <button onClick={() => setShowManual(v => !v)} className="text-xs text-gray-500 hover:text-gray-700 underline">
-            {showManual ? 'Ocultar' : 'O pega tu Access Token manualmente'}
-          </button>
-          {showManual && (
-            <div className="space-y-2">
-              <Input value={token} onChange={e => setToken(e.target.value)} type="password"
-                placeholder="Access Token de Mercado Pago (APP_USR-…)" className="h-10 text-sm" />
-              <Button onClick={save} disabled={isPending} className="h-10 bg-gradient-to-r from-sky-500 to-cyan-500 hover:opacity-90">
-                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Wallet size={16} className="mr-1.5" /> Guardar token</>}
-              </Button>
-              <p className="text-[11px] text-gray-400">
-                Lo obtienes en <span className="font-medium">Mercado Pago → Tus integraciones → tu app → Credenciales</span>. Se guarda en tu tienda y nunca se muestra en el catálogo.
-              </p>
-            </div>
-          )}
-        </>
+        <div className="space-y-2">
+          <Input value={token} onChange={e => setToken(e.target.value)} type="password"
+            placeholder="Access Token de Mercado Pago (APP_USR-…)" className="h-10 text-sm" />
+          <Button onClick={save} disabled={isPending} className="h-10 bg-gradient-to-r from-sky-500 to-cyan-500 hover:opacity-90">
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Wallet size={16} className="mr-1.5" /> Guardar token de cobros</>}
+          </Button>
+          <p className="text-[11px] text-gray-400">
+            Pega tu Access Token de <span className="font-medium">Mercado Pago → Tus integraciones → tu app → Credenciales</span>. Se guarda en tu tienda y nunca se muestra en el catálogo.
+          </p>
+        </div>
       )}
     </div>
   )

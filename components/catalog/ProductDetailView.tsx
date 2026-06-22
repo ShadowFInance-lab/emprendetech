@@ -6,6 +6,7 @@ import { MessageCircle, ChevronLeft, Share2 } from 'lucide-react'
 import { InstagramIcon, FacebookIcon } from '@/components/catalog/SocialIcons'
 import { formatCurrency } from '@/lib/utils/format'
 import { buildStoreWhatsAppLink, buildProductWhatsAppLink } from '@/lib/utils/whatsapp'
+import OnlineBuyButton from './OnlineBuyButton'
 import type { Store, Product } from '@/lib/types'
 
 interface Props {
@@ -236,6 +237,17 @@ export default function ProductDetailView({ store, product, related }: Props) {
                 <MessageCircle size={22} />
                 Pedir por WhatsApp
               </a>
+            )}
+
+            {/* CTA: Compra Online (si la tienda activó Vender Online) */}
+            {(store as { online_sales?: boolean }).online_sales && !isOut && (
+              <OnlineBuyButton
+                storeId={store.id}
+                storeName={store.name}
+                whatsapp={store.whatsapp}
+                product={{ name: product.name, price: product.sale_price, url: productUrl }}
+                color={primary}
+              />
             )}
 
             {/* CTA: Solo WhatsApp de tienda si agotado */}

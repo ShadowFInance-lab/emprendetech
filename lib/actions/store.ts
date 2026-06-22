@@ -88,14 +88,14 @@ export async function updateStoreAction(
     'facebook', 'instagram', 'tiktok', 'youtube',
     'skin', 'primary_color', 'secondary_color', 'button_color',
     'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit',
-    'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices',
+    'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices', 'online_sales',
     'bg_color', 'button_style', 'background_url',
   ]
 
   fields.forEach(field => {
     const val = formData.get(field)
     if (val !== null) {
-      if (field === 'show_prices') {
+      if (field === 'show_prices' || field === 'online_sales') {
         updates[field] = val === 'true'
       } else {
         updates[field] = val as string || null
@@ -132,7 +132,7 @@ export async function updateStoreAction(
     /column|schema cache/i.test(error.message ?? '')
   )
   if (isMissingColumn) {
-    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style', 'background_url', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit']) {
+    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style', 'background_url', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit', 'online_sales']) {
       delete (updates as Record<string, unknown>)[k]
     }
     const retry = await supabase

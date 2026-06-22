@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check } from 'lucide-react'
+import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -83,11 +83,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [primaryColor, setPrimaryColor] = useState(store.primary_color || '#2563eb')
   const [secondaryColor, setSecondaryColor] = useState(store.secondary_color || '#7c3aed')
   const [buttonColor, setButtonColor] = useState(store.button_color || '#2563eb')
-  const sx = store as { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; bg_fit?: string | null }
+  const sx = store as { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; bg_fit?: string | null; online_sales?: boolean | null }
   const [panelPrimary, setPanelPrimary] = useState(sx.panel_primary || store.primary_color || '#1F2937')
   const [panelSecondary, setPanelSecondary] = useState(sx.panel_secondary || store.secondary_color || '#111827')
   const [panelButton, setPanelButton] = useState(sx.panel_button || store.button_color || '#4F46E5')
   const [bgFit, setBgFit] = useState(sx.bg_fit || 'cover')
+  const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
   const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
   const [buttonStyle, setButtonStyle] = useState(store.button_style ?? 'redondeado')
@@ -186,6 +187,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('panel_secondary', panelSecondary)
     formData.set('panel_button', panelButton)
     formData.set('bg_fit', bgFit)
+    formData.set('online_sales', String(onlineSales))
     formData.set('currency', currency)
     formData.set('bg_color', bgColor)
     formData.set('button_style', buttonStyle)
@@ -287,6 +289,25 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           <input key={soc.name} type="hidden" name={soc.name} value={socialVals[soc.name]} readOnly />
         ))}
         <p className="text-[11px] text-gray-400 mt-3">Google abre el inicio de sesión real de tu cuenta.</p>
+      </div>
+
+      {/* ─── VENDER ONLINE ──── */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+              <ShoppingBag size={17} className="text-white" />
+            </span>
+            <div>
+              <p className="font-semibold text-gray-900 text-[15px] leading-tight">Vender Online</p>
+              <p className="text-xs text-gray-400">Agrega un botón <strong>&ldquo;Compra Online&rdquo;</strong> en tu catálogo con formulario de dirección, teléfono y método de pago. El pedido llega a tu negocio.</p>
+            </div>
+          </div>
+          <button type="button" onClick={() => setOnlineSales(v => !v)} aria-pressed={onlineSales}
+            className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${onlineSales ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+            <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${onlineSales ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
