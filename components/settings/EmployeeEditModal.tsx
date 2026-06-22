@@ -153,9 +153,9 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
               <p className="text-[10px] text-gray-400 mt-1.5">Supervisor: además del POS puede ver el panel de Empleados.</p>
             </div>
 
-            {/* Asistencia manual */}
-            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
-              <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><CalendarClock size={13} /> Asistencia de la semana</p>
+            {/* Asistencia de la Semana — bloque destacado morado unificado (igual que Staff) */}
+            <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-4">
+              <p className="text-[11px] font-bold text-violet-700 uppercase tracking-wide flex items-center gap-1.5 mb-3"><CalendarClock size={13} /> Asistencia de la Semana</p>
               <div className="flex items-center justify-between gap-1 mb-2">
                 {days.map((date, i) => {
                   const st = stateOf(date)
@@ -172,7 +172,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                   )
                 })}
               </div>
-              <p className="text-[10px] text-gray-400 mb-2">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
+              <p className="text-[10px] text-violet-600/70 mb-2">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
               <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <label className="text-[10px] text-gray-400">Día</label>

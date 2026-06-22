@@ -296,8 +296,8 @@ export default function MinimalistaSkin({
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400 font-sans">
           <span>{store.name}</span>
           <div className="flex gap-4 items-center">
-            {store.whatsapp && (
-              <a href={buildStoreWhatsAppLink(store.whatsapp, store.name)}
+            {showWA && (
+              <a href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
                 target="_blank" rel="noopener noreferrer"
                 className="hover:text-gray-700 transition-colors">
                 WhatsApp
@@ -323,8 +323,8 @@ export default function MinimalistaSkin({
         </div>
       </footer>
 
-      {/* WhatsApp flotante minimalista */}
-      {hasWhatsApp && (
+      {/* WhatsApp flotante minimalista — oculto en Venta Online */}
+      {showWA && (
         <a
           href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
           target="_blank"

@@ -593,14 +593,14 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </p>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Colores principales (presets con nombre, como la referencia) */}
+              {/* Colores principales (presets con nombre — siempre visible) */}
               <div className="space-y-2">
-                <Label>Colores principales</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <Label className="text-sm font-semibold">Colores principales (presets)</Label>
+                <div className="grid grid-cols-3 gap-3">
                   {[
-                    { name: 'Azul Mercanta Business', p: '#2563EB', s: '#1E40AF', b: '#16A34A' },
-                    { name: 'Morado Mercanta Business', p: '#7C3AED', s: '#5B21B6', b: '#059669' },
-                    { name: 'Verde Mercanta Business', p: '#059669', s: '#047857', b: '#2563EB' },
+                    { name: 'Azul Mercanta', p: '#2563EB', s: '#1E40AF', b: '#16A34A' },
+                    { name: 'Morado Mercanta', p: '#7C3AED', s: '#5B21B6', b: '#059669' },
+                    { name: 'Verde Mercanta', p: '#059669', s: '#047857', b: '#2563EB' },
                   ].map(c => {
                     const active = primaryColor === c.p
                     return (
@@ -608,22 +608,22 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                         key={c.name}
                         type="button"
                         onClick={() => { setPrimaryColor(c.p); setSecondaryColor(c.s); setButtonColor(c.b) }}
-                        className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left transition-all ${
-                          active ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'
+                        className={`flex items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all ${
+                          active ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
-                        <span className="w-6 h-6 rounded-full flex-shrink-0 ring-1 ring-black/5"
+                        <span className="w-8 h-8 rounded-full flex-shrink-0 ring-1 ring-black/10 shadow-sm"
                           style={{ background: `linear-gradient(135deg, ${c.p}, ${c.s})` }} />
-                        <span className="text-xs font-medium text-gray-700 leading-tight">{c.name}</span>
+                        <span className="text-sm font-medium text-gray-700 leading-tight">{c.name}</span>
                       </button>
                     )
                   })}
                 </div>
               </div>
 
-              {/* Más paletas */}
-              <Label className="block">Más paletas (toca una para aplicarla)</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {/* Más paletas — siempre visibles, swatches grandes */}
+              <Label className="block text-sm font-semibold">Más paletas (toca para aplicar — todas visibles)</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {COLOR_PALETTES.map((palette) => {
                   const isActive = primaryColor === palette.p && buttonColor === palette.b
                   const isLocked = false
@@ -635,16 +635,16 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       onClick={() => { if (!isLocked) { setPrimaryColor(palette.p); setSecondaryColor(palette.s); setButtonColor(palette.b) } }}
                       className={`relative rounded-2xl overflow-hidden border-2 transition-all ${
                         isLocked ? 'opacity-50 cursor-not-allowed border-gray-100'
-                          : isActive ? 'border-gray-900 shadow-lg scale-[1.02]'
+                          : isActive ? 'border-gray-900 shadow-lg scale-[1.01]'
                           : 'border-transparent hover:border-gray-300 hover:shadow-md'
                       }`}
                     >
-                      <div className="h-20 flex" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
-                        <span className="self-end m-1.5 w-6 h-6 rounded-full ring-2 ring-white" style={{ backgroundColor: palette.b }} />
+                      <div className="h-24 flex" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
+                        <span className="self-end m-2 w-8 h-8 rounded-full ring-2 ring-white shadow" style={{ backgroundColor: palette.b }} />
                       </div>
-                      <div className="py-1.5 px-2 bg-white flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-700">{palette.name}</span>
-                        {isActive && <Check size={13} className="text-green-600" />}
+                      <div className="py-2 px-3 bg-white flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-800">{palette.name}</span>
+                        {isActive && <Check size={14} className="text-green-600" />}
                         {isLocked && <Lock size={11} className="text-amber-500" />}
                       </div>
                     </button>
@@ -659,20 +659,20 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               <div className="rounded-2xl border-2 border-gray-100 bg-white p-4">
                 <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Palette size={15} className="text-indigo-500" /> Colores del catálogo <span className="text-[11px] font-normal text-gray-400">— tu tienda pública</span></p>
                 <p className="text-[11px] text-gray-400 mb-3">Toca un color para abrir el <strong>deslizador</strong>, o escribe el <strong>HEX</strong>.</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-4">
                   {[
-                    { label: 'Principal', value: primaryColor, onChange: setPrimaryColor },
-                    { label: 'Secundario', value: secondaryColor, onChange: setSecondaryColor },
-                    { label: 'Botones', value: buttonColor, onChange: setButtonColor },
+                    { label: 'Principal (catálogo)', value: primaryColor, onChange: setPrimaryColor },
+                    { label: 'Secundario (catálogo)', value: secondaryColor, onChange: setSecondaryColor },
+                    { label: 'Botones (catálogo)', value: buttonColor, onChange: setButtonColor },
                   ].map(({ label, value, onChange }) => (
-                    <div key={label} className="rounded-2xl border border-gray-100 bg-gray-50/40 p-3 text-center shadow-sm">
+                    <div key={label} className="rounded-2xl border border-gray-100 bg-white p-3 text-center shadow-sm">
                       <label className="relative cursor-pointer block">
-                        <span className="block w-full h-20 rounded-2xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
+                        <span className="block w-full h-24 rounded-2xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
                         <input type="color" value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                       </label>
-                      <p className="text-xs font-semibold text-gray-700 mt-2">{label}</p>
+                      <p className="text-[12px] font-semibold text-gray-700 mt-2.5">{label}</p>
                       <input value={value} onChange={e => { const v = e.target.value.trim(); onChange(v.startsWith('#') || v === '' ? v : `#${v}`) }} maxLength={7}
-                        className="w-full mt-1.5 text-xs text-center uppercase font-mono border-2 border-gray-200 rounded-lg px-1 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="#000000" />
+                        className="w-full mt-1.5 text-xs text-center uppercase font-mono border-2 border-gray-300 rounded-lg px-1 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="#000000" />
                     </div>
                   ))}
                 </div>
@@ -682,27 +682,27 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               <div className="rounded-2xl border-2 border-gray-100 bg-white p-4">
                 <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Palette size={15} className="text-violet-500" /> Colores del panel <span className="text-[11px] font-normal text-gray-400">— administración</span></p>
                 <p className="text-[11px] text-gray-400 mb-3">Pintan tu menú, encabezados y botones del panel. Guarda y recarga para aplicarlos.</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-4">
                   {[
-                    { label: 'Principal', value: panelPrimary, onChange: setPanelPrimary },
-                    { label: 'Secundario', value: panelSecondary, onChange: setPanelSecondary },
-                    { label: 'Botones', value: panelButton, onChange: setPanelButton },
+                    { label: 'Principal (panel)', value: panelPrimary, onChange: setPanelPrimary },
+                    { label: 'Secundario (panel)', value: panelSecondary, onChange: setPanelSecondary },
+                    { label: 'Botones (panel)', value: panelButton, onChange: setPanelButton },
                   ].map(({ label, value, onChange }) => (
-                    <div key={label} className="rounded-2xl border border-gray-100 bg-gray-50/40 p-3 text-center shadow-sm">
+                    <div key={label} className="rounded-2xl border border-gray-100 bg-white p-3 text-center shadow-sm">
                       <label className="relative cursor-pointer block">
-                        <span className="block w-full h-20 rounded-2xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
+                        <span className="block w-full h-24 rounded-2xl shadow-inner ring-1 ring-black/10" style={{ backgroundColor: value }} />
                         <input type="color" value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                       </label>
-                      <p className="text-xs font-semibold text-gray-700 mt-2">{label}</p>
+                      <p className="text-[12px] font-semibold text-gray-700 mt-2.5">{label}</p>
                       <input value={value} onChange={e => { const v = e.target.value.trim(); onChange(v.startsWith('#') || v === '' ? v : `#${v}`) }} maxLength={7}
-                        className="w-full mt-1.5 text-xs text-center uppercase font-mono border-2 border-gray-200 rounded-lg px-1 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="#000000" />
+                        className="w-full mt-1.5 text-xs text-center uppercase font-mono border-2 border-gray-300 rounded-lg px-1 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="#000000" />
                     </div>
                   ))}
                 </div>
 
-                {/* Vista previa del PANEL en vivo */}
-                <p className="text-xs font-bold text-gray-700 mt-4 mb-1.5">🖥️ Así se verá tu panel</p>
-                <div className="rounded-xl border border-gray-200 overflow-hidden flex h-28 text-[10px]">
+                {/* Vista previa del PANEL en vivo — claro con etiquetas */}
+                <p className="text-sm font-bold text-gray-700 mt-4 mb-2">🖥️ Vista previa del Panel de Administración</p>
+                <div className="rounded-2xl border border-gray-200 overflow-hidden flex h-32 text-[10px] shadow-sm">
                   <div className="w-20 flex-shrink-0 p-2 text-white flex flex-col gap-1" style={{ backgroundColor: panelPrimary }}>
                     <div className="font-bold mb-0.5">Menú</div>
                     <div className="rounded px-1.5 py-1 bg-white/15">Ganancias</div>
@@ -723,13 +723,13 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <div>
                     <Label className="text-xs text-gray-500">Fondo del catálogo</Label>
-                    <div className="flex items-center gap-2 mt-1.5">
+                    <div className="flex items-center gap-3 mt-1.5">
                       <label className="relative cursor-pointer inline-block">
-                        <span className="block w-12 h-9 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: bgColor }} />
+                        <span className="block w-14 h-10 rounded-xl ring-1 ring-black/10 shadow" style={{ backgroundColor: bgColor }} />
                         <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)}
                           className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
                       </label>
-                      <span className="text-xs text-gray-400">{bgColor}</span>
+                      <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{bgColor}</span>
                     </div>
                     {/* Imagen de fondo opcional (se ve detrás del catálogo) */}
                     <div className="mt-2 flex items-center gap-2">
@@ -780,10 +780,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   </div>
                 </div>
 
-              {/* Preview GRANDE del catálogo */}
+              {/* Preview GRANDE del catálogo — con etiquetas claras */}
               <div>
-                <Label className="text-xs font-bold text-gray-700 mb-2 block">🛍️ Así se verá tu catálogo</Label>
-                <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+                <Label className="text-sm font-bold text-gray-700 mb-2 block">🛍️ Vista previa del Catálogo Público (con tus colores)</Label>
+                <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-md">
                   <div className="px-5 py-4 flex items-center justify-between"
                     style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
                     <span className="text-white font-bold text-lg">{store.name}</span>

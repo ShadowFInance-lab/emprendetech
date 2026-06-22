@@ -400,12 +400,14 @@ export default function ModernaSkin({
               <ul className="space-y-2.5 text-sm">
                 {store.whatsapp && (
                   <li>
-                    <a href={buildStoreWhatsAppLink(store.whatsapp, store.name)}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 hover:text-white transition-colors">
-                      <MessageCircle size={16} className="text-green-400" />
-                      {store.whatsapp}
-                    </a>
+                    {showWA && (
+                      <a href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 hover:text-white transition-colors">
+                        <MessageCircle size={16} className="text-green-400" />
+                        {store.whatsapp}
+                      </a>
+                    )}
                   </li>
                 )}
                 <li className="text-gray-500 text-xs pt-1">
@@ -420,8 +422,8 @@ export default function ModernaSkin({
                 Síguenos
               </h4>
               <div className="flex gap-3">
-                {store.whatsapp && (
-                  <a href={buildStoreWhatsAppLink(store.whatsapp, store.name)}
+                {showWA && (
+                  <a href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
                     target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
                     className="w-11 h-11 rounded-full bg-gray-800 hover:bg-green-500 text-white flex items-center justify-center transition-all hover:scale-110">
                     <MessageCircle size={20} />
@@ -456,8 +458,8 @@ export default function ModernaSkin({
         </div>
       </footer>
 
-      {/* ─── WhatsApp flotante ────────────────────────────────── */}
-      {hasWhatsApp && (
+      {/* ─── WhatsApp flotante — oculto cuando Venta Online activa (usa el carrito persistente) */}
+      {showWA && (
         <a
           href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
           target="_blank"

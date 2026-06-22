@@ -19,7 +19,7 @@ import StaffEditModal from './StaffEditModal'
 import { useBossGate } from './BossGate'
 
 const PERIODS: { id: PayrollPeriod; label: string }[] = [
-  { id: 'week', label: 'Semanal' }, { id: 'biweekly', label: 'Catorcenal' },
+  { id: 'week', label: 'Semanal' },
   { id: 'fortnight', label: 'Quincenal' }, { id: 'month', label: 'Mensual' },
 ]
 const QUICK_DED = ['ISR', 'Seguro Social', 'Infonavit', 'Otros']
@@ -37,7 +37,6 @@ function thisWeekDates(): string[] {
 function periodEnd(period: PayrollPeriod, startISO: string): Date {
   const s = new Date(startISO + 'T00:00:00')
   if (period === 'week') { const e = new Date(s); e.setDate(s.getDate() + 6); return e }
-  if (period === 'biweekly') { const e = new Date(s); e.setDate(s.getDate() + 13); return e }
   if (period === 'fortnight') return s.getDate() === 1 ? new Date(s.getFullYear(), s.getMonth(), 15) : new Date(s.getFullYear(), s.getMonth() + 1, 0)
   return new Date(s.getFullYear(), s.getMonth() + 1, 0)
 }
@@ -244,7 +243,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
               <p className="text-lg font-bold text-gray-900 leading-tight">{k.value}</p>
             </div>
           ))}
-          {/* Periodo de Pago (reemplaza la tarjeta Cartocena) */}
+          {/* Periodo de Pago */}
           <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-indigo-50/50 shadow-sm p-3.5 col-span-2 sm:col-span-1">
             <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-2"><CalendarClock size={17} className="text-white" /></span>
             <p className="text-[11px] text-violet-700/80 font-medium mb-1">Periodo de pago</p>

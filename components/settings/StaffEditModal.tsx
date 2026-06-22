@@ -125,9 +125,9 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
             </label>
           </div>
 
-          {/* Asistencia de la semana — MISMO bloque destacado que los empleados con login */}
-          <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
-            <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><CalendarClock size={13} /> Asistencia de la semana</p>
+          {/* Asistencia de la Semana — bloque destacado morado unificado */}
+          <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-4">
+            <p className="text-[11px] font-bold text-violet-700 uppercase tracking-wide flex items-center gap-1.5 mb-3"><CalendarClock size={13} /> Asistencia de la Semana</p>
             <div className="flex items-center justify-between gap-1 mb-2">
               {days.map((date, i) => {
                 const st = s.week_attendance?.[date] || 'none'
@@ -144,7 +144,7 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
                 )
               })}
             </div>
-            <p className="text-[10px] text-gray-400">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
+            <p className="text-[10px] text-violet-600/70">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
           </div>
 
           <div>

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
-export type PayrollPeriod = 'week' | 'biweekly' | 'fortnight' | 'month'
+export type PayrollPeriod = 'week' | 'fortnight' | 'month'
 
 export interface PayrollDay { date: string; checkIn: string | null; checkOut: string | null; note: string | null }
 export interface PayrollRow {
@@ -31,13 +31,7 @@ function periodStartDate(period: PayrollPeriod): string {
     const d = now.getDate() <= 15 ? 1 : 16
     return new Date(now.getFullYear(), now.getMonth(), d).toISOString().slice(0, 10)
   }
-  if (period === 'biweekly') {
-    // Catorcena: bloques de 14 días anclados a un lunes de referencia.
-    const anchor = new Date(Date.UTC(2024, 0, 1)) // 2024-01-01 fue lunes
-    const days = Math.floor((now.getTime() - anchor.getTime()) / 86400000)
-    const start = new Date(anchor); start.setUTCDate(anchor.getUTCDate() + Math.floor(days / 14) * 14)
-    return start.toISOString().slice(0, 10)
-  }
+  // week (default) — Catorcenal (biweekly) removed in v7.31
   const dow = (now.getDay() + 6) % 7 // 0 = lunes
   const mon = new Date(now); mon.setDate(now.getDate() - dow)
   return mon.toISOString().slice(0, 10)
