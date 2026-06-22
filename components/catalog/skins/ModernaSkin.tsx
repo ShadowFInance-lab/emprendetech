@@ -25,8 +25,8 @@ export default function ModernaSkin({
   const button = store.button_color ?? '#16A34A'
   const hasWhatsApp = !!store.whatsapp
   // Modo Venta Online: oculta WhatsApp y muestra carrito
-  const online = !!(store as { online_sales?: boolean }).online_sales
-  const showWA = hasWhatsApp && !online
+  const online_sales = !!(store as { online_sales?: boolean }).online_sales
+  const showWA = hasWhatsApp && !online_sales
 
   const filters = [
     { id: null, label: 'Todo', icon: null },
@@ -320,7 +320,7 @@ export default function ModernaSkin({
                         )
                       )}
 
-                      {online && product.stock > 0 && (
+                      {online_sales && product.stock > 0 && (
                         <AddToCartButtons
                           variant="compact"
                           product={{ product_id: product.id, name: product.name, price: product.sale_price, image_url: primaryImage?.url ?? null }}
@@ -398,21 +398,21 @@ export default function ModernaSkin({
                 Contacto
               </h4>
               <ul className="space-y-2.5 text-sm">
-                {store.whatsapp && (
+                {showWA && store.whatsapp && (
                   <li>
-                    {showWA && (
-                      <a href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 hover:text-white transition-colors">
-                        <MessageCircle size={16} className="text-green-400" />
-                        {store.whatsapp}
-                      </a>
-                    )}
+                    <a href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 hover:text-white transition-colors">
+                      <MessageCircle size={16} className="text-green-400" />
+                      {store.whatsapp}
+                    </a>
                   </li>
                 )}
-                <li className="text-gray-500 text-xs pt-1">
-                  Haz tu pedido por WhatsApp · Envíos a todo México
-                </li>
+                {showWA && (
+                  <li className="text-gray-500 text-xs pt-1">
+                    Haz tu pedido por WhatsApp · Envíos a todo México
+                  </li>
+                )}
               </ul>
             </div>
 

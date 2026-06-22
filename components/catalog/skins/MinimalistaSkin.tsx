@@ -24,8 +24,8 @@ export default function MinimalistaSkin({
   const button = store.button_color ?? '#111827'
   const hasWhatsApp = !!store.whatsapp
   // Modo Venta Online: oculta WhatsApp y muestra carrito
-  const online = !!(store as { online_sales?: boolean }).online_sales
-  const showWA = hasWhatsApp && !online
+  const online_sales = !!(store as { online_sales?: boolean }).online_sales
+  const showWA = hasWhatsApp && !online_sales
 
   return (
     <div
@@ -247,7 +247,7 @@ export default function MinimalistaSkin({
                     </p>
                   )}
 
-                  {online && product.stock > 0 && (
+                  {online_sales && product.stock > 0 && (
                     <div className="mt-2">
                       <AddToCartButtons
                         variant="compact"

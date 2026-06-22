@@ -23,8 +23,8 @@ export default function ProductDetailView({ store, product, related }: Props) {
   const isMinimalista = store.skin === 'minimalista'
   const hasWhatsApp = !!store.whatsapp
   // Modo Venta Online: oculta WhatsApp, muestra carrito
-  const online = !!(store as { online_sales?: boolean }).online_sales
-  const showWA = hasWhatsApp && !online
+  const online_sales = !!(store as { online_sales?: boolean }).online_sales
+  const showWA = hasWhatsApp && !online_sales
   const catalogUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/catalog/${store.slug}`
   const productUrl = `${catalogUrl}/product/${product.slug}`
 
@@ -243,7 +243,7 @@ export default function ProductDetailView({ store, product, related }: Props) {
             )}
 
             {/* CTA: Carrito (si la tienda activó Vender Online) */}
-            {online && !isOut && (
+            {online_sales && !isOut && (
               <AddToCartButtons
                 product={{ product_id: product.id, name: product.name, price: product.sale_price, image_url: activeImage ?? null }}
                 rounded={isMinimalista ? 'rounded-none' : 'rounded-2xl'}

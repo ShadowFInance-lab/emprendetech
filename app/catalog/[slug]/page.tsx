@@ -162,7 +162,7 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
     sameAs: [store.facebook, store.instagram, store.tiktok].filter(Boolean),
   }
 
-  const online = !!(store as { online_sales?: boolean }).online_sales
+  const online_sales = !!(store as { online_sales?: boolean }).online_sales
 
   return (
     <>
@@ -171,7 +171,7 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <CartProvider
-        enabled={online}
+        enabled={online_sales}
         storeId={store.id}
         storeName={store.name}
         color={store.primary_color ?? '#2563EB'}
