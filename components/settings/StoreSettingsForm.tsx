@@ -16,6 +16,8 @@ import { Lock, Share2, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
+import { listEmployeesAction } from '@/lib/actions/employees'
+import { listStaffAction } from '@/lib/actions/staff'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -83,12 +85,14 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [primaryColor, setPrimaryColor] = useState(store.primary_color || '#2563eb')
   const [secondaryColor, setSecondaryColor] = useState(store.secondary_color || '#7c3aed')
   const [buttonColor, setButtonColor] = useState(store.button_color || '#2563eb')
-  const sx = store as { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; bg_fit?: string | null; online_sales?: boolean | null }
+  const sx = store as { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; bg_fit?: string | null; online_sales?: boolean | null; online_reception_type?: string | null; online_reception_value?: string | null }
   const [panelPrimary, setPanelPrimary] = useState(sx.panel_primary || store.primary_color || '#1F2937')
   const [panelSecondary, setPanelSecondary] = useState(sx.panel_secondary || store.secondary_color || '#111827')
   const [panelButton, setPanelButton] = useState(sx.panel_button || store.button_color || '#4F46E5')
   const [bgFit, setBgFit] = useState(sx.bg_fit || 'cover')
   const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
+  const [receptionType, setReceptionType] = useState<'employee' | 'branch'>((sx.online_reception_type as 'employee' | 'branch') || 'branch')
+  const [receptionValue, setReceptionValue] = useState(sx.online_reception_value || '')
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
   const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
   const [buttonStyle, setButtonStyle] = useState(store.button_style ?? 'redondeado')
@@ -108,12 +112,32 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   // Login real (Google / Facebook) vía Supabase Identity Linking
   const [identities, setIdentities] = useState<{ provider: string; identity_data?: Record<string, unknown> | null }[]>([])
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
+  const [employeesList, setEmployeesList] = useState<Array<{id: string; name?: string | null; full_name?: string | null}>>([])
+  const [branchesList, setBranchesList] = useState<string[]>([])
   const loadIdentities = useCallback(async () => {
     const supabase = createClient()
     const { data } = await supabase.auth.getUserIdentities()
     setIdentities((data?.identities ?? []) as { provider: string }[])
   }, [])
   useEffect(() => { loadIdentities() }, [loadIdentities])
+
+  // Load employees and branches for reception when online sales enabled
+  useEffect(() => {
+    if (!onlineSales) {
+      setEmployeesList([])
+      setBranchesList([])
+      return
+    }
+    ;(async () => {
+      try {
+        const emps = await listEmployeesAction().catch(() => [])
+        setEmployeesList((emps || []).map((e: { id: string; name?: string | null; full_name?: string | null }) => ({ id: e.id, name: e.name, full_name: e.full_name })))
+        const stfs = await listStaffAction().catch(() => [] as { branch?: string | null }[])
+        const brs = Array.from(new Set(stfs.map((s) => s.branch).filter(Boolean))) as string[]
+        setBranchesList(brs)
+      } catch {}
+    })()
+  }, [onlineSales])
 
   async function toggleLogin(provider: string) {
     const supabase = createClient()
@@ -188,6 +212,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('panel_button', panelButton)
     formData.set('bg_fit', bgFit)
     formData.set('online_sales', String(onlineSales))
+    formData.set('online_reception_type', receptionType)
+    formData.set('online_reception_value', receptionValue)
     formData.set('currency', currency)
     formData.set('bg_color', bgColor)
     formData.set('button_style', buttonStyle)
@@ -292,7 +318,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       </div>
 
       {/* ─── VENDER ONLINE ──── */}
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
@@ -300,7 +326,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             </span>
             <div>
               <p className="font-semibold text-gray-900 text-[15px] leading-tight">Vender Online</p>
-              <p className="text-xs text-gray-400">Agrega un botón <strong>&ldquo;Compra Online&rdquo;</strong> en tu catálogo con formulario de dirección, teléfono y método de pago. El pedido llega a tu negocio.</p>
+              <p className="text-xs text-gray-400">Agrega un botón <strong>&ldquo;Compra Online&rdquo;</strong> en tu catálogo con formulario de dirección, teléfono y método de pago.</p>
             </div>
           </div>
           <button type="button" onClick={() => setOnlineSales(v => !v)} aria-pressed={onlineSales}
@@ -308,6 +334,56 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${onlineSales ? 'translate-x-5' : ''}`} />
           </button>
         </div>
+
+        {onlineSales && (
+          <div className="pt-3 border-t border-gray-100 space-y-2">
+            <p className="text-sm font-semibold">Recepción de pedidos</p>
+            <p className="text-xs text-gray-400">Elige cómo se reciben los pedidos online. El pedido se guardará con esta información para que el receptor lo vea.</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setReceptionType('employee')}
+                className={`px-3 py-1.5 text-xs rounded-lg border font-medium ${receptionType === 'employee' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-200 hover:border-gray-300'}`}
+              >
+                Por Empleado
+              </button>
+              <button
+                type="button"
+                onClick={() => setReceptionType('branch')}
+                className={`px-3 py-1.5 text-xs rounded-lg border font-medium ${receptionType === 'branch' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-200 hover:border-gray-300'}`}
+              >
+                Por Sucursal
+              </button>
+            </div>
+
+            {receptionType === 'employee' ? (
+              <select
+                value={receptionValue}
+                onChange={e => setReceptionValue(e.target.value)}
+                className="w-full h-9 text-sm border border-gray-200 rounded-lg px-2 bg-white"
+              >
+                <option value="">-- Selecciona empleado --</option>
+                {employeesList.map((e: { id: string; name?: string | null; full_name?: string | null }) => (
+                  <option key={e.id} value={e.id}>{e.name || e.full_name || 'Empleado'}</option>
+                ))}
+              </select>
+            ) : (
+              <select
+                value={receptionValue}
+                onChange={e => setReceptionValue(e.target.value)}
+                className="w-full h-9 text-sm border border-gray-200 rounded-lg px-2 bg-white"
+              >
+                <option value="">-- Selecciona sucursal --</option>
+                {branchesList.length > 0 ? branchesList.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                )) : <option value="">Sin sucursales definidas (usa nombre libre)</option>}
+                {!branchesList.length && <option value={receptionValue}>{receptionValue || 'Ingresa nombre de sucursal'}</option>}
+              </select>
+            )}
+
+            <p className="text-[10px] text-gray-400">Se guarda con el pedido. Puedes ver la asignación en la lista de Pedidos Online.</p>
+          </div>
+        )}
       </div>
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
@@ -706,19 +782,19 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 <div>
                   <div className="text-xs font-semibold text-gray-600 mb-1">PREVIEW CATÁLOGO EN VIVO</div>
                   <div className="rounded-2xl border-2 border-gray-300 overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 text-white text-sm font-bold flex items-center justify-between" style={{background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`}}>
-                      <span>Mi Tienda</span>
+                    <div className="px-4 py-4 text-white text-base font-bold flex items-center justify-between" style={{background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`}}>
+                      <span>{store.name || 'Mi Tienda'}</span>
                       <span className="text-[10px] px-2 py-0.5 bg-white/20 rounded-full">Catálogo</span>
                     </div>
-                    <div className="p-4" style={{backgroundColor: bgColor}}>
-                      <div className="grid grid-cols-2 gap-3">
+                    <div className="p-5" style={{backgroundColor: bgColor}}>
+                      <div className="grid grid-cols-2 gap-4">
                         {[1,2].map(n => (
-                          <div key={n} className="bg-white rounded-xl border overflow-hidden text-xs">
-                            <div className="h-12 bg-gradient-to-br from-gray-100 to-gray-200" />
-                            <div className="p-2">
-                              <div className="font-medium text-gray-800">Producto Ejemplo {n}</div>
-                              <div className="text-base font-extrabold" style={{color: primaryColor}}>$450</div>
-                              <div className="mt-2 text-center text-white text-[10px] py-1 rounded font-semibold" style={{backgroundColor: buttonColor}}>Agregar al carrito</div>
+                          <div key={n} className="bg-white rounded-2xl border overflow-hidden text-sm shadow-sm">
+                            <div className="h-16 bg-gradient-to-br from-gray-100 to-gray-200" />
+                            <div className="p-3">
+                              <div className="font-semibold text-gray-800">Producto Ejemplo {n}</div>
+                              <div className="text-lg font-extrabold" style={{color: primaryColor}}>$450.00</div>
+                              <div className="mt-3 text-center text-white text-xs py-1.5 rounded-xl font-bold" style={{backgroundColor: buttonColor}}>Agregar al carrito</div>
                             </div>
                           </div>
                         ))}
@@ -729,18 +805,18 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
 
                 <div>
                   <div className="text-xs font-semibold text-gray-600 mb-1">PREVIEW PANEL ADMIN EN VIVO</div>
-                  <div className="rounded-2xl border-2 border-gray-300 overflow-hidden shadow-sm flex text-xs" style={{minHeight: '140px'}}>
-                    <div className="w-24 p-2 text-white" style={{backgroundColor: panelPrimary}}>
-                      <div className="text-[10px] font-bold mb-1 opacity-80">MENÚ</div>
-                      <div className="text-[9px] py-0.5 px-1 bg-white/20 rounded mb-0.5">Dashboard</div>
-                      <div className="text-[9px] py-0.5 px-1" style={{backgroundColor: panelButton}}>Ventas</div>
-                      <div className="text-[9px] py-0.5 px-1 mt-1">Empleados</div>
+                  <div className="rounded-2xl border-2 border-gray-300 overflow-hidden shadow-sm flex text-sm" style={{minHeight: '180px'}}>
+                    <div className="w-28 p-3 text-white" style={{backgroundColor: panelPrimary}}>
+                      <div className="text-xs font-bold mb-2 opacity-80">MENÚ</div>
+                      <div className="text-xs py-1 px-2 bg-white/20 rounded mb-1">Dashboard</div>
+                      <div className="text-xs py-1 px-2" style={{backgroundColor: panelButton}}>Ventas</div>
+                      <div className="text-xs py-1 px-2 mt-1">Empleados</div>
                     </div>
-                    <div className="flex-1 p-2 bg-gray-100">
-                      <div className="h-5 rounded mb-2" style={{background: `linear-gradient(90deg, ${panelPrimary}, ${panelSecondary})`}} />
-                      <div className="bg-white rounded p-2 text-[10px] shadow">
-                        <div className="font-medium">Resumen del día</div>
-                        <button className="mt-2 w-full py-1 text-white rounded text-[9px] font-semibold" style={{backgroundColor: panelButton}}>Ver detalles</button>
+                    <div className="flex-1 p-3 bg-gray-100">
+                      <div className="h-6 rounded mb-2" style={{background: `linear-gradient(90deg, ${panelPrimary}, ${panelSecondary})`}} />
+                      <div className="bg-white rounded-lg p-3 text-sm shadow">
+                        <div className="font-semibold mb-1">Resumen del día</div>
+                        <button className="mt-1 w-full py-1.5 text-white rounded-lg text-xs font-bold" style={{backgroundColor: panelButton}}>Ver detalles</button>
                       </div>
                     </div>
                   </div>

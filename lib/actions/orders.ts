@@ -22,6 +22,8 @@ export interface OnlineOrder {
   total: number | null
   status: OrderStatus
   created_at: string
+  online_reception_type?: string | null
+  online_reception_value?: string | null
 }
 
 export interface OnlineOrderInput {
@@ -84,6 +86,8 @@ export async function listOnlineOrdersAction(): Promise<OnlineOrder[]> {
       notes: o.notes ?? null, payment_method: o.payment_method ?? null,
       items: (o.items as OnlineOrder['items']) ?? null, total: o.total == null ? null : Number(o.total),
       status: (o.status as OrderStatus) ?? 'pendiente', created_at: o.created_at as string,
+      online_reception_type: (o.online_reception_type as string) ?? null,
+      online_reception_value: (o.online_reception_value as string) ?? null,
     }))
   } catch { return [] }
 }

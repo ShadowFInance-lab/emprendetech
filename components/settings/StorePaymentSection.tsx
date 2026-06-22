@@ -61,8 +61,8 @@ export default function StorePaymentSection() {
           <Wallet size={17} className="text-white" />
         </span>
         <div>
-          <p className="font-semibold text-gray-900 text-[15px] leading-tight">Cobros de tus ventas (Mercado Pago)</p>
-          <p className="text-xs text-gray-400">El dinero de tus ventas llega a TU cuenta. Las suscripciones de plan se cobran aparte.</p>
+          <p className="font-semibold text-gray-900 text-[15px] leading-tight">Pagos con Mercado Pago (opcional para online)</p>
+          <p className="text-xs text-gray-400">Conecta para cobrar pedidos online con MP. (Contra entrega y transferencia ya funcionan sin esto.)</p>
         </div>
       </div>
 

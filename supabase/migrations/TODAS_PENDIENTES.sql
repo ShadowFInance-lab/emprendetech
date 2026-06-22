@@ -558,4 +558,23 @@ CREATE POLICY "carts_all" ON carts FOR ALL USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS "cart_items_all" ON cart_items;
 CREATE POLICY "cart_items_all" ON cart_items FOR ALL USING (true) WITH CHECK (true);
 
+-- ─── 039: Recepción de pedidos online (a quién llega el pedido) ─────────────
+-- Sucursales del negocio
+CREATE TABLE IF NOT EXISTS branches (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id   UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS branches_owner ON branches;
+CREATE POLICY branches_owner ON branches FOR ALL
+  USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()))
+  WITH CHECK (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
+
+-- A quién se dirigen los pedidos online: 'employee' | 'branch'
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS online_reception_type  TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS online_reception_id    TEXT;  -- id del empleado/staff/sucursal
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS online_reception_value TEXT;  -- nombre legible (se copia al pedido)
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

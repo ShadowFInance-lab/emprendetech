@@ -89,6 +89,7 @@ export async function updateStoreAction(
     'skin', 'primary_color', 'secondary_color', 'button_color',
     'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit',
     'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices', 'online_sales',
+    'online_reception_type', 'online_reception_value',
     'bg_color', 'button_style', 'background_url',
   ]
 

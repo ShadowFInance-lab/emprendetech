@@ -194,6 +194,12 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
       ? `${input.address.trim()}, Col. ${input.colonia.trim()}`
       : input.address.trim()
 
+    // Fetch reception preference from store
+    const { data: storeCfg } = await supabase.from('stores').select('online_reception_type, online_reception_value').eq('id', cart.store_id).single()
+    const recType = storeCfg?.online_reception_type
+    const recVal = storeCfg?.online_reception_value
+    const notesWithRec = [input.notes?.trim(), recVal ? `[Recepción: ${recType === 'employee' ? 'Empleado' : 'Sucursal'} ${recVal}]` : ''].filter(Boolean).join(' ')
+
     const { error } = await supabase.from('online_orders').insert({
       store_id: cart.store_id,
       order_no,
@@ -204,7 +210,7 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
       city: input.city?.trim() || null,
       state: input.state?.trim() || null,
       zip: input.zip?.trim() || null,
-      notes: input.notes?.trim() || null,
+      notes: notesWithRec || null,
       payment_method: input.payment_method || null,
       items: items.map(it => ({ name: it.name, price: it.price, qty: it.qty })),
       total,

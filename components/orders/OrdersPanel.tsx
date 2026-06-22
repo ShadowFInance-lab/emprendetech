@@ -92,6 +92,11 @@ export default function OrdersPanel() {
                 {o.phone && <p className="flex items-center gap-1.5"><Phone size={12} className="text-gray-400 shrink-0" /> <a href={`tel:${o.phone}`} className="hover:underline">{o.phone}</a></p>}
                 {(o.address || o.city) && <p className="flex items-start gap-1.5"><MapPin size={12} className="text-gray-400 mt-0.5 shrink-0" /> <span>{[o.address, o.city, o.state, o.zip].filter(Boolean).join(', ')}{o.notes ? ` — ${o.notes}` : ''}</span></p>}
                 {o.payment_method && <p className="flex items-center gap-1.5"><CreditCard size={12} className="text-gray-400 shrink-0" /> {o.payment_method}</p>}
+                {o.notes && o.notes.includes('[Recepción:') && (
+                  <p className="flex items-center gap-1.5 text-indigo-600 font-medium">
+                    📍 {o.notes.match(/\[Recepción: ([^\]]+)\]/)?.[1]}
+                  </p>
+                )}
               </div>
 
               {/* Cambiar estado (auto-guardado) */}
