@@ -16,8 +16,6 @@ import { Lock, Share2, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
-import { listEmployeesAction } from '@/lib/actions/employees'
-import { listStaffAction } from '@/lib/actions/staff'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -91,8 +89,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [panelButton, setPanelButton] = useState(sx.panel_button || store.button_color || '#4F46E5')
   const [bgFit, setBgFit] = useState(sx.bg_fit || 'cover')
   const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
-  const [receptionType, setReceptionType] = useState<'employee' | 'branch'>((sx.online_reception_type as 'employee' | 'branch') || 'branch')
-  const [receptionValue, setReceptionValue] = useState(sx.online_reception_value || '')
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
   const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
   const [buttonStyle, setButtonStyle] = useState(store.button_style ?? 'redondeado')
@@ -112,32 +108,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   // Login real (Google / Facebook) vía Supabase Identity Linking
   const [identities, setIdentities] = useState<{ provider: string; identity_data?: Record<string, unknown> | null }[]>([])
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
-  const [employeesList, setEmployeesList] = useState<Array<{id: string; name?: string | null; full_name?: string | null}>>([])
-  const [branchesList, setBranchesList] = useState<string[]>([])
   const loadIdentities = useCallback(async () => {
     const supabase = createClient()
     const { data } = await supabase.auth.getUserIdentities()
     setIdentities((data?.identities ?? []) as { provider: string }[])
   }, [])
   useEffect(() => { loadIdentities() }, [loadIdentities])
-
-  // Load employees and branches for reception when online sales enabled
-  useEffect(() => {
-    if (!onlineSales) {
-      setEmployeesList([])
-      setBranchesList([])
-      return
-    }
-    ;(async () => {
-      try {
-        const emps = await listEmployeesAction().catch(() => [])
-        setEmployeesList((emps || []).map((e: { id: string; name?: string | null; full_name?: string | null }) => ({ id: e.id, name: e.name, full_name: e.full_name })))
-        const stfs = await listStaffAction().catch(() => [] as { branch?: string | null }[])
-        const brs = Array.from(new Set(stfs.map((s) => s.branch).filter(Boolean))) as string[]
-        setBranchesList(brs)
-      } catch {}
-    })()
-  }, [onlineSales])
 
   async function toggleLogin(provider: string) {
     const supabase = createClient()
@@ -212,8 +188,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('panel_button', panelButton)
     formData.set('bg_fit', bgFit)
     formData.set('online_sales', String(onlineSales))
-    formData.set('online_reception_type', receptionType)
-    formData.set('online_reception_value', receptionValue)
     formData.set('currency', currency)
     formData.set('bg_color', bgColor)
     formData.set('button_style', buttonStyle)
@@ -335,55 +309,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </button>
         </div>
 
-        {onlineSales && (
-          <div className="pt-3 border-t border-gray-100 space-y-2">
-            <p className="text-sm font-semibold">Recepción de pedidos</p>
-            <p className="text-xs text-gray-400">Elige cómo se reciben los pedidos online. El pedido se guardará con esta información para que el receptor lo vea.</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setReceptionType('employee')}
-                className={`px-3 py-1.5 text-xs rounded-lg border font-medium ${receptionType === 'employee' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-200 hover:border-gray-300'}`}
-              >
-                Por Empleado
-              </button>
-              <button
-                type="button"
-                onClick={() => setReceptionType('branch')}
-                className={`px-3 py-1.5 text-xs rounded-lg border font-medium ${receptionType === 'branch' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white border-gray-200 hover:border-gray-300'}`}
-              >
-                Por Sucursal
-              </button>
-            </div>
-
-            {receptionType === 'employee' ? (
-              <select
-                value={receptionValue}
-                onChange={e => setReceptionValue(e.target.value)}
-                className="w-full h-9 text-sm border border-gray-200 rounded-lg px-2 bg-white"
-              >
-                <option value="">-- Selecciona empleado --</option>
-                {employeesList.map((e: { id: string; name?: string | null; full_name?: string | null }) => (
-                  <option key={e.id} value={e.id}>{e.name || e.full_name || 'Empleado'}</option>
-                ))}
-              </select>
-            ) : (
-              <select
-                value={receptionValue}
-                onChange={e => setReceptionValue(e.target.value)}
-                className="w-full h-9 text-sm border border-gray-200 rounded-lg px-2 bg-white"
-              >
-                <option value="">-- Selecciona sucursal --</option>
-                {branchesList.length > 0 ? branchesList.map(b => (
-                  <option key={b} value={b}>{b}</option>
-                )) : <option value="">Sin sucursales definidas (usa nombre libre)</option>}
-                {!branchesList.length && <option value={receptionValue}>{receptionValue || 'Ingresa nombre de sucursal'}</option>}
-              </select>
-            )}
-
-            <p className="text-[10px] text-gray-400">Se guarda con el pedido. Puedes ver la asignación en la lista de Pedidos Online.</p>
-          </div>
-        )}
       </div>
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}

@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import type { Plan } from '@/lib/types'
 import StoreSettingsForm from '@/components/settings/StoreSettingsForm'
 import OrderReceptionSection from '@/components/settings/OrderReceptionSection'
-import StorePaymentSection from '@/components/settings/StorePaymentSection'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -29,7 +28,6 @@ export default async function SettingsPage() {
       </div>
       <StoreSettingsForm store={store} plan={plan} />
       <OrderReceptionSection />
-      <StorePaymentSection />
     </div>
   )
 }

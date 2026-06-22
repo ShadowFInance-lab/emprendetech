@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload } from 'lucide-react'
+import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, type EmployeeMeta } from '@/lib/actions/employees'
+import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, getEmployeeLoginAction, setEmployeePasswordAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { savePayrollDiscountAction } from '@/lib/actions/payroll'
 import { getEmployeeWeekAction, setEmployeeDayAction, setEmployeeDayTimesAction, type AttendanceRow, type DayState } from '@/lib/actions/attendance'
 import { useBossGate } from './BossGate'
@@ -40,6 +40,9 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
   const [daySel, setDaySel] = useState(days[0])
   const [tIn, setTIn] = useState(''); const [tOut, setTOut] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [email, setEmail] = useState<string | null>(null)
+  const [newPw, setNewPw] = useState('')
+  const [showPw, setShowPw] = useState(false)
 
   async function loadWeek() { setWeek(await getEmployeeWeekAction(employeeId)) }
 
@@ -61,6 +64,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
       if (m) setMeta({ ...EMPTY, ...m })
       setWeek(w); setLoaded(true)
     })
+    getEmployeeLoginAction(employeeId).then(r => setEmail(r.email))
   }, [employeeId])
 
   const weekMap = new Map(week.map(r => [r.work_date, r]))
@@ -90,6 +94,14 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
       const res = await Promise.all(ops)
       if (res.every(r => r.success)) { toast.success('Empleado actualizado'); onSaved(); onClose() }
       else toast.error(res.find(r => !r.success)?.error || 'Error')
+    })
+  }
+  function savePassword() {
+    if (newPw.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return }
+    startTransition(async () => {
+      const r = await setEmployeePasswordAction(employeeId, newPw)
+      if (r.success) { toast.success('Contraseña actualizada. Compártela con el empleado.'); setNewPw('') }
+      else toast.error(r.error ?? 'Error')
     })
   }
   function setRole(role: 'employee' | 'supervisor') {
@@ -170,6 +182,31 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Descuento del periodo</label>
                   <Input type="number" min="0" value={discount} onChange={e => setDiscount(e.target.value)} className="h-9 text-sm" placeholder="0.00" />
                 </div>
+              </div>
+            </div>
+
+            {/* Acceso del empleado: correo + restablecer contraseña */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+              <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><KeyRound size={13} /> Acceso del empleado</p>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Usuario / correo de acceso</label>
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-700">
+                    <Mail size={14} className="text-gray-400 shrink-0" />
+                    <span className="truncate">{email || '—'}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Nueva contraseña</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input type={showPw ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Mín. 6 caracteres" className="h-9 text-sm pr-9" />
+                      <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">{showPw ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+                    </div>
+                    <button type="button" onClick={savePassword} disabled={isPending || newPw.length < 6} className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">Guardar</button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-400">La contraseña actual no se puede ver (está cifrada). Aquí puedes ponerle una nueva y dársela al empleado.</p>
               </div>
             </div>
 

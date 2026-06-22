@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient, createPublicClient } from '@/lib/supabase/server'
+import { createClient, createPublicClient, createAdminClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
 export interface Employee {
@@ -116,6 +116,34 @@ export async function deleteEmployeeAction(employeeId: string): Promise<ActionRe
   } catch {
     return { success: false, error: 'No se pudo quitar el acceso' }
   }
+}
+
+/** Correo/usuario de acceso de un empleado del jefe actual. */
+export async function getEmployeeLoginAction(employeeId: string): Promise<{ email: string | null }> {
+  try {
+    const emps = await listEmployeesAction()
+    return { email: emps.find(e => e.id === employeeId)?.email ?? null }
+  } catch { return { email: null } }
+}
+
+/**
+ * El jefe restablece la contraseña de un empleado (la anterior NO se puede leer:
+ * está cifrada). Verifica que el empleado le pertenezca y usa el cliente admin.
+ */
+export async function setEmployeePasswordAction(employeeId: string, password: string): Promise<ActionResult> {
+  try {
+    if (!password || password.length < 6) return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { data: emps } = await supabase.rpc('list_my_employees')
+    const owns = (emps as { id: string }[] | null)?.some(e => e.id === employeeId)
+    if (!owns) return { success: false, error: 'Empleado no encontrado' }
+    const admin = createAdminClient()
+    const { error } = await admin.auth.admin.updateUserById(employeeId, { password })
+    if (error) return { success: false, error: 'No se pudo cambiar la contraseña (falta SUPABASE_SERVICE_ROLE_KEY en el servidor).' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
 }
 
 export async function notifyEmployeeAction(employeeId: string, message: string): Promise<ActionResult> {
