@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createPublicClient } from '@/lib/supabase/server'
 import ProductDetailView from '@/components/catalog/ProductDetailView'
+import { CartProvider } from '@/components/catalog/cart/CartProvider'
+import CartFab from '@/components/catalog/cart/CartFab'
 
 export const revalidate = 600 // 10 minutos
 
@@ -117,11 +119,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProductDetailView
-        store={store}
-        product={product}
-        related={related ?? []}
-      />
+      <CartProvider
+        enabled={!!(store as { online_sales?: boolean }).online_sales}
+        storeId={store.id}
+        storeName={store.name}
+        color={store.primary_color ?? '#2563EB'}
+        currency={store.currency}
+        whatsapp={store.whatsapp}
+      >
+        <ProductDetailView
+          store={store}
+          product={product}
+          related={related ?? []}
+        />
+        <CartFab />
+      </CartProvider>
     </>
   )
 }

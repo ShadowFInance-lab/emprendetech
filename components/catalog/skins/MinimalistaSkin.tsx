@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { MessageCircle, Search } from 'lucide-react'
 import { InstagramIcon, FacebookIcon } from '@/components/catalog/SocialIcons'
 import AdBanner from '@/components/catalog/AdBanner'
+import AddToCartButtons from '@/components/catalog/cart/AddToCartButtons'
 import { formatCurrency } from '@/lib/utils/format'
 import { buildStoreWhatsAppLink, buildProductWhatsAppLink } from '@/lib/utils/whatsapp'
 import type { Store, Category, Product } from '@/lib/types'
@@ -22,6 +23,9 @@ export default function MinimalistaSkin({
   const primary = store.primary_color ?? '#111827'
   const button = store.button_color ?? '#111827'
   const hasWhatsApp = !!store.whatsapp
+  // Modo Venta Online: oculta WhatsApp y muestra carrito
+  const online = !!(store as { online_sales?: boolean }).online_sales
+  const showWA = hasWhatsApp && !online
 
   return (
     <div
@@ -86,7 +90,7 @@ export default function MinimalistaSkin({
                   <FacebookIcon size={16} />
                 </a>
               )}
-              {hasWhatsApp && (
+              {showWA && (
                 <a
                   href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
                   target="_blank"
@@ -243,7 +247,15 @@ export default function MinimalistaSkin({
                     </p>
                   )}
 
-                  {hasWhatsApp && product.stock > 0 && (
+                  {online && product.stock > 0 && (
+                    <div className="mt-2">
+                      <AddToCartButtons
+                        variant="compact"
+                        product={{ product_id: product.id, name: product.name, price: product.sale_price, image_url: primaryImage?.url ?? null }}
+                      />
+                    </div>
+                  )}
+                  {showWA && product.stock > 0 && (
                     <a
                       href={buildProductWhatsAppLink(
                         store.whatsapp!,

@@ -6,7 +6,7 @@ import { MessageCircle, ChevronLeft, Share2 } from 'lucide-react'
 import { InstagramIcon, FacebookIcon } from '@/components/catalog/SocialIcons'
 import { formatCurrency } from '@/lib/utils/format'
 import { buildStoreWhatsAppLink, buildProductWhatsAppLink } from '@/lib/utils/whatsapp'
-import OnlineBuyButton from './OnlineBuyButton'
+import AddToCartButtons from '@/components/catalog/cart/AddToCartButtons'
 import type { Store, Product } from '@/lib/types'
 
 interface Props {
@@ -22,6 +22,9 @@ export default function ProductDetailView({ store, product, related }: Props) {
   const primary = store.primary_color ?? '#2563EB'
   const isMinimalista = store.skin === 'minimalista'
   const hasWhatsApp = !!store.whatsapp
+  // Modo Venta Online: oculta WhatsApp, muestra carrito
+  const online = !!(store as { online_sales?: boolean }).online_sales
+  const showWA = hasWhatsApp && !online
   const catalogUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/catalog/${store.slug}`
   const productUrl = `${catalogUrl}/product/${product.slug}`
 
@@ -219,7 +222,7 @@ export default function ProductDetailView({ store, product, related }: Props) {
             <hr className="border-gray-100" />
 
             {/* CTA: WhatsApp — verde fuerte, grande, premium */}
-            {hasWhatsApp && !isOut && (
+            {showWA && !isOut && (
               <a
                 href={buildProductWhatsAppLink(
                   store.whatsapp!,
@@ -239,19 +242,16 @@ export default function ProductDetailView({ store, product, related }: Props) {
               </a>
             )}
 
-            {/* CTA: Compra Online (si la tienda activó Vender Online) */}
-            {(store as { online_sales?: boolean }).online_sales && !isOut && (
-              <OnlineBuyButton
-                storeId={store.id}
-                storeName={store.name}
-                whatsapp={store.whatsapp}
-                product={{ name: product.name, price: product.sale_price, url: productUrl }}
-                color={primary}
+            {/* CTA: Carrito (si la tienda activó Vender Online) */}
+            {online && !isOut && (
+              <AddToCartButtons
+                product={{ product_id: product.id, name: product.name, price: product.sale_price, image_url: activeImage ?? null }}
+                rounded={isMinimalista ? 'rounded-none' : 'rounded-2xl'}
               />
             )}
 
             {/* CTA: Solo WhatsApp de tienda si agotado */}
-            {hasWhatsApp && isOut && (
+            {showWA && isOut && (
               <a
                 href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
                 target="_blank"

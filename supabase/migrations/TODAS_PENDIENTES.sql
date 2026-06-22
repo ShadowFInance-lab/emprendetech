@@ -528,4 +528,34 @@ DROP POLICY IF EXISTS "oo_owner_update" ON online_orders;
 CREATE POLICY "oo_owner_update" ON online_orders FOR UPDATE
   USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
 
+-- ─── 038: Carrito de compras (ecommerce) + número de orden ─────────────────
+ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS order_no TEXT;
+
+CREATE TABLE IF NOT EXISTS carts (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id   UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS cart_items (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cart_id    UUID NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
+  product_id UUID,
+  name       TEXT NOT NULL,
+  price      NUMERIC NOT NULL DEFAULT 0,
+  qty        INTEGER NOT NULL DEFAULT 1,
+  image_url  TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_cart_items_cart ON cart_items(cart_id);
+
+-- El carrito es de visitantes anónimos identificados por el UUID del carrito
+-- (en una cookie). El UUID es secreto e inadivinable; abrimos CRUD por anon.
+ALTER TABLE carts      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "carts_all" ON carts;
+CREATE POLICY "carts_all" ON carts FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "cart_items_all" ON cart_items;
+CREATE POLICY "cart_items_all" ON cart_items FOR ALL USING (true) WITH CHECK (true);
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

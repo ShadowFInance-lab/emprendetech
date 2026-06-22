@@ -3,6 +3,8 @@ import type { Metadata } from 'next'
 import { createPublicClient } from '@/lib/supabase/server'
 import ModernaSkin from '@/components/catalog/skins/ModernaSkin'
 import MinimalistaSkin from '@/components/catalog/skins/MinimalistaSkin'
+import { CartProvider } from '@/components/catalog/cart/CartProvider'
+import CartFab from '@/components/catalog/cart/CartFab'
 import type { Store, Category, Product } from '@/lib/types'
 
 // ISR: revalidar cada 5 minutos
@@ -160,17 +162,29 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
     sameAs: [store.facebook, store.instagram, store.tiktok].filter(Boolean),
   }
 
+  const online = !!(store as { online_sales?: boolean }).online_sales
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      {store.skin === 'minimalista' ? (
-        <MinimalistaSkin {...skinProps} />
-      ) : (
-        <ModernaSkin {...skinProps} />
-      )}
+      <CartProvider
+        enabled={online}
+        storeId={store.id}
+        storeName={store.name}
+        color={store.primary_color ?? '#2563EB'}
+        currency={store.currency}
+        whatsapp={store.whatsapp}
+      >
+        {store.skin === 'minimalista' ? (
+          <MinimalistaSkin {...skinProps} />
+        ) : (
+          <ModernaSkin {...skinProps} />
+        )}
+        <CartFab />
+      </CartProvider>
     </>
   )
 }

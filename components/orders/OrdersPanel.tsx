@@ -68,7 +68,7 @@ export default function OrdersPanel() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-bold text-gray-900 leading-tight">{o.customer_name || 'Cliente'}</p>
-                  <p className="text-[11px] text-gray-400">{fmtDate(o.created_at)}</p>
+                  <p className="text-[11px] text-gray-400">{o.order_no && <span className="font-mono font-semibold text-gray-500">{o.order_no}</span>}{o.order_no ? ' · ' : ''}{fmtDate(o.created_at)}</p>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${STATUS_STYLE[o.status]}`}>{cap(o.status)}</span>
               </div>

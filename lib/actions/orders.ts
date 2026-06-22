@@ -8,6 +8,7 @@ export type OrderStatus = typeof ORDER_STATUSES[number]
 
 export interface OnlineOrder {
   id: string
+  order_no: string | null
   customer_name: string | null
   phone: string | null
   email: string | null
@@ -77,6 +78,7 @@ export async function listOnlineOrdersAction(): Promise<OnlineOrder[]> {
     if (error) return []
     return (data ?? []).map(o => ({
       id: o.id as string,
+      order_no: (o.order_no as string) ?? null,
       customer_name: o.customer_name ?? null, phone: o.phone ?? null, email: o.email ?? null,
       address: o.address ?? null, city: o.city ?? null, state: o.state ?? null, zip: o.zip ?? null,
       notes: o.notes ?? null, payment_method: o.payment_method ?? null,

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { MessageCircle, Search, Star, Zap, TrendingUp } from 'lucide-react'
 import { InstagramIcon, FacebookIcon } from '@/components/catalog/SocialIcons'
 import AdBanner from '@/components/catalog/AdBanner'
+import AddToCartButtons from '@/components/catalog/cart/AddToCartButtons'
 import { formatCurrency } from '@/lib/utils/format'
 import { buildStoreWhatsAppLink, buildProductWhatsAppLink } from '@/lib/utils/whatsapp'
 import type { Store, Category, Product } from '@/lib/types'
@@ -23,6 +24,9 @@ export default function ModernaSkin({
   const secondary = store.secondary_color ?? '#1E40AF'
   const button = store.button_color ?? '#16A34A'
   const hasWhatsApp = !!store.whatsapp
+  // Modo Venta Online: oculta WhatsApp y muestra carrito
+  const online = !!(store as { online_sales?: boolean }).online_sales
+  const showWA = hasWhatsApp && !online
 
   const filters = [
     { id: null, label: 'Todo', icon: null },
@@ -101,7 +105,7 @@ export default function ModernaSkin({
                 <FacebookIcon size={18} />
               </a>
             )}
-            {hasWhatsApp && (
+            {showWA && (
               <a
                 href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
                 target="_blank"
@@ -135,7 +139,7 @@ export default function ModernaSkin({
                   {store.description}
                 </p>
               )}
-              {hasWhatsApp && (
+              {showWA && (
                 <a
                   href={buildStoreWhatsAppLink(store.whatsapp!, store.name)}
                   target="_blank" rel="noopener noreferrer"
@@ -316,7 +320,13 @@ export default function ModernaSkin({
                         )
                       )}
 
-                      {hasWhatsApp && product.stock > 0 && (
+                      {online && product.stock > 0 && (
+                        <AddToCartButtons
+                          variant="compact"
+                          product={{ product_id: product.id, name: product.name, price: product.sale_price, image_url: primaryImage?.url ?? null }}
+                        />
+                      )}
+                      {showWA && product.stock > 0 && (
                         <a
                           href={buildProductWhatsAppLink(
                             store.whatsapp!,
