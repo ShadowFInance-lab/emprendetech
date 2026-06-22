@@ -621,95 +621,114 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 </div>
               </div>
 
-              {/* Más paletas — profesionales, grandes y en vivo */}
-              <Label className="block text-sm font-semibold">Paletas recomendadas (toca para aplicar)</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {/* Paletas grandes y profesionales */}
+              <Label className="block text-sm font-semibold mb-2">Paletas de color (toca para aplicar)</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {COLOR_PALETTES.map((palette) => {
                   const isActive = primaryColor === palette.p && buttonColor === palette.b
-                  const isLocked = false
                   return (
                     <button
                       key={palette.name}
                       type="button"
-                      disabled={isLocked}
-                      onClick={() => { if (!isLocked) { setPrimaryColor(palette.p); setSecondaryColor(palette.s); setButtonColor(palette.b) } }}
-                      className={`group relative rounded-3xl overflow-hidden border-2 transition-all shadow-sm ${
-                        isLocked ? 'opacity-50 cursor-not-allowed border-gray-100'
-                          : isActive ? 'border-gray-900 shadow-xl scale-[1.02] ring-1 ring-gray-900/10'
-                          : 'border-gray-200 hover:border-gray-400 hover:shadow-md'
-                      }`}
+                      onClick={() => { setPrimaryColor(palette.p); setSecondaryColor(palette.s); setButtonColor(palette.b) }}
+                      className={`group relative rounded-2xl overflow-hidden border-2 transition-all ${isActive ? 'border-gray-900 shadow-lg scale-[1.01] ring-2 ring-offset-2 ring-gray-900' : 'border-gray-200 hover:border-gray-400 hover:shadow'}`}
                     >
-                      <div className="h-28 flex items-end p-3" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
-                        <div className="flex gap-1.5">
-                          <span className="w-6 h-6 rounded-full ring-2 ring-white/70 shadow" style={{ backgroundColor: palette.p }} />
-                          <span className="w-6 h-6 rounded-full ring-2 ring-white/70 shadow" style={{ backgroundColor: palette.s }} />
-                          <span className="w-6 h-6 rounded-full ring-2 ring-white/70 shadow" style={{ backgroundColor: palette.b }} />
+                      <div className="h-32 p-3 flex flex-col justify-between" style={{ background: `linear-gradient(135deg, ${palette.p} 0%, ${palette.s} 100%)` }}>
+                        <div className="flex gap-1">
+                          <div className="w-5 h-5 rounded-full bg-white/80" style={{background: palette.p}} />
+                          <div className="w-5 h-5 rounded-full bg-white/80" style={{background: palette.s}} />
+                          <div className="w-5 h-5 rounded-full bg-white/80" style={{background: palette.b}} />
                         </div>
+                        <div className="text-xs font-medium text-white drop-shadow">{palette.name}</div>
                       </div>
-                      <div className="py-2.5 px-3 bg-white flex items-center justify-between text-left">
-                        <span className="text-sm font-semibold text-gray-900 group-hover:text-gray-700">{palette.name}</span>
-                        {isActive && <Check size={16} className="text-emerald-600" />}
+                      <div className={`py-1.5 px-2 text-center text-xs font-semibold ${isActive ? 'bg-gray-900 text-white' : 'bg-white text-gray-700'}`}>
+                        {isActive ? 'Seleccionado' : 'Aplicar'}
                       </div>
                     </button>
                   )
                 })}
               </div>
 
-              {/* ── Colores personalizados con previews profesionales en vivo ── */}
-              <p className="text-sm font-bold text-gray-900 pt-1">🎨 Colores personalizados</p>
+              {/* Colores personalizados con previews grandes en vivo */}
+              <div className="space-y-4">
+                <p className="text-sm font-bold text-gray-900">Colores personalizados</p>
 
-              {/* CATÁLOGO + PREVIEW */}
-              <div className="rounded-3xl border-2 border-gray-100 bg-white p-5">
-                <p className="font-semibold text-sm mb-2 text-gray-900">Colores del catálogo (público)</p>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  {[{l:'Principal', v:primaryColor, f:setPrimaryColor}, {l:'Secundario', v:secondaryColor, f:setSecondaryColor}, {l:'Botones', v:buttonColor, f:setButtonColor}].map(({l,v,f}) => (
-                    <div key={l}>
-                      <label className="block h-16 rounded-2xl border shadow-inner cursor-pointer overflow-hidden" style={{background:v}}>
-                        <input type="color" value={v} onChange={e=>f(e.target.value)} className="opacity-0 w-full h-full" />
-                      </label>
-                      <div className="text-[11px] mt-1 font-medium">{l}</div>
-                      <input className="text-[10px] font-mono w-full border rounded px-1 py-0.5" value={v} onChange={e=>f(e.target.value.startsWith('#')?e.target.value:'#'+e.target.value)} />
+                {/* Selectores grandes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Catálogo */}
+                  <div className="rounded-2xl border bg-white p-4">
+                    <p className="font-medium text-sm mb-3">Colores del catálogo público</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[{label:'Principal', val:primaryColor, set:setPrimaryColor}, {label:'Secundario', val:secondaryColor, set:setSecondaryColor}, {label:'Botones', val:buttonColor, set:setButtonColor}].map(item => (
+                        <div key={item.label}>
+                          <button onClick={() => { /* trigger color picker */ }} className="w-full h-16 rounded-xl border-2 shadow flex items-center justify-center text-white text-xs font-bold" style={{background:item.val, borderColor: item.val === primaryColor || item.val === secondaryColor || item.val === buttonColor ? '#111' : '#ddd'}}>
+                            {item.label}
+                          </button>
+                          <input type="color" value={item.val} onChange={e => item.set(e.target.value)} className="mt-1 w-full h-7 cursor-pointer" />
+                          <div className="text-[10px] text-center mt-0.5 font-mono">{item.val}</div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-
-                <div className="text-[10px] font-semibold text-gray-600 mb-1">Vista catálogo en vivo</div>
-                <div className="rounded-2xl border overflow-hidden text-xs" style={{background:bgColor}}>
-                  <div className="px-3 py-2 text-white text-sm font-bold flex justify-between" style={{background:`linear-gradient(${primaryColor},${secondaryColor})`}}>
-                    <span>Tienda Demo</span><span className="bg-white/30 px-1 rounded text-[9px]">Online</span>
                   </div>
-                  <div className="p-2 grid grid-cols-3 gap-1.5">
-                    {[1,2,3].map(i=><div key={i} className="bg-white rounded border p-1 text-[9px]"><div className="h-6 bg-gray-100 mb-0.5"/><div style={{color:primaryColor}} className="font-bold">$299</div><div className="h-3 mt-0.5 rounded text-white text-center" style={{background:buttonColor,fontSize:8}}>Agregar</div></div>)}
-                  </div>
-                </div>
-              </div>
 
-              {/* PANEL + PREVIEW */}
-              <div className="rounded-3xl border-2 border-gray-100 bg-white p-5">
-                <p className="font-semibold text-sm mb-2 text-gray-900">Colores del panel admin</p>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  {[{l:'Principal', v:panelPrimary, f:setPanelPrimary}, {l:'Secundario', v:panelSecondary, f:setPanelSecondary}, {l:'Botones', v:panelButton, f:setPanelButton}].map(({l,v,f}) => (
-                    <div key={l}>
-                      <label className="block h-16 rounded-2xl border shadow-inner cursor-pointer overflow-hidden" style={{background:v}}>
-                        <input type="color" value={v} onChange={e=>f(e.target.value)} className="opacity-0 w-full h-full" />
-                      </label>
-                      <div className="text-[11px] mt-1 font-medium">{l}</div>
-                      <input className="text-[10px] font-mono w-full border rounded px-1 py-0.5" value={v} onChange={e=>f(e.target.value.startsWith('#')?e.target.value:'#'+e.target.value)} />
+                  {/* Panel */}
+                  <div className="rounded-2xl border bg-white p-4">
+                    <p className="font-medium text-sm mb-3">Colores del panel de admin</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[{label:'Principal', val:panelPrimary, set:setPanelPrimary}, {label:'Secundario', val:panelSecondary, set:setPanelSecondary}, {label:'Botones', val:panelButton, set:setPanelButton}].map(item => (
+                        <div key={item.label}>
+                          <button className="w-full h-16 rounded-xl border-2 shadow flex items-center justify-center text-white text-xs font-bold" style={{background:item.val}}>
+                            {item.label}
+                          </button>
+                          <input type="color" value={item.val} onChange={e => item.set(e.target.value)} className="mt-1 w-full h-7 cursor-pointer" />
+                          <div className="text-[10px] text-center mt-0.5 font-mono">{item.val}</div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
 
-                <div className="text-[10px] font-semibold text-gray-600 mb-1">Vista panel en vivo</div>
-                <div className="rounded-2xl border overflow-hidden flex h-24 text-[9px]">
-                  <div className="w-16 p-1.5 text-white" style={{background:panelPrimary}}>
-                    <div className="text-[8px] opacity-70">MENU</div>
-                    <div className="text-[8px] bg-white/20 rounded px-1">Dashboard</div>
+                {/* Previews en vivo grandes lado a lado */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Preview Catálogo */}
+                  <div>
+                    <p className="text-xs font-semibold mb-1 text-gray-600">PREVIEW CATÁLOGO (EN VIVO)</p>
+                    <div className="rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm bg-white">
+                      <div className="h-9 px-3 flex items-center justify-between text-sm font-bold text-white" style={{background: `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`}}>
+                        <span>Mi Tienda</span>
+                        <span className="text-[10px] bg-white/25 px-2 rounded">Catálogo</span>
+                      </div>
+                      <div className="p-3" style={{background: bgColor}}>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          {[1,2].map(i => (
+                            <div key={i} className="bg-white rounded border p-2">
+                              <div className="h-8 bg-gray-100 rounded mb-1" />
+                              <div style={{color: primaryColor}} className="font-semibold">Producto {i}</div>
+                              <div className="text-xs">$450</div>
+                              <div className="mt-1 text-center text-white text-[10px] py-0.5 rounded" style={{background: buttonColor}}>Comprar</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 bg-gray-50 p-1.5">
-                    <div className="h-3 mb-1 rounded" style={{background:`linear-gradient(${panelPrimary}, ${panelSecondary})`}} />
-                    <div className="bg-white p-1 rounded shadow text-[8px]">
-                      <div className="h-1.5 bg-gray-200 rounded w-8 mb-0.5"/>
-                      <span className="px-1 py-0 rounded text-white text-[7px]" style={{background:panelButton}}>Acción</span>
+
+                  {/* Preview Panel */}
+                  <div>
+                    <p className="text-xs font-semibold mb-1 text-gray-600">PREVIEW PANEL ADMIN (EN VIVO)</p>
+                    <div className="rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm flex h-[110px] text-[10px]">
+                      <div className="w-[70px] p-2 text-white flex flex-col" style={{background: panelPrimary}}>
+                        <div className="font-bold text-[9px] mb-1">Menú</div>
+                        <div className="text-[8px] bg-white/20 px-1 py-0.5 rounded mb-0.5">Dashboard</div>
+                        <div className="text-[8px] px-1 py-0.5" style={{background: panelButton}}>Ventas</div>
+                      </div>
+                      <div className="flex-1 p-2 bg-gray-50">
+                        <div className="h-4 mb-1 rounded" style={{background: `linear-gradient(${panelPrimary}, ${panelSecondary})`}} />
+                        <div className="bg-white p-1 rounded text-[9px] shadow">
+                          <div>Estadísticas</div>
+                          <button className="mt-0.5 px-2 py-0.5 text-white rounded text-[8px]" style={{background: panelButton}}>Guardar</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

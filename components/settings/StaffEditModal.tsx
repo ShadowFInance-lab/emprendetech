@@ -124,8 +124,10 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
                 <label className="text-[11px] font-medium text-gray-500 mb-1 block">Foto</label>
                 <div className="flex items-center gap-2">
                   {s.photo_url ? <img src={s.photo_url} alt="" className="w-9 h-9 rounded-full object-cover ring" /> : <div className="w-9 h-9 bg-gray-200 rounded-full" />}
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto || isPending} className="text-xs" />
-                  {uploadingPhoto && <span className="text-[10px]">...</span>}
+                  <label className="cursor-pointer text-xs px-2 py-1 border rounded hover:bg-gray-50">
+                    {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto || isPending} className="hidden" />
+                  </label>
                 </div>
                 <input type="text" value={s.photo_url ?? ''} onChange={e => set('photo_url', e.target.value)} placeholder="O URL" className="h-8 text-xs border rounded mt-1 w-full px-2" />
               </div>

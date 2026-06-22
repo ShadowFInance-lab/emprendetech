@@ -153,12 +153,12 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={meta.photo_url} alt="" className="w-10 h-10 rounded-full object-cover ring-1" />
                     ) : <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">👤</div>}
-                    <div className="flex-1">
-                      <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="text-xs" />
-                      {uploadingPhoto && <span className="text-xs text-gray-500">Subiendo...</span>}
-                    </div>
+                    <label className="cursor-pointer text-xs px-2 py-1 border rounded hover:bg-gray-50">
+                      {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
+                      <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
+                    </label>
                   </div>
-                  <input type="text" value={meta.photo_url ?? ''} onChange={e => setMeta(m => ({...m, photo_url: e.target.value}))} placeholder="O pega URL" className="mt-1 w-full h-8 text-xs border rounded px-2" />
+                  <input type="text" value={meta.photo_url ?? ''} onChange={e => setMeta(m => ({...m, photo_url: e.target.value}))} placeholder="O URL directa" className="mt-1 w-full h-8 text-xs border rounded px-2" />
                 </div>
                 <div>
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Sueldo base</label>
