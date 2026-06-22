@@ -108,8 +108,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
       .neq('id', product.id)
       .order('created_at', { ascending: false })
       .limit(6 - finalRelated.length)
-    const recentIds = new Set(finalRelated.map((p: any) => p.id))
-    finalRelated = [...finalRelated, ...(recent ?? []).filter((p: any) => !recentIds.has(p.id))]
+    const recentIds = new Set(finalRelated.map((p: { id: string }) => p.id))
+    finalRelated = [...finalRelated, ...(recent ?? []).filter((p: { id: string }) => !recentIds.has(p.id))]
   }
 
   // Schema.org JSON-LD

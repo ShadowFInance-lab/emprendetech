@@ -183,8 +183,9 @@ export async function uploadEmployeePhotoAction(employeeOrStaffId: string, file:
 
     const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(path)
     return { success: true, url: publicUrl }
-  } catch (e: any) {
-    return { success: false, error: e?.message || 'Error subiendo foto' }
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error subiendo foto'
+    return { success: false, error: message }
   }
 }
 

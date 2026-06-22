@@ -103,7 +103,7 @@ export async function setCartItemQtyAction(itemId: string, qty: number): Promise
     const id = await getCartId()
     if (!id) return { items: [] }
     const supabase = createPublicClient()
-    let opError: any = null
+    let opError: { message?: string } | null = null
     if (qty <= 0) {
       const { error } = await supabase.from('cart_items').delete().eq('id', itemId).eq('cart_id', id)
       opError = error

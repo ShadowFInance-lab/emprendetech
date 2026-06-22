@@ -146,21 +146,20 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                 {txt('position', 'Puesto', 'Cajero')}
                 {txt('branch', 'Sucursal / caja', 'Centro')}
                 {txt('hire_date', 'Fecha de ingreso', '', 'date')}
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Foto del empleado</label>
-                  <div className="flex items-center gap-3">
+                <div className="col-span-2">
+                  <label className="text-[11px] font-medium text-gray-500 mb-1.5 block">Foto del empleado</label>
+                  <div className="flex items-center gap-4 rounded-2xl border border-violet-100 bg-violet-50/40 p-3">
                     {meta.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={meta.photo_url} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-violet-200" />
-                    ) : <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"><UserRound size={20} /></div>}
-                    <label className="cursor-pointer flex-1 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition">
-                      <Upload size={16} /> {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
-                      <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
-                    </label>
-                  </div>
-                  <div className="mt-1.5">
-                    <label className="text-[10px] text-gray-500">O URL de foto:</label>
-                    <input type="text" value={meta.photo_url ?? ''} onChange={e => setMeta(m => ({...m, photo_url: e.target.value}))} placeholder="https://..." className="mt-0.5 w-full h-8 text-xs border border-gray-300 rounded-lg px-2" />
+                      <img src={meta.photo_url} alt="" className="w-20 h-20 rounded-2xl object-cover ring-2 ring-violet-200 shrink-0" />
+                    ) : <div className="w-20 h-20 rounded-2xl bg-white ring-2 ring-violet-100 flex items-center justify-center text-violet-300 shrink-0"><UserRound size={30} /></div>}
+                    <div className="flex-1 min-w-0">
+                      <label className="cursor-pointer w-full px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-90 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-violet-500/20">
+                        <Upload size={18} /> {uploadingPhoto ? 'Subiendo...' : 'Subir foto'}
+                        <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="hidden" />
+                      </label>
+                      <input type="text" value={meta.photo_url ?? ''} onChange={e => setMeta(m => ({...m, photo_url: e.target.value}))} placeholder="O pega una URL: https://..." className="mt-2 w-full h-8 text-xs border border-gray-200 rounded-lg px-2" />
+                    </div>
                   </div>
                 </div>
                 <div>
