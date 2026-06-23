@@ -35,15 +35,22 @@ export default function Sidebar({ store, profile }: SidebarProps) {
 
   // Empleados/supervisores: POS + historial + mensajes. El dueño ve todo.
   const role = profile.role
-  const isStaff = role === 'employee' || role === 'supervisor'
+  const isEmployee = role === 'employee'
+  const isSupervisor = role === 'supervisor'
+  const isGerente = role === 'gerente'
   const brand = store.primary_color || '#2563eb'
-  const navItems = isStaff
-    ? [
-        { href: '/sales/new', label: 'Ventas (POS)', icon: ShoppingCart },
-        { href: '/sales', label: 'Historial', icon: History },
-        { href: '/mensajes', label: 'Mensajes', icon: MessageCircle },
-      ]
-    : NAV_ITEMS
+  const staffNav = [
+    { href: '/sales/new', label: 'Ventas (POS)', icon: ShoppingCart },
+    { href: '/sales', label: 'Historial', icon: History },
+    { href: '/mensajes', label: 'Mensajes', icon: MessageCircle },
+  ]
+  const navItems = isEmployee
+    ? staffNav
+    : isSupervisor
+      ? [...staffNav, { href: '/employees', label: 'Empleados', icon: UserCog }]
+      : isGerente
+        ? NAV_ITEMS.filter(i => i.href !== '/subscription' && i.href !== '/settings')
+        : NAV_ITEMS
 
   const planBadgeColor: Record<string, string> = {
     free: 'bg-gray-100 text-gray-600',
@@ -86,11 +93,12 @@ export default function Sidebar({ store, profile }: SidebarProps) {
             <p className="font-semibold text-gray-900 text-sm truncate">{store.name}</p>
             <span className={cn(
               'text-xs px-2 py-0.5 rounded-full font-medium',
-              role === 'supervisor' ? 'bg-indigo-100 text-indigo-700'
+              role === 'gerente' ? 'bg-amber-100 text-amber-700'
+                : role === 'supervisor' ? 'bg-indigo-100 text-indigo-700'
                 : role === 'employee' ? 'bg-emerald-100 text-emerald-700'
                 : (planBadgeColor[profile.plan] ?? planBadgeColor.free)
             )}>
-              {role === 'supervisor' ? 'Supervisor' : role === 'employee' ? 'Empleado' : (planLabel[profile.plan] ?? 'Gratis')}
+              {role === 'gerente' ? 'Gerente' : role === 'supervisor' ? 'Supervisor' : role === 'employee' ? 'Empleado' : (planLabel[profile.plan] ?? 'Gratis')}
             </span>
           </div>
         </div>

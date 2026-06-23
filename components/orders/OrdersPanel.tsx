@@ -24,7 +24,12 @@ export default function OrdersPanel() {
   const [filter, setFilter] = useState<'todos' | OrderStatus>('todos')
   const [isPending, startTransition] = useTransition()
 
-  async function load() { setLoading(true); setOrders(await listOnlineOrdersAction()); setLoading(false) }
+  async function load() {
+    setLoading(true)
+    try { setOrders(await listOnlineOrdersAction()) }
+    catch { setOrders([]) }
+    finally { setLoading(false) }
+  }
   useEffect(() => { load() }, [])
 
   function setStatus(id: string, status: OrderStatus) {

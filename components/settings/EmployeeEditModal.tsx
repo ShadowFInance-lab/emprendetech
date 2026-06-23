@@ -107,7 +107,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
       else toast.error(r.error ?? 'Error')
     })
   }
-  function setRole(role: 'employee' | 'supervisor') {
+  function setRole(role: 'employee' | 'supervisor' | 'gerente') {
     startTransition(async () => { const r = await setEmployeeRoleAction(employeeId, role); if (r.success) toast.success(role === 'supervisor' ? 'Ahora es supervisor' : 'Ahora es empleado'); else toast.error(r.error ?? 'Error') })
   }
   function remove() {
@@ -219,8 +219,9 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
               <div className="flex gap-2">
                 <button onClick={() => setRole('employee')} disabled={isPending} className="flex-1 h-9 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:border-indigo-300">Empleado</button>
                 <button onClick={() => setRole('supervisor')} disabled={isPending} className="flex-1 h-9 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100">Supervisor</button>
+                <button onClick={() => setRole('gerente')} disabled={isPending} className="flex-1 h-9 rounded-lg border border-amber-200 bg-amber-50 text-sm font-medium text-amber-700 hover:bg-amber-100">Gerente</button>
               </div>
-              <p className="text-[10px] text-gray-400 mt-1.5">Supervisor: además del POS puede ver el panel de Empleados.</p>
+              <p className="text-[10px] text-gray-400 mt-1.5">Supervisor: POS + panel de Empleados. Gerente: casi todo el panel (sin Configuración ni Suscripción).</p>
             </div>
 
             {/* Asistencia de la Semana — bloque EXACTO idéntico (como en Juan David para Staff y Employee) */}

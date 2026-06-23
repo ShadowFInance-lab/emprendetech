@@ -279,8 +279,8 @@ export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeM
   } catch { return { success: false, error: 'Error' } }
 }
 
-/** Jefe: cambia el rol de un empleado (empleado ↔ supervisor). */
-export async function setEmployeeRoleAction(employeeId: string, role: 'employee' | 'supervisor'): Promise<ActionResult> {
+/** Jefe: cambia el rol de un empleado (empleado / supervisor / gerente). */
+export async function setEmployeeRoleAction(employeeId: string, role: 'employee' | 'supervisor' | 'gerente'): Promise<ActionResult> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

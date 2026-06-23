@@ -96,9 +96,18 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Empleados y supervisores: acceso restringido al POS / ventas y a Mensajes
-    if (profile?.role === 'employee' || profile?.role === 'supervisor') {
-      const allowed = pathname.startsWith('/sales') || pathname.startsWith('/mensajes')
+    // Roles no-dueño: acceso según nivel.
+    // - empleado: POS/Ventas + Mensajes
+    // - supervisor: + panel de Empleados
+    // - gerente: casi todo el panel (NO Configuración ni Suscripción)
+    const r = profile?.role
+    if (r === 'employee' || r === 'supervisor' || r === 'gerente') {
+      let allowed = pathname.startsWith('/sales') || pathname.startsWith('/mensajes')
+      if (r === 'supervisor' || r === 'gerente') allowed = allowed || pathname.startsWith('/employees')
+      if (r === 'gerente') allowed = allowed
+        || pathname.startsWith('/dashboard') || pathname.startsWith('/inventory')
+        || pathname.startsWith('/orders') || pathname.startsWith('/customers')
+        || pathname.startsWith('/quotes')
       if (!allowed) {
         return NextResponse.redirect(new URL('/sales/new', request.url))
       }
