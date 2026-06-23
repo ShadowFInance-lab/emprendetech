@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
-export type PayrollPeriod = 'week' | 'fortnight' | 'month' | 'custom'
+export type PayrollPeriod = 'week' | 'biweekly' | 'fortnight' | 'month' | 'custom'
 
 export interface PayrollDay { date: string; checkIn: string | null; checkOut: string | null; note: string | null }
 export interface PayrollRow {
@@ -35,6 +35,14 @@ function periodStartDate(period: PayrollPeriod, cycleDays = 7, anchorISO?: strin
     const diff = Math.floor((today.getTime() - anchor.getTime()) / 86400000)
     const blocks = diff > 0 ? Math.floor(diff / n) : 0
     const start = new Date(anchor); start.setDate(anchor.getDate() + blocks * n)
+    return start.toISOString().slice(0, 10)
+  }
+  if (period === 'biweekly') {
+    // Catorcenal: bloques de 14 días anclados a un lunes fijo (2024-01-01).
+    const anchor = Date.UTC(2024, 0, 1)
+    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+    const blocks = Math.floor((today - anchor) / (14 * 86400000))
+    const start = new Date(anchor); start.setUTCDate(start.getUTCDate() + blocks * 14)
     return start.toISOString().slice(0, 10)
   }
   if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)

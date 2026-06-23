@@ -19,7 +19,7 @@ import StaffEditModal from './StaffEditModal'
 import { useBossGate } from './BossGate'
 
 const PERIODS: { id: PayrollPeriod; label: string }[] = [
-  { id: 'week', label: 'Semanal' },
+  { id: 'week', label: 'Semanal' }, { id: 'biweekly', label: 'Catorcenal' },
   { id: 'fortnight', label: 'Quincenal' }, { id: 'month', label: 'Mensual' },
   { id: 'custom', label: 'Personalizado' },
 ]
@@ -38,6 +38,7 @@ function thisWeekDates(): string[] {
 function periodEnd(period: PayrollPeriod, startISO: string, cycleDays = 7): Date {
   const s = new Date(startISO + 'T00:00:00')
   if (period === 'custom') { const e = new Date(s); e.setDate(s.getDate() + Math.max(1, cycleDays) - 1); return e }
+  if (period === 'biweekly') { const e = new Date(s); e.setDate(s.getDate() + 13); return e }
   if (period === 'week') { const e = new Date(s); e.setDate(s.getDate() + 6); return e }
   if (period === 'fortnight') return s.getDate() === 1 ? new Date(s.getFullYear(), s.getMonth(), 15) : new Date(s.getFullYear(), s.getMonth() + 1, 0)
   return new Date(s.getFullYear(), s.getMonth() + 1, 0)
