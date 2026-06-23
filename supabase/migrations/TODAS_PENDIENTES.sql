@@ -582,4 +582,7 @@ ALTER TABLE stores    ADD COLUMN IF NOT EXISTS payroll_cycle_days   INTEGER NOT 
 ALTER TABLE stores    ADD COLUMN IF NOT EXISTS payroll_cycle_anchor DATE;
 ALTER TABLE reminders ADD COLUMN IF NOT EXISTS products             TEXT;
 
+-- ─── 042: imagen de fondo del panel admin (dashboard) ──────────────────────
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_url TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

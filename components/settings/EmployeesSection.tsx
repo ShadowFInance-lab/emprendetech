@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, Lock, Crown, Check, Copy, ClipboardList, Wallet, X } from 'lucide-react'
+import { UserPlus, Loader2, Lock, Crown, Check, Copy, ClipboardList, Wallet, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/actions/employees'
@@ -101,13 +101,27 @@ export default function EmployeesSection({ plan }: { plan: string }) {
     )
   }
 
+  // Vista dedicada de Nómina DENTRO de la misma página (sin modal emergente)
+  if (showNomina) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={() => setShowNomina(false)} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50">
+            <ChevronLeft size={16} /> Volver a empleados
+          </button>
+          <p className="font-bold text-gray-900 flex items-center gap-2"><Wallet size={18} className="text-violet-600" /> Nómina</p>
+        </div>
+        <PayrollDashboard refreshSignal={signal} isPaid={isPaid} />
+      </div>
+    )
+  }
+
   return (
-    <>
     <div className="grid lg:grid-cols-3 gap-4 items-start">
       {/* Columna principal */}
       <div className="lg:col-span-2 space-y-4">
-        <button onClick={() => setShowNomina(true)} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 font-medium">
-          <Wallet size={13} /> Nómina
+        <button onClick={() => setShowNomina(true)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold shadow-sm transition-colors">
+          <Wallet size={15} /> Ver Nómina
         </button>
         {/* Crear empleado + KPIs + nómina + descuentos + resumen */}
         <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} />
@@ -119,21 +133,5 @@ export default function EmployeesSection({ plan }: { plan: string }) {
         <TeamChatPanel employees={employees} />
       </div>
     </div>
-
-    {/* Ventana dedicada de Nómina */}
-    {showNomina && (
-      <div className="fixed inset-0 z-50 bg-black/50 p-3 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" onClick={() => setShowNomina(false)}>
-        <div className="relative max-w-6xl mx-auto bg-gray-50 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
-          <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-white border-b border-gray-100 rounded-t-2xl">
-            <p className="font-bold text-gray-900 flex items-center gap-2"><Wallet size={18} className="text-violet-600" /> Nómina</p>
-            <button onClick={() => setShowNomina(false)} className="text-gray-400 hover:text-gray-700" aria-label="Cerrar"><X size={20} /></button>
-          </div>
-          <div className="p-4">
-            <PayrollDashboard refreshSignal={signal} isPaid={isPaid} />
-          </div>
-        </div>
-      </div>
-    )}
-    </>
   )
 }

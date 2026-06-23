@@ -133,7 +133,7 @@ export async function updateStoreAction(
     /column|schema cache/i.test(error.message ?? '')
   )
   if (isMissingColumn) {
-    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style', 'background_url', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit', 'online_sales']) {
+    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style', 'background_url', 'dashboard_bg_url', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit', 'online_sales']) {
       delete (updates as Record<string, unknown>)[k]
     }
     const retry = await supabase

@@ -33,7 +33,7 @@ export default function ColorPickerField({ label, value, onChange }: { label: st
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-gray-800">{label}</div>
         <button type="button" onClick={() => setOpen(true)} className="text-xs text-gray-500 hover:text-gray-900 text-left truncate w-full">
-          <span className="font-medium text-gray-700">{colorName(value)}</span> · <span className="font-mono">{(value || '').toUpperCase()}</span>
+          <span className="font-medium text-gray-700">{colorName(value)}</span>
         </button>
       </div>
 
