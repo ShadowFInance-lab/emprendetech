@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Inbox, Loader2, Phone, MapPin, CreditCard, RefreshCw } from 'lucide-react'
+import { Inbox, Loader2, Phone, MapPin, CreditCard, RefreshCw, X, ShoppingBag, CalendarDays, Clock, DollarSign, Check } from 'lucide-react'
 import { listOnlineOrdersAction, updateOnlineOrderStatusAction, type OnlineOrder } from '@/lib/actions/orders'
 import { ORDER_STATUSES, type OrderStatus } from '@/lib/constants/orders'
 import { formatCurrency } from '@/lib/utils/format'
@@ -16,13 +16,17 @@ const STATUS_STYLE: Record<OrderStatus, string> = {
   entregado: 'bg-green-100 text-green-700 border-green-200',
   cancelado: 'bg-red-100 text-red-600 border-red-200',
 }
+// Línea de vida del pedido (sin "cancelado", que es estado terminal aparte)
+const FLOW: OrderStatus[] = ['pendiente', 'confirmado', 'pagado', 'preparando', 'enviado', 'entregado']
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const fmtDate = (s: string) => new Date(s).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+const isToday = (s: string) => new Date(s).toDateString() === new Date().toDateString()
 
 export default function OrdersPanel() {
   const [orders, setOrders] = useState<OnlineOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'todos' | OrderStatus>('todos')
+  const [selected, setSelected] = useState<OnlineOrder | null>(null)
   const [isPending, startTransition] = useTransition()
 
   async function load() {
@@ -34,7 +38,8 @@ export default function OrdersPanel() {
   useEffect(() => { load() }, [])
 
   function setStatus(id: string, status: OrderStatus) {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))
+    setOrders(prev => prev.map(o => (o.id === id ? { ...o, status } : o)))
+    setSelected(s => (s && s.id === id ? { ...s, status } : s))
     startTransition(async () => {
       const r = await updateOnlineOrderStatusAction(id, status)
       if (!r.success) { toast.error(r.error ?? 'Error'); load() } else toast.success('Estado actualizado')
@@ -42,12 +47,36 @@ export default function OrdersPanel() {
   }
 
   const shown = filter === 'todos' ? orders : orders.filter(o => o.status === filter)
+  const stats = useMemo(() => ({
+    total: orders.length,
+    hoy: orders.filter(o => isToday(o.created_at)).length,
+    pendientes: orders.filter(o => o.status === 'pendiente').length,
+    ingresos: orders.reduce((s, o) => s + (o.total ?? 0), 0),
+  }), [orders])
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-indigo-500" /></div>
 
+  const cards = [
+    { label: 'Pedidos', value: String(stats.total), icon: ShoppingBag, c: 'from-indigo-500 to-violet-600' },
+    { label: 'Hoy', value: String(stats.hoy), icon: CalendarDays, c: 'from-cyan-500 to-sky-600' },
+    { label: 'Pendientes', value: String(stats.pendientes), icon: Clock, c: 'from-amber-500 to-orange-600' },
+    { label: 'Ingresos', value: formatCurrency(stats.ingresos), icon: DollarSign, c: 'from-emerald-500 to-green-600' },
+  ]
+
   return (
     <div className="space-y-4">
-      {/* Filtros por estado */}
+      {/* ── Tarjetas resumen ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {cards.map(k => (
+          <div key={k.label} className="rounded-2xl border border-gray-100 bg-white shadow-sm p-3.5">
+            <span className={`w-9 h-9 rounded-xl bg-gradient-to-br ${k.c} flex items-center justify-center mb-2`}><k.icon size={17} className="text-white" /></span>
+            <p className="text-[11px] text-gray-400 font-medium">{k.label}</p>
+            <p className="text-lg font-bold text-gray-900 leading-tight">{k.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Filtros ── */}
       <div className="flex flex-wrap items-center gap-1.5">
         {(['todos', ...ORDER_STATUSES] as const).map(st => {
           const count = st === 'todos' ? orders.length : orders.filter(o => o.status === st).length
@@ -61,6 +90,7 @@ export default function OrdersPanel() {
         <button type="button" onClick={load} className="ml-auto inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800"><RefreshCw size={13} /> Actualizar</button>
       </div>
 
+      {/* ── Tabla / vacío ── */}
       {shown.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <Inbox size={40} className="mx-auto text-gray-300 mb-3" />
@@ -68,50 +98,121 @@ export default function OrdersPanel() {
           <p className="text-sm text-gray-400">Los pedidos de «Compra Online» de tu catálogo aparecerán aquí.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {shown.map(o => (
-            <div key={o.id} className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 space-y-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-bold text-gray-900 leading-tight">{o.customer_name || 'Cliente'}</p>
-                  <p className="text-[11px] text-gray-400">{o.order_no && <span className="font-mono font-semibold text-gray-500">{o.order_no}</span>}{o.order_no ? ' · ' : ''}{fmtDate(o.created_at)}</p>
+        <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wide text-gray-400 bg-gray-50/70">
+                <th className="px-4 py-2.5 font-semibold">ID</th>
+                <th className="px-4 py-2.5 font-semibold">Cliente</th>
+                <th className="px-4 py-2.5 font-semibold">Estado</th>
+                <th className="px-4 py-2.5 font-semibold">Pago</th>
+                <th className="px-4 py-2.5 font-semibold text-right">Total</th>
+                <th className="px-4 py-2.5 font-semibold whitespace-nowrap">Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map(o => (
+                <tr key={o.id} onClick={() => setSelected(o)} className="border-t border-gray-100 cursor-pointer hover:bg-indigo-50/40 transition-colors">
+                  <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-500 whitespace-nowrap">{o.order_no || o.id.slice(0, 6).toUpperCase()}</td>
+                  <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap">{o.customer_name || 'Cliente'}</td>
+                  <td className="px-4 py-2.5"><span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${STATUS_STYLE[o.status] ?? STATUS_STYLE.pendiente}`}>{cap(o.status || 'pendiente')}</span></td>
+                  <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{o.payment_method || '—'}</td>
+                  <td className="px-4 py-2.5 text-right font-bold text-gray-900 whitespace-nowrap">{o.total != null ? formatCurrency(o.total) : '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{fmtDate(o.created_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Panel lateral de detalle ── */}
+      {selected && (
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelected(null)} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white shrink-0">
+              <div>
+                <p className="text-sm font-bold leading-tight flex items-center gap-2"><ShoppingBag size={16} /> {selected.order_no || 'Pedido'}</p>
+                <p className="text-[11px] text-white/75">{fmtDate(selected.created_at)}</p>
+              </div>
+              <button onClick={() => setSelected(null)} className="text-white/80 hover:text-white"><X size={18} /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Cliente */}
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Cliente</p>
+                <p className="font-semibold text-gray-900">{selected.customer_name || 'Cliente'}</p>
+                <div className="mt-1 space-y-0.5 text-sm text-gray-600">
+                  {selected.phone && <p className="flex items-center gap-1.5"><Phone size={13} className="text-gray-400" /> <a href={`tel:${selected.phone}`} className="hover:underline">{selected.phone}</a></p>}
+                  {selected.email && <p className="flex items-center gap-1.5"><span className="text-gray-400">@</span> {selected.email}</p>}
+                  {(selected.address || selected.city) && <p className="flex items-start gap-1.5"><MapPin size={13} className="text-gray-400 mt-0.5 shrink-0" /> <span>{[selected.address, selected.city, selected.state, selected.zip].filter(Boolean).join(', ')}</span></p>}
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${STATUS_STYLE[o.status] ?? STATUS_STYLE.pendiente}`}>{cap(o.status || 'pendiente')}</span>
               </div>
 
-              {o.items && o.items.length > 0 && (
-                <div className="rounded-lg bg-gray-50 border border-gray-100 p-2 text-xs space-y-0.5">
-                  {o.items.map((it, i) => (
-                    <div key={i} className="flex justify-between gap-2">
-                      <span className="text-gray-600 truncate">{it.qty}× {it.name}</span>
-                      <span className="font-medium text-gray-800 shrink-0">{formatCurrency(it.price * it.qty)}</span>
+              {/* Productos */}
+              {selected.items && selected.items.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Productos</p>
+                  <div className="rounded-xl border border-gray-100 divide-y divide-gray-100">
+                    {selected.items.map((it, i) => (
+                      <div key={i} className="flex justify-between gap-2 px-3 py-2 text-sm">
+                        <span className="text-gray-700">{it.qty}× {it.name}</span>
+                        <span className="font-medium text-gray-900 shrink-0">{formatCurrency(it.price * it.qty)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between px-3 py-2 text-sm font-bold bg-gray-50">
+                      <span>Total</span><span>{selected.total != null ? formatCurrency(selected.total) : '—'}</span>
                     </div>
-                  ))}
+                  </div>
                 </div>
               )}
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Total</span>
-                <span className="font-extrabold text-gray-900">{o.total != null ? formatCurrency(o.total) : '—'}</span>
-              </div>
 
-              <div className="space-y-1 text-xs text-gray-600">
-                {o.phone && <p className="flex items-center gap-1.5"><Phone size={12} className="text-gray-400 shrink-0" /> <a href={`tel:${o.phone}`} className="hover:underline">{o.phone}</a></p>}
-                {(o.address || o.city) && <p className="flex items-start gap-1.5"><MapPin size={12} className="text-gray-400 mt-0.5 shrink-0" /> <span>{[o.address, o.city, o.state, o.zip].filter(Boolean).join(', ')}{o.notes ? ` — ${o.notes}` : ''}</span></p>}
-                {o.payment_method && <p className="flex items-center gap-1.5"><CreditCard size={12} className="text-gray-400 shrink-0" /> {o.payment_method}</p>}
-                {o.notes && o.notes.includes('[Recepción:') && (
-                  <p className="flex items-center gap-1.5 text-indigo-600 font-medium">
-                    📍 {o.notes.match(/\[Recepción: ([^\]]+)\]/)?.[1]}
-                  </p>
+              {/* Pago */}
+              {selected.payment_method && (
+                <p className="text-sm text-gray-600 flex items-center gap-1.5"><CreditCard size={14} className="text-gray-400" /> Pago: <strong className="text-gray-800">{selected.payment_method}</strong></p>
+              )}
+
+              {/* Notas */}
+              {selected.notes && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Notas</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-3">{selected.notes}</p>
+                </div>
+              )}
+
+              {/* Historial / línea de estados */}
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Historial de estados</p>
+                {selected.status === 'cancelado' ? (
+                  <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"><X size={15} /> Pedido cancelado</div>
+                ) : (
+                  <ol className="space-y-1.5">
+                    {FLOW.map((st, i) => {
+                      const curIdx = FLOW.indexOf(selected.status)
+                      const done = i <= curIdx
+                      return (
+                        <li key={st} className="flex items-center gap-2.5">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-300'}`}>{done ? <Check size={12} /> : <span className="text-[9px]">{i + 1}</span>}</span>
+                          <span className={`text-sm ${i === curIdx ? 'font-bold text-gray-900' : done ? 'text-gray-500' : 'text-gray-400'}`}>{cap(st)}</span>
+                        </li>
+                      )
+                    })}
+                  </ol>
                 )}
               </div>
+            </div>
 
-              {/* Cambiar estado (auto-guardado) */}
-              <select value={o.status} onChange={e => setStatus(o.id, e.target.value as OrderStatus)} disabled={isPending}
-                className="w-full h-9 text-sm border border-gray-200 rounded-lg px-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            {/* Cambiar estado */}
+            <div className="border-t border-gray-100 p-4 shrink-0">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Cambiar estado</label>
+              <select value={selected.status} onChange={e => setStatus(selected.id, e.target.value as OrderStatus)} disabled={isPending}
+                className="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
                 {ORDER_STATUSES.map(st => <option key={st} value={st}>{cap(st)}</option>)}
               </select>
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>
