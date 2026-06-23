@@ -8,7 +8,7 @@ import {
   addBranchAction, deleteBranchAction, type ReceptionData,
 } from '@/lib/actions/reception'
 
-export default function OrderReceptionSection() {
+export default function OrderReceptionSection({ embedded = false }: { embedded?: boolean }) {
   const [data, setData] = useState<ReceptionData | null>(null)
   const [tab, setTab] = useState<'employee' | 'branch'>('employee')
   const [newBranch, setNewBranch] = useState('')
@@ -45,7 +45,7 @@ export default function OrderReceptionSection() {
   }
 
   if (!data) return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 flex justify-center">
+    <div className={embedded ? 'pt-4 mt-1 border-t border-gray-100 flex justify-center' : 'rounded-2xl border border-gray-100 bg-white shadow-sm p-5 flex justify-center'}>
       <Loader2 className="h-5 w-5 animate-spin text-indigo-400" />
     </div>
   )
@@ -53,7 +53,7 @@ export default function OrderReceptionSection() {
   const opts = tab === 'employee' ? data.employees : data.branches
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 space-y-4">
+    <div className={embedded ? 'pt-4 mt-1 border-t border-gray-100 space-y-4' : 'rounded-2xl border border-gray-100 bg-white shadow-sm p-5 space-y-4'}>
       <div className="flex items-center gap-2.5">
         <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
           <Inbox size={17} className="text-white" />

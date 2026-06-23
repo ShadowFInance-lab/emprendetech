@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/client'
 import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
 import ColorPickerField from './ColorPickerField'
+import OrderReceptionSection from './OrderReceptionSection'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -309,7 +310,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${onlineSales ? 'translate-x-5' : ''}`} />
           </button>
         </div>
-
+        {/* Recepción de pedidos: integrada con el toggle de Vender Online */}
+        {onlineSales && <OrderReceptionSection embedded />}
       </div>
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
