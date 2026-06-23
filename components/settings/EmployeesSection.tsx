@@ -106,8 +106,8 @@ export default function EmployeesSection({ plan }: { plan: string }) {
     <div className="grid lg:grid-cols-3 gap-4 items-start">
       {/* Columna principal */}
       <div className="lg:col-span-2 space-y-4">
-        <button onClick={() => setShowNomina(true)} className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-md hover:opacity-90">
-          <Wallet size={17} /> Ver Nómina (ventana dedicada)
+        <button onClick={() => setShowNomina(true)} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 font-medium">
+          <Wallet size={13} /> Nómina
         </button>
         {/* Crear empleado + KPIs + nómina + descuentos + resumen */}
         <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} />

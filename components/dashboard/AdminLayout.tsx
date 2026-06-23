@@ -31,19 +31,27 @@ export default async function AdminLayout({
   if (!isEmployee && (!profile?.onboarding_done || !store)) redirect('/onboarding')
   if (!store) redirect('/login') // empleado sin tienda asignada (caso raro)
 
-  const s = store as typeof store & { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null }
+  const s = store as typeof store & { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; dashboard_bg_url?: string | null }
   const themeVars = {
     '--brand': s.panel_primary || store.primary_color || '#4f46e5',
     '--brand-2': s.panel_secondary || store.secondary_color || '#7c3aed',
     '--brand-btn': s.panel_button || store.button_color || '#4f46e5',
   } as CSSProperties
 
+  const dashBg = s.dashboard_bg_url || null
+  const contentStyle: CSSProperties = dashBg ? {
+    backgroundImage: `url(${dashBg})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+  } : {}
+
   return (
     <div className="min-h-screen bg-gray-50 flex mb-theme" style={themeVars}>
       <Sidebar store={store} profile={profile} />
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64" style={contentStyle}>
         <Header store={store} />
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
+        <main className="flex-1 p-4 lg:p-6 overflow-auto bg-white/70 backdrop-blur-[1px]">
           {children}
         </main>
       </div>

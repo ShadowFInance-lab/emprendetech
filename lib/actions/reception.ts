@@ -7,7 +7,7 @@ import { listStaffAction } from './staff'
 
 export interface ReceptionOption { id: string; name: string }
 export interface ReceptionData {
-  type: 'employee' | 'branch' | null
+  type: 'employee' | 'branch' | 'multi' | null
   id: string | null
   value: string | null
   employees: ReceptionOption[]
@@ -40,7 +40,7 @@ export async function getReceptionDataAction(): Promise<ReceptionData> {
     ]
     const branches: ReceptionOption[] = (branchesRes.data ?? []).map(b => ({ id: b.id as string, name: b.name as string }))
     return {
-      type: (store.online_reception_type as 'employee' | 'branch') ?? null,
+      type: (store.online_reception_type as 'employee' | 'branch' | 'multi') ?? null,
       id: store.online_reception_id ?? null,
       value: store.online_reception_value ?? null,
       employees, branches,
@@ -48,8 +48,8 @@ export async function getReceptionDataAction(): Promise<ReceptionData> {
   } catch { return empty }
 }
 
-/** Guarda a quién llegan los pedidos online (empleado o sucursal). */
-export async function setReceptionAction(type: 'employee' | 'branch', id: string, value: string): Promise<ActionResult> {
+/** Guarda a quién llegan los pedidos online (empleado, sucursal o multi). */
+export async function setReceptionAction(type: 'employee' | 'branch' | 'multi', id: string, value: string): Promise<ActionResult> {
   try {
     const { supabase, store } = await ownerStore()
     if (!store) return { success: false, error: 'Sin tienda' }

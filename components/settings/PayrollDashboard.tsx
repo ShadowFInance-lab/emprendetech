@@ -284,7 +284,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
       {/* Tabla de nómina */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Wallet size={16} className="text-indigo-600" /> Nómina · {periodLabel}</p>
+          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Wallet size={16} className="text-indigo-600" /> Nómina · {periodLabel} <span className="ml-2 text-[10px] font-normal text-gray-400">(edita bonos/desc. — guarda al salir del campo)</span></p>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => requireUnlock(exportExcel)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100"><FileSpreadsheet size={13} /> Excel</button>
             <button onClick={() => requireUnlock(exportPDF)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100"><FileText size={13} /> PDF</button>
@@ -351,16 +351,13 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       </td>
                       <td className="px-2 py-2 text-right border-b border-gray-100 whitespace-nowrap">{formatCurrency(r.base)}</td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                        <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} className="w-20 h-8 text-right text-xs mx-auto" />
+                        <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-20 h-7 text-right text-xs mx-auto border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
                       <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(r.base) > 0 ? `-${formatCurrency(isrFor(r.base))}` : '—'}</td>
                       <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(r.base) > 0 ? `-${formatCurrency(imssFor(r.base))}` : '—'}</td>
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[160px]"><span className="line-clamp-1" title={r.notes || 'Sin incidencias'}>{r.notes || 'Sin incidencias'}</span></td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-1 justify-center">
-                          <Input type="number" min="0" value={discounts[r.employeeId] ?? '0'} onChange={e => setDiscounts(d => ({ ...d, [r.employeeId]: e.target.value }))} className="w-20 h-8 text-right text-xs" />
-                          <button onClick={() => saveRow(r)} disabled={isPending} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50" title="Guardar"><Save size={14} /></button>
-                        </div>
+                        <Input type="number" min="0" value={discounts[r.employeeId] ?? '0'} onChange={e => setDiscounts(d => ({ ...d, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-20 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
                       <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap">{formatCurrency(netOf(r))}</td>
                       <td className="px-2 py-2 text-center border-b border-gray-100" onClick={e => e.stopPropagation()}>{estadoChip(r.paid, () => togglePaid(r))}</td>
@@ -398,16 +395,13 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     </td>
                     <td className="px-2 py-2 text-right border-b border-gray-100 whitespace-nowrap">{formatCurrency(s.salary)}</td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} className="w-20 h-8 text-right text-xs mx-auto" />
+                      <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-20 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(s.salary) > 0 ? `-${formatCurrency(isrFor(s.salary))}` : '—'}</td>
                     <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(s.salary) > 0 ? `-${formatCurrency(imssFor(s.salary))}` : '—'}</td>
                     <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[160px]"><span className="line-clamp-1" title={s.note || '—'}>{s.note || '—'}</span></td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center gap-1 justify-center">
-                        <Input type="number" min="0" value={s.discount} onChange={e => setStaffField(s.id, { discount: parseFloat(e.target.value) || 0 })} className="w-20 h-8 text-right text-xs" />
-                        <button onClick={() => saveStaffRow(s)} disabled={isPending} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50" title="Guardar"><Save size={14} /></button>
-                      </div>
+                      <Input type="number" min="0" value={s.discount} onChange={e => setStaffField(s.id, { discount: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-20 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap">{formatCurrency(netStaff(s))}</td>
                     <td className="px-2 py-2 text-center border-b border-gray-100" onClick={e => e.stopPropagation()}>{estadoChip(s.paid, () => toggleStaffPaid(s))}</td>

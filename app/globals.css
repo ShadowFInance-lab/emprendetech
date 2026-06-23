@@ -140,3 +140,19 @@ font[style] { background: transparent !important; box-shadow: none !important; }
 .mb-theme .border-indigo-500,
 .mb-theme .border-indigo-600 { border-color: var(--brand) !important; }
 .mb-theme .accent-indigo-600 { accent-color: var(--brand) !important; }
+
+/* Más coberturas para que los colores de panel se apliquen consistentemente */
+.mb-theme .bg-violet-50,
+.mb-theme .bg-indigo-50 { background-color: color-mix(in srgb, var(--brand) 8%, white) !important; }
+.mb-theme .text-violet-600,
+.mb-theme .text-violet-700 { color: var(--brand) !important; }
+.mb-theme .border-violet-200,
+.mb-theme .border-indigo-200 { border-color: color-mix(in srgb, var(--brand) 30%, #e5e7eb) !important; }
+.mb-theme button.bg-violet-600,
+.mb-theme button.bg-indigo-600 { background-color: var(--brand-btn) !important; }
+.mb-theme button.bg-violet-600:hover,
+.mb-theme button.bg-indigo-600:hover { background-color: var(--brand-btn) !important; filter: brightness(0.92); }
+.mb-theme .text-indigo-600 { color: var(--brand) !important; }
+.mb-theme .text-blue-600 { color: var(--brand) !important; }
+.mb-theme .border-blue-200 { border-color: color-mix(in srgb, var(--brand) 25%, #e5e7eb) !important; }
+.mb-theme .hover\:bg-blue-50:hover { background-color: color-mix(in srgb, var(--brand) 6%, white) !important; }

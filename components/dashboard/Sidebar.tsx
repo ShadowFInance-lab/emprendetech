@@ -38,7 +38,7 @@ export default function Sidebar({ store, profile }: SidebarProps) {
   const isEmployee = role === 'employee'
   const isSupervisor = role === 'supervisor'
   const isGerente = role === 'gerente'
-  const brand = store.primary_color || '#2563eb'
+  const brandBtn = 'var(--brand-btn, #4f46e5)'
   const staffNav = [
     { href: '/sales/new', label: 'Ventas (POS)', icon: ShoppingCart },
     { href: '/sales', label: 'Historial', icon: History },
@@ -71,7 +71,7 @@ export default function Sidebar({ store, profile }: SidebarProps) {
       {/* Logo */}
       <div className="p-5 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: brand }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: brandBtn }}>
             <span className="text-white font-bold text-sm">M</span>
           </div>
           <span className="font-bold text-gray-900 text-lg">Mercanta Business</span>
@@ -118,7 +118,7 @@ export default function Sidebar({ store, profile }: SidebarProps) {
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
                 isActive ? 'text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
-              style={isActive ? { backgroundColor: brand } : undefined}
+              style={isActive ? { backgroundColor: brandBtn } : undefined}
             >
               <item.icon size={18} />
               {item.label}
@@ -133,7 +133,7 @@ export default function Sidebar({ store, profile }: SidebarProps) {
           href={`/catalog/${store.slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-blue-50 rounded-lg transition-colors" style={{ color: 'var(--brand)' }}
         >
           <ExternalLink size={16} />
           Ver mi catálogo

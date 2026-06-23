@@ -194,11 +194,12 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
       ? `${input.address.trim()}, Col. ${input.colonia.trim()}`
       : input.address.trim()
 
-    // Fetch reception preference from store
+    // Fetch reception preference from store (soporta multi-select)
     const { data: storeCfg } = await supabase.from('stores').select('online_reception_type, online_reception_value').eq('id', cart.store_id).single()
     const recType = storeCfg?.online_reception_type
     const recVal = storeCfg?.online_reception_value
-    const notesWithRec = [input.notes?.trim(), recVal ? `[Recepción: ${recType === 'employee' ? 'Empleado' : 'Sucursal'} ${recVal}]` : ''].filter(Boolean).join(' ')
+    const prefix = recType === 'multi' ? 'Multi' : (recType === 'employee' ? 'Empleado' : 'Sucursal')
+    const notesWithRec = [input.notes?.trim(), recVal ? `[Recepción: ${prefix} ${recVal}]` : ''].filter(Boolean).join(' ')
 
     const { error } = await supabase.from('online_orders').insert({
       store_id: cart.store_id,

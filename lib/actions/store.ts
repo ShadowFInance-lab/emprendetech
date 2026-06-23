@@ -90,7 +90,7 @@ export async function updateStoreAction(
     'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit',
     'font_family', 'product_order', 'currency', 'sales_pin', 'show_prices', 'online_sales',
     'online_reception_type', 'online_reception_value',
-    'bg_color', 'button_style', 'background_url',
+    'bg_color', 'button_style', 'background_url', 'dashboard_bg_url',
   ]
 
   fields.forEach(field => {
@@ -183,7 +183,7 @@ export async function uploadStoreImage(
     .from('stores').select('id').eq('id', storeId).eq('owner_id', user.id).single()
   if (!store) return { success: false, error: 'Tienda no encontrada' }
 
-  const type = formData.get('type') as 'logo' | 'banner' | 'background'
+  const type = formData.get('type') as 'logo' | 'banner' | 'background' | 'dashboard'
   const file = formData.get('file') as File
   if (!file || !file.size) return { success: false, error: 'No se recibió la imagen' }
 
@@ -214,9 +214,10 @@ export async function uploadStoreImage(
     .from('public-assets')
     .getPublicUrl(path)
 
+  const col = type === 'dashboard' ? 'dashboard_bg_url' : `${type}_url`
   const { error: updateError } = await supabase
     .from('stores')
-    .update({ [`${type}_url`]: publicUrl })
+    .update({ [col]: publicUrl })
     .eq('id', storeId)
     .eq('owner_id', user.id)
 

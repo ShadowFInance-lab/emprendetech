@@ -73,6 +73,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const [uploadingBg, setUploadingBg] = useState(false)
+  const [uploadingDashboardBg, setUploadingDashboardBg] = useState(false)
   const logoRef = useRef<HTMLInputElement>(null)
   const bannerRef = useRef<HTMLInputElement>(null)
 
@@ -85,12 +86,13 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [primaryColor, setPrimaryColor] = useState(store.primary_color || '#2563eb')
   const [secondaryColor, setSecondaryColor] = useState(store.secondary_color || '#7c3aed')
   const [buttonColor, setButtonColor] = useState(store.button_color || '#2563eb')
-  const sx = store as { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; bg_fit?: string | null; online_sales?: boolean | null; online_reception_type?: string | null; online_reception_value?: string | null }
+  const sx = store as { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; bg_fit?: string | null; online_sales?: boolean | null; online_reception_type?: string | null; online_reception_value?: string | null; dashboard_bg_url?: string | null }
   const [panelPrimary, setPanelPrimary] = useState(sx.panel_primary || store.primary_color || '#1F2937')
   const [panelSecondary, setPanelSecondary] = useState(sx.panel_secondary || store.secondary_color || '#111827')
   const [panelButton, setPanelButton] = useState(sx.panel_button || store.button_color || '#4F46E5')
   const [bgFit, setBgFit] = useState(sx.bg_fit || 'cover')
   const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
+  const [dashboardBgUrl, setDashboardBgUrl] = useState(sx.dashboard_bg_url || '')
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
   const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
   const [buttonStyle, setButtonStyle] = useState(store.button_style ?? 'redondeado')
@@ -190,6 +192,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('panel_button', panelButton)
     formData.set('bg_fit', bgFit)
     formData.set('online_sales', String(onlineSales))
+    formData.set('dashboard_bg_url', dashboardBgUrl)
     formData.set('currency', currency)
     formData.set('bg_color', bgColor)
     formData.set('button_style', buttonStyle)
@@ -206,7 +209,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     })
   }
 
-  async function handleImageUpload(file: File, type: 'logo' | 'banner' | 'background') {
+  async function handleImageUpload(file: File, type: 'logo' | 'banner' | 'background' | 'dashboard') {
     // Validación clara ANTES de subir
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
     if (!validTypes.includes(file.type)) {
@@ -220,7 +223,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
 
     if (type === 'logo') setUploadingLogo(true)
     else if (type === 'banner') setUploadingBanner(true)
-    else setUploadingBg(true)
+    else if (type === 'background') setUploadingBg(true)
+    else if (type === 'dashboard') setUploadingDashboardBg(true)
 
     const fd = new FormData()
     fd.set('file', file)
@@ -229,7 +233,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     if (result.success && result.url) {
       if (type === 'logo') setLogoUrl(result.url)
       else if (type === 'banner') setBannerUrl(result.url)
-      else setBackgroundUrl(result.url)
+      else if (type === 'background') setBackgroundUrl(result.url)
+      else if (type === 'dashboard') setDashboardBgUrl(result.url)
       toast.success('Imagen actualizada')
     } else {
       toast.error(result.error ?? 'Error al subir imagen')
@@ -237,7 +242,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
 
     if (type === 'logo') setUploadingLogo(false)
     else if (type === 'banner') setUploadingBanner(false)
-    else setUploadingBg(false)
+    else if (type === 'background') setUploadingBg(false)
+    else if (type === 'dashboard') setUploadingDashboardBg(false)
   }
 
   return (
@@ -769,6 +775,28 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                         </div>
                       </div>
                     )}
+                  </div>
+                  {/* Imagen de fondo del Dashboard / Panel Admin */}
+                  <div className="pt-2 border-t border-gray-100 mt-2">
+                    <Label className="text-xs text-gray-500">Imagen de fondo del panel admin (dashboard)</Label>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {dashboardBgUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={dashboardBgUrl} alt="Fondo dashboard" className="w-12 h-9 rounded-lg object-cover ring-1 ring-black/10" />
+                      ) : (
+                        <span className="w-12 h-9 rounded-lg bg-gray-100 ring-1 ring-black/10" />
+                      )}
+                      <label className="text-xs text-blue-600 hover:underline cursor-pointer inline-flex items-center gap-1">
+                        {uploadingDashboardBg ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                        {dashboardBgUrl ? 'Cambiar fondo' : 'Subir imagen de fondo'}
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, 'dashboard') }} />
+                      </label>
+                      {dashboardBgUrl && (
+                        <button type="button" onClick={() => setDashboardBgUrl('')} className="text-[11px] text-gray-400 hover:text-red-500">Quitar</button>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Se aplica como fondo sutil del panel (con overlay para legibilidad).</p>
                   </div>
                   <div>
                     <Label className="text-xs text-gray-500">Estilo de botones</Label>

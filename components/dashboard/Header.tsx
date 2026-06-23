@@ -31,7 +31,8 @@ export default function Header({ store }: HeaderProps) {
           href={`/catalog/${store.slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
+          className="hidden sm:flex items-center gap-1.5 text-xs font-medium border px-3 py-1.5 rounded-lg transition-colors"
+          style={{ color: 'var(--brand, #2563eb)', borderColor: 'color-mix(in srgb, var(--brand, #2563eb) 30%, #e5e7eb)' }}
         >
           <ExternalLink size={13} />
           Ver catálogo
