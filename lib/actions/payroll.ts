@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
-export type PayrollPeriod = 'week' | 'fortnight' | 'month'
+export type PayrollPeriod = 'week' | 'fortnight' | 'month' | 'custom'
 
 export interface PayrollDay { date: string; checkIn: string | null; checkOut: string | null; note: string | null }
 export interface PayrollRow {
@@ -24,8 +24,19 @@ export interface PayrollRow {
 }
 export interface PayrollResult { periodStart: string; rows: PayrollRow[] }
 
-function periodStartDate(period: PayrollPeriod): string {
+function periodStartDate(period: PayrollPeriod, cycleDays = 7, anchorISO?: string | null): string {
   const now = new Date()
+  if (period === 'custom') {
+    // Periodo personalizado: bloques de N días que se reinician automáticamente
+    // desde una fecha ancla (cada N días). Sin ancla, empieza hoy.
+    const n = Math.max(1, cycleDays || 7)
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const anchor = anchorISO ? new Date(anchorISO + 'T00:00:00') : today
+    const diff = Math.floor((today.getTime() - anchor.getTime()) / 86400000)
+    const blocks = diff > 0 ? Math.floor(diff / n) : 0
+    const start = new Date(anchor); start.setDate(anchor.getDate() + blocks * n)
+    return start.toISOString().slice(0, 10)
+  }
   if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
   if (period === 'fortnight') {
     const d = now.getDate() <= 15 ? 1 : 16
@@ -37,13 +48,38 @@ function periodStartDate(period: PayrollPeriod): string {
   return mon.toISOString().slice(0, 10)
 }
 
+/** Lee el ciclo de nómina personalizado del dueño (cada N días + fecha ancla). */
+export async function getPayrollCycleAction(): Promise<{ days: number; anchor: string | null }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { days: 7, anchor: null }
+    const { data } = await supabase.from('stores').select('payroll_cycle_days, payroll_cycle_anchor').eq('owner_id', user.id).maybeSingle()
+    return { days: Number(data?.payroll_cycle_days) || 7, anchor: (data?.payroll_cycle_anchor as string) ?? null }
+  } catch { return { days: 7, anchor: null } }
+}
+
+/** Guarda el ciclo de nómina personalizado (días de corte + fecha de inicio). */
+export async function savePayrollCycleAction(days: number, anchor: string | null): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { error } = await supabase.from('stores')
+      .update({ payroll_cycle_days: Math.max(1, days || 7), payroll_cycle_anchor: anchor || null })
+      .eq('owner_id', user.id)
+    if (error) return { success: false, error: 'No se pudo guardar el ciclo (¿corriste la migración 041?)' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
 /** Jefe: nómina del periodo (días, base, descuento, neto + detalle por día). */
-export async function getPayrollAction(period: PayrollPeriod): Promise<PayrollResult> {
+export async function getPayrollAction(period: PayrollPeriod, cycleDays?: number, anchorISO?: string | null): Promise<PayrollResult> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { periodStart: '', rows: [] }
-    const pStart = periodStartDate(period)
+    const pStart = periodStartDate(period, cycleDays, anchorISO)
 
     const { data: emps } = await supabase.rpc('list_my_employees')
     const employees = (emps ?? []) as { id: string; full_name: string | null; email: string | null }[]

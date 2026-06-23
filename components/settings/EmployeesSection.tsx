@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, Lock, Crown, Check, Copy, ClipboardList } from 'lucide-react'
+import { UserPlus, Loader2, Lock, Crown, Check, Copy, ClipboardList, Wallet, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/actions/employees'
@@ -21,6 +21,7 @@ export default function EmployeesSection({ plan }: { plan: string }) {
   const [form, setForm] = useState({ name: '', password: '' })
   const [lastCreated, setLastCreated] = useState<string | null>(null)
   const [signal, setSignal] = useState(0)
+  const [showNomina, setShowNomina] = useState(false)
 
   const refresh = useCallback(async () => {
     setEmployees(await listEmployeesAction())
@@ -101,10 +102,14 @@ export default function EmployeesSection({ plan }: { plan: string }) {
   }
 
   return (
+    <>
     <div className="grid lg:grid-cols-3 gap-4 items-start">
       {/* Columna principal */}
       <div className="lg:col-span-2 space-y-4">
-        {/* Crear empleado + KPIs + Cartocena + nómina + descuentos + resumen */}
+        <button onClick={() => setShowNomina(true)} className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-bold shadow-md hover:opacity-90">
+          <Wallet size={17} /> Ver Nómina (ventana dedicada)
+        </button>
+        {/* Crear empleado + KPIs + nómina + descuentos + resumen */}
         <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} />
         <TasksManager employees={employees} />
       </div>
@@ -114,5 +119,21 @@ export default function EmployeesSection({ plan }: { plan: string }) {
         <TeamChatPanel employees={employees} />
       </div>
     </div>
+
+    {/* Ventana dedicada de Nómina */}
+    {showNomina && (
+      <div className="fixed inset-0 z-50 bg-black/50 p-3 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" onClick={() => setShowNomina(false)}>
+        <div className="relative max-w-6xl mx-auto bg-gray-50 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-white border-b border-gray-100 rounded-t-2xl">
+            <p className="font-bold text-gray-900 flex items-center gap-2"><Wallet size={18} className="text-violet-600" /> Nómina</p>
+            <button onClick={() => setShowNomina(false)} className="text-gray-400 hover:text-gray-700" aria-label="Cerrar"><X size={20} /></button>
+          </div>
+          <div className="p-4">
+            <PayrollDashboard refreshSignal={signal} isPaid={isPaid} />
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

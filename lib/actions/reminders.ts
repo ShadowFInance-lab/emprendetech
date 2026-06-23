@@ -14,6 +14,7 @@ export interface Reminder {
   due_time: string | null
   done: boolean
   assigned_to: string | null
+  products: string | null
   created_at: string
 }
 
@@ -23,6 +24,7 @@ const ReminderSchema = z.object({
   due_date: z.string().optional(),
   due_time: z.string().optional(),
   assigned_to: z.string().uuid().optional(),
+  products: z.string().max(500).optional(),
 })
 
 // Si la migración 008 no se ha corrido, la tabla no existe (código 42P01)
@@ -110,29 +112,49 @@ export async function createReminderAction(input: {
   due_date?: string
   due_time?: string
   assigned_to?: string
+  products?: string
 }): Promise<ActionResult> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
   const storeId = await getStoreId(supabase)
   if (!storeId) return { success: false, error: 'No autenticado' }
 
   const parsed = ReminderSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  const row: Record<string, unknown> = {
+  const baseRow: Record<string, unknown> = {
     store_id: storeId,
     customer_id: parsed.data.customer_id || null,
     title: parsed.data.title,
     due_date: parsed.data.due_date || null,
     due_time: parsed.data.due_time || null,
   }
+  const row: Record<string, unknown> = { ...baseRow }
   if (parsed.data.assigned_to) row.assigned_to = parsed.data.assigned_to
-  const { error } = await supabase.from('reminders').insert(row)
+  if (parsed.data.products?.trim()) row.products = parsed.data.products.trim()
+
+  let { error } = await supabase.from('reminders').insert(row)
+  // Si faltan columnas nuevas (assigned_to / products), reintenta con lo básico.
+  if (error && (error.code === '42703' || error.code === 'PGRST204' || /column|schema cache/i.test(error.message ?? ''))) {
+    ({ error } = await supabase.from('reminders').insert(baseRow))
+  }
 
   if (error) {
     if (isMissingTable(error)) {
       return { success: false, error: 'Falta ejecutar la migración 008_reminders.sql en Supabase.' }
     }
     return { success: false, error: 'No se pudo guardar el recordatorio' }
+  }
+
+  // Notifica al empleado logueado asignado (mejor esfuerzo).
+  if (parsed.data.assigned_to) {
+    try {
+      await supabase.from('employee_notifications').insert({
+        employee_id: parsed.data.assigned_to,
+        sender_id: user?.id ?? null,
+        message: `📦 Recordatorio de entrega: ${parsed.data.title}${parsed.data.due_date ? ` · ${parsed.data.due_date}` : ''}${parsed.data.products?.trim() ? ` — ${parsed.data.products.trim()}` : ''}`,
+      })
+    } catch { /* best-effort */ }
   }
 
   if (parsed.data.customer_id) revalidatePath(`/customers/${parsed.data.customer_id}`)

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Bell, Plus, Check, Trash2, Loader2, CalendarClock, AlertCircle, UserCheck } from 'lucide-react'
+import { Bell, Plus, Check, Trash2, Loader2, CalendarClock, AlertCircle, UserCheck, Package } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,7 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
+  const [products, setProducts] = useState('')
   const [employees, setEmployees] = useState<Employee[]>([])
   const [assignTo, setAssignTo] = useState<string[]>([])
   const [isPending, startTransition] = useTransition()
@@ -51,6 +52,7 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
           due_date: dueDate || undefined,
           due_time: dueTime || undefined,
           assigned_to: t || undefined,
+          products: products.trim() || undefined,
         })
       ))
       const ok = results.filter(r => r.success).length
@@ -66,6 +68,7 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
             due_time: dueTime || null,
             done: false,
             assigned_to: t,
+            products: products.trim() || null,
             created_at: new Date().toISOString(),
           })),
           ...prev,
@@ -73,6 +76,7 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
         setTitle('')
         setDueDate('')
         setDueTime('')
+        setProducts('')
         setAssignTo([])
         toast.success(assignTo.length ? `Asignado a ${ok} empleado(s)` : 'Recordatorio agregado')
       } else {
@@ -164,6 +168,14 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
               </Button>
             </div>
 
+            {/* Productos del cliente (opcional) */}
+            <Input
+              value={products}
+              onChange={e => setProducts(e.target.value)}
+              placeholder="Productos del cliente (ej: 2 collares, 1 pulsera)"
+              className="w-full"
+            />
+
             {/* Asignar a empleados (solo ése recibe la alarma) */}
             {employees.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -215,6 +227,9 @@ export default function RemindersCard({ customerId, initialReminders, missingTab
                         <p className={`text-sm ${r.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                           {r.title}
                         </p>
+                        {r.products && (
+                          <p className={`text-[11px] flex items-center gap-1 ${r.done ? 'text-gray-300' : 'text-gray-500'}`}><Package size={11} /> {r.products}</p>
+                        )}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                           {(d || r.due_time) && (
                             <span

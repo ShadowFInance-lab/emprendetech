@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
-  getPayrollAction, savePayrollRowAction,
+  getPayrollAction, savePayrollRowAction, getPayrollCycleAction, savePayrollCycleAction,
   getDeductionsAction, saveDeductionAction, deleteDeductionAction,
   type PayrollRow, type PayrollPeriod, type PayrollDeduction,
 } from '@/lib/actions/payroll'
@@ -21,6 +21,7 @@ import { useBossGate } from './BossGate'
 const PERIODS: { id: PayrollPeriod; label: string }[] = [
   { id: 'week', label: 'Semanal' },
   { id: 'fortnight', label: 'Quincenal' }, { id: 'month', label: 'Mensual' },
+  { id: 'custom', label: 'Personalizado' },
 ]
 const QUICK_DED = ['ISR', 'Seguro Social', 'Infonavit', 'Otros']
 const WD = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -34,8 +35,9 @@ function thisWeekDates(): string[] {
   const mon = new Date(now); mon.setDate(now.getDate() - dow); mon.setHours(0, 0, 0, 0)
   return Array.from({ length: 7 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return toISO(d) })
 }
-function periodEnd(period: PayrollPeriod, startISO: string): Date {
+function periodEnd(period: PayrollPeriod, startISO: string, cycleDays = 7): Date {
   const s = new Date(startISO + 'T00:00:00')
+  if (period === 'custom') { const e = new Date(s); e.setDate(s.getDate() + Math.max(1, cycleDays) - 1); return e }
   if (period === 'week') { const e = new Date(s); e.setDate(s.getDate() + 6); return e }
   if (period === 'fortnight') return s.getDate() === 1 ? new Date(s.getFullYear(), s.getMonth(), 15) : new Date(s.getFullYear(), s.getMonth() + 1, 0)
   return new Date(s.getFullYear(), s.getMonth() + 1, 0)
@@ -52,6 +54,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const [rows, setRows] = useState<PayrollRow[]>([])
   const [staff, setStaff] = useState<Staff[]>([])
   const [periodStart, setPeriodStart] = useState('')
+  const [cycleDays, setCycleDays] = useState(7)
+  const [cycleAnchor, setCycleAnchor] = useState('')
   const [discounts, setDiscounts] = useState<Record<string, string>>({})
   const [bonuses, setBonuses] = useState<Record<string, string>>({})
   const [deductions, setDeductions] = useState<PayrollDeduction[]>([])
@@ -61,15 +65,26 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
   const { requireUnlock, gate } = useBossGate()
 
-  const refresh = useCallback(async (p: PayrollPeriod) => {
+  const refresh = useCallback(async (p: PayrollPeriod, days?: number, anchor?: string) => {
     setLoading(true)
-    const [res, ded, st] = await Promise.all([getPayrollAction(p), getDeductionsAction(), listStaffAction()])
+    const [res, ded, st] = await Promise.all([getPayrollAction(p, days, anchor || null), getDeductionsAction(), listStaffAction()])
     setRows(res.rows); setPeriodStart(res.periodStart); setDeductions(ded); setStaff(st)
     const d: Record<string, string> = {}, b: Record<string, string> = {}
     res.rows.forEach(r => { d[r.employeeId] = String(r.discount || 0); b[r.employeeId] = String(r.bonus || 0) })
     setDiscounts(d); setBonuses(b); setLoading(false)
   }, [])
-  useEffect(() => { refresh(period) }, [period, refresh, refreshSignal])
+  // Carga el ciclo personalizado guardado (cada N días + fecha ancla)
+  useEffect(() => { getPayrollCycleAction().then(c => { setCycleDays(c.days); setCycleAnchor(c.anchor || '') }) }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { refresh(period, cycleDays, cycleAnchor) }, [period, refresh, refreshSignal])
+
+  function saveCycle() {
+    startTransition(async () => {
+      const r = await savePayrollCycleAction(cycleDays, cycleAnchor || null)
+      if (r.success) { toast.success('Ciclo de nómina guardado'); refresh('custom', cycleDays, cycleAnchor) }
+      else toast.error(r.error ?? 'Error')
+    })
+  }
 
   const periodLabel = PERIODS.find(p => p.id === period)?.label ?? ''
   const week = useMemo(() => thisWeekDates(), [])
@@ -111,7 +126,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, staff, deductions, discounts, bonuses])
 
-  const nextPay = periodStart ? fmtDate(new Date(periodEnd(period, periodStart).getTime() + 86400000)) : '—'
+  const nextPay = periodStart ? fmtDate(new Date(periodEnd(period, periodStart, cycleDays).getTime() + 86400000)) : '—'
 
   function saveRow(r: PayrollRow) {
     startTransition(async () => {
@@ -250,6 +265,17 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
             <select value={period} onChange={e => setPeriod(e.target.value as PayrollPeriod)} className="w-full h-8 text-xs font-semibold text-violet-700 border border-violet-200 rounded-lg px-1.5 bg-white">
               {PERIODS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
+            {period === 'custom' && (
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-violet-700/70">Cada</span>
+                  <input type="number" min="1" value={cycleDays} onChange={e => setCycleDays(Math.max(1, parseInt(e.target.value) || 1))} className="w-12 h-7 text-xs text-center border border-violet-200 rounded-md bg-white" />
+                  <span className="text-[10px] text-violet-700/70">días, desde:</span>
+                </div>
+                <input type="date" value={cycleAnchor} onChange={e => setCycleAnchor(e.target.value)} className="w-full h-7 text-xs border border-violet-200 rounded-md px-1 bg-white" />
+                <button type="button" onClick={saveCycle} disabled={isPending} className="w-full h-7 text-xs font-semibold rounded-md bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">Aplicar ciclo</button>
+              </div>
+            )}
             <p className="text-[10px] text-violet-700/70 mt-1.5">Próximo pago: <span className="font-semibold">{nextPay}</span></p>
           </div>
         </div>

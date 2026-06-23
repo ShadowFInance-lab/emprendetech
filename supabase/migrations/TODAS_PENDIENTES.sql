@@ -577,4 +577,9 @@ ALTER TABLE stores ADD COLUMN IF NOT EXISTS online_reception_type  TEXT;
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS online_reception_id    TEXT;  -- id del empleado/staff/sucursal
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS online_reception_value TEXT;  -- nombre legible (se copia al pedido)
 
+-- ─── 041: ciclo de nómina personalizado + productos en recordatorios ───────
+ALTER TABLE stores    ADD COLUMN IF NOT EXISTS payroll_cycle_days   INTEGER NOT NULL DEFAULT 7;
+ALTER TABLE stores    ADD COLUMN IF NOT EXISTS payroll_cycle_anchor DATE;
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS products             TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.
