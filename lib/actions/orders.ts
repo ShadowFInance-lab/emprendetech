@@ -2,9 +2,9 @@
 
 import { createClient, createPublicClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
+import { ORDER_STATUSES, type OrderStatus } from '@/lib/constants/orders'
 
-export const ORDER_STATUSES = ['pendiente', 'confirmado', 'pagado', 'preparando', 'enviado', 'entregado', 'cancelado'] as const
-export type OrderStatus = typeof ORDER_STATUSES[number]
+export type { OrderStatus }
 
 export interface OnlineOrder {
   id: string

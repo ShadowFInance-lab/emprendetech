@@ -3,7 +3,8 @@
 import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { Inbox, Loader2, Phone, MapPin, CreditCard, RefreshCw } from 'lucide-react'
-import { listOnlineOrdersAction, updateOnlineOrderStatusAction, ORDER_STATUSES, type OnlineOrder, type OrderStatus } from '@/lib/actions/orders'
+import { listOnlineOrdersAction, updateOnlineOrderStatusAction, type OnlineOrder } from '@/lib/actions/orders'
+import { ORDER_STATUSES, type OrderStatus } from '@/lib/constants/orders'
 import { formatCurrency } from '@/lib/utils/format'
 
 const STATUS_STYLE: Record<OrderStatus, string> = {
@@ -75,7 +76,7 @@ export default function OrdersPanel() {
                   <p className="font-bold text-gray-900 leading-tight">{o.customer_name || 'Cliente'}</p>
                   <p className="text-[11px] text-gray-400">{o.order_no && <span className="font-mono font-semibold text-gray-500">{o.order_no}</span>}{o.order_no ? ' · ' : ''}{fmtDate(o.created_at)}</p>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${STATUS_STYLE[o.status]}`}>{cap(o.status)}</span>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${STATUS_STYLE[o.status] ?? STATUS_STYLE.pendiente}`}>{cap(o.status || 'pendiente')}</span>
               </div>
 
               {o.items && o.items.length > 0 && (
