@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.50'
-export const APP_BUILD = '2026-06-24' // v7.50: nómina tabla editable, variantes de producto, sidebar en color de marca, bg panel mejorado
+export const APP_VERSION = 'v7.51'
+export const APP_BUILD = '2026-06-24' // v7.51: bg panel fit controls, settings 2-col con preview vivo, nómina tabla editable + otros desc. + resumen compacto

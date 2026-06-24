@@ -124,8 +124,9 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
     const general = rows.reduce((s, r) => s + generalFor(baseOf(r)), 0) + staff.reduce((s, x) => s + generalFor(x.salary), 0)
     const individual = rows.reduce((s, r) => s + indiv(r), 0) + staff.reduce((s, x) => s + x.discount, 0)
     const otros = general - isr - imss + individual
+    const otros_gen = general - isr - imss
     const neto = rows.reduce((s, r) => s + netOf(r), 0) + staff.reduce((s, x) => s + netStaff(x), 0)
-    return { bruto, isr, imss, otros, desc: general + individual, neto }
+    return { bruto, isr, imss, otros, otros_gen, individual, desc: general + individual, neto }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, staff, deductions, discounts, bonuses, bases])
 
@@ -289,8 +290,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Wallet size={16} className="text-indigo-600" /> Nómina · {periodLabel} <span className="ml-2 text-[10px] font-normal text-gray-400">(edita sueldo/bonos/desc. — guarda al salir del campo)</span></p>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => requireUnlock(exportExcel)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100"><FileSpreadsheet size={13} /> Excel</button>
-            <button onClick={() => requireUnlock(exportPDF)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100"><FileText size={13} /> PDF</button>
+            <button onClick={() => requireUnlock(exportExcel)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-green-300 bg-green-600 text-white text-xs font-bold hover:bg-green-700 shadow-sm"><FileSpreadsheet size={14} /> Descargar Excel</button>
+            <button onClick={() => requireUnlock(exportPDF)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-300 bg-red-600 text-white text-xs font-bold hover:bg-red-700 shadow-sm"><FileText size={14} /> Descargar PDF</button>
           </div>
         </div>
 
@@ -310,8 +311,9 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Bonos</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100">ISR</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100 whitespace-nowrap">Seg. Social</th>
-                  <th className="text-left px-2 py-2.5 font-semibold border-b border-indigo-100">Descripción</th>
-                  <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Descuentos</th>
+                  <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100 whitespace-nowrap">Otros desc.</th>
+                  <th className="text-left px-2 py-2.5 font-semibold border-b border-indigo-100">Notas</th>
+                  <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Desc. indiv.</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100">Neto</th>
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Estado</th>
                   <th className="text-center px-3 py-2.5 font-semibold border-b border-indigo-100">Acciones</th>
@@ -370,7 +372,12 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       </td>
                       <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(baseOf(r)) > 0 ? `-${formatCurrency(isrFor(baseOf(r)))}` : '—'}</td>
                       <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(baseOf(r)) > 0 ? `-${formatCurrency(imssFor(baseOf(r)))}` : '—'}</td>
-                      <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[160px]"><span className="line-clamp-1" title={r.notes || 'Sin incidencias'}>{r.notes || 'Sin incidencias'}</span></td>
+                      <td className="px-2 py-2 text-right text-orange-600 border-b border-gray-100 whitespace-nowrap">
+                        {(generalFor(baseOf(r)) - isrFor(baseOf(r)) - imssFor(baseOf(r))) > 0.005
+                          ? `-${formatCurrency(generalFor(baseOf(r)) - isrFor(baseOf(r)) - imssFor(baseOf(r)))}`
+                          : '—'}
+                      </td>
+                      <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[120px]"><span className="line-clamp-1" title={r.notes || ''}>{r.notes || '—'}</span></td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                         <Input type="number" min="0" value={discounts[r.employeeId] ?? '0'} onChange={e => setDiscounts(d => ({ ...d, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
@@ -402,13 +409,13 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
-                    <td className="px-2 py-2 border-b border-gray-100">
-                      <div className="flex items-center justify-center gap-1">
-                        {week.map((date, i) => {
-                          const st = s.week_attendance?.[date] || 'none'
-                          const cls = st === 'present' ? 'bg-emerald-100 text-emerald-600' : st === 'justified' ? 'bg-blue-100 text-blue-500' : st === 'absent' ? 'bg-red-100 text-red-500' : 'bg-gray-100 text-gray-300'
-                          return <span key={date} title={`${WD[i]} ${date.slice(5)}`} className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] ${cls}`}>{st === 'present' ? <Check size={11} /> : st === 'justified' ? <Check size={10} /> : st === 'absent' ? <X size={11} /> : '·'}</span>
-                        })}
+                    <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <Input type="number" min="0" max="31" value={s.days_worked}
+                          onChange={e => setStaffField(s.id, { days_worked: parseInt(e.target.value) || 0 })}
+                          onBlur={() => saveStaffRow(s)}
+                          className="w-14 h-7 text-center text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                        <span className="text-[10px] text-gray-400">días</span>
                       </div>
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
@@ -419,7 +426,12 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     </td>
                     <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(s.salary) > 0 ? `-${formatCurrency(isrFor(s.salary))}` : '—'}</td>
                     <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(s.salary) > 0 ? `-${formatCurrency(imssFor(s.salary))}` : '—'}</td>
-                    <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[160px]"><span className="line-clamp-1" title={s.note || '—'}>{s.note || '—'}</span></td>
+                    <td className="px-2 py-2 text-right text-orange-600 border-b border-gray-100 whitespace-nowrap">
+                      {(generalFor(s.salary) - isrFor(s.salary) - imssFor(s.salary)) > 0.005
+                        ? `-${formatCurrency(generalFor(s.salary) - isrFor(s.salary) - imssFor(s.salary))}`
+                        : '—'}
+                    </td>
+                    <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[120px]"><span className="line-clamp-1" title={s.note || ''}>{s.note || '—'}</span></td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <Input type="number" min="0" value={s.discount} onChange={e => setStaffField(s.id, { discount: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
@@ -436,16 +448,17 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-indigo-50/70 font-semibold text-gray-800">
-                  <td className="px-3 py-2.5 sticky left-0 bg-indigo-50 z-10" colSpan={9}>Totales · {totalCount} empleado(s)</td>
-                  <td className="px-2 py-2.5 text-right">{formatCurrency(totals.bruto)}</td>
-                  <td className="px-2 py-2.5" />
-                  <td className="px-2 py-2.5 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
-                  <td className="px-2 py-2.5 text-right text-rose-600">-{formatCurrency(totals.imss)}</td>
-                  <td className="px-2 py-2.5" />
-                  <td className="px-2 py-2.5" />
-                  <td className="px-2 py-2.5 text-right text-indigo-700">{formatCurrency(totals.neto)}</td>
-                  <td className="px-2 py-2.5" /><td className="px-3 py-2.5" />
+                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-xs">
+                  <td className="px-3 py-2 sticky left-0 bg-indigo-50 z-10" colSpan={9}>Totales · {totalCount} empleado(s)</td>
+                  <td className="px-2 py-2 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
+                  <td className="px-2 py-2" />
+                  <td className="px-2 py-2 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
+                  <td className="px-2 py-2 text-right text-rose-600">-{formatCurrency(totals.imss)}</td>
+                  <td className="px-2 py-2 text-right text-orange-600">{totals.otros_gen > 0.005 ? `-${formatCurrency(totals.otros_gen)}` : '—'}</td>
+                  <td className="px-2 py-2" />
+                  <td className="px-2 py-2" />
+                  <td className="px-2 py-2 text-right text-indigo-700 font-bold">{formatCurrency(totals.neto)}</td>
+                  <td className="px-2 py-2" /><td className="px-3 py-2" />
                 </tr>
               </tfoot>
             </table>
@@ -453,46 +466,53 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
         )}
       </div>
 
-      {/* Descuentos generales + Resumen (solo en la vista completa "Ver Nómina") */}
+      {/* Descuentos generales + tira resumen compacta */}
       {!compact && (
-      <div className="grid lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Receipt size={16} className="text-indigo-600" /> Descuentos generales</p>
-            <button onClick={() => addDed()} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"><Plus size={14} /> Agregar</button>
-          </div>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {QUICK_DED.map(c => (
-              <button key={c} onClick={() => addDed(c)} className="text-[11px] px-2 py-0.5 rounded-full border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600">+ {c}</button>
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Receipt size={16} className="text-indigo-600" /> Descuentos generales</p>
+          <button onClick={() => addDed()} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"><Plus size={14} /> Agregar</button>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_DED.map(c => (
+            <button key={c} onClick={() => addDed(c)} className="text-[11px] px-2 py-0.5 rounded-full border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600">+ {c}</button>
+          ))}
+        </div>
+        {deductions.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-3">Sin descuentos generales. Usa los botones de arriba (ISR, Seguro Social, Infonavit…).</p>
+        ) : (
+          <div className="space-y-2">
+            {deductions.map((d, i) => (
+              <div key={d.id || `new-${i}`} className="flex items-center gap-1.5">
+                <Input value={d.concept} onChange={e => setDed(i, { concept: e.target.value })} placeholder="Concepto" className="h-9 text-sm flex-1 min-w-0" />
+                <select value={d.kind} onChange={e => setDed(i, { kind: e.target.value as 'percent' | 'amount' })} className="h-9 text-xs border border-gray-200 rounded-lg px-1.5 bg-white"><option value="percent">%</option><option value="amount">$</option></select>
+                <Input type="number" min="0" value={d.value} onChange={e => setDed(i, { value: parseFloat(e.target.value) || 0 })} className="h-9 text-sm w-20 text-right" />
+                <button onClick={() => saveDed(i)} disabled={isPending} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50 p-1" title="Guardar"><Save size={15} /></button>
+                <button onClick={() => removeDed(i)} disabled={isPending} className="text-gray-300 hover:text-red-500 p-1" title="Eliminar"><Trash2 size={15} /></button>
+              </div>
             ))}
           </div>
-          {deductions.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Sin descuentos generales. Usa los botones de arriba (ISR, Seguro Social, Infonavit…).</p>
-          ) : (
-            <div className="space-y-2">
-              {deductions.map((d, i) => (
-                <div key={d.id || `new-${i}`} className="flex items-center gap-1.5">
-                  <Input value={d.concept} onChange={e => setDed(i, { concept: e.target.value })} placeholder="Concepto" className="h-9 text-sm flex-1 min-w-0" />
-                  <select value={d.kind} onChange={e => setDed(i, { kind: e.target.value as 'percent' | 'amount' })} className="h-9 text-xs border border-gray-200 rounded-lg px-1.5 bg-white"><option value="percent">%</option><option value="amount">$</option></select>
-                  <Input type="number" min="0" value={d.value} onChange={e => setDed(i, { value: parseFloat(e.target.value) || 0 })} className="h-9 text-sm w-20 text-right" />
-                  <button onClick={() => saveDed(i)} disabled={isPending} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50 p-1" title="Guardar"><Save size={15} /></button>
-                  <button onClick={() => removeDed(i)} disabled={isPending} className="text-gray-300 hover:text-red-500 p-1" title="Eliminar"><Trash2 size={15} /></button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
-          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-3"><BadgeDollarSign size={16} className="text-indigo-600" /> Resumen de nómina</p>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between text-sm"><span className="text-gray-500">Total bruto (sueldo + bonos)</span><span className="font-semibold text-gray-900">{formatCurrency(totals.bruto)}</span></div>
-            <div className="flex items-center justify-between text-sm"><span className="text-gray-500">Total ISR</span><span className="font-medium text-rose-600">-{formatCurrency(totals.isr)}</span></div>
-            <div className="flex items-center justify-between text-sm"><span className="text-gray-500">Total Seguro Social</span><span className="font-medium text-rose-600">-{formatCurrency(totals.imss)}</span></div>
-            <div className="flex items-center justify-between text-sm"><span className="text-gray-500">Otros descuentos</span><span className="font-medium text-rose-600">-{formatCurrency(totals.otros)}</span></div>
-            <div className="flex items-center justify-between text-sm border-t border-gray-100 pt-2"><span className="text-gray-500">Total descuentos</span><span className="font-medium text-rose-600">-{formatCurrency(totals.desc)}</span></div>
-            <div className="flex items-center justify-between rounded-xl bg-indigo-50 px-3 py-2.5 mt-1"><span className="text-sm font-semibold text-indigo-900">Total neto a pagar</span><span className="text-lg font-bold text-indigo-700">{formatCurrency(totals.neto)}</span></div>
-          </div>
+        {/* Tira resumen compacta */}
+        <div className="border-t border-gray-100 pt-3 flex flex-wrap items-center gap-3">
+          <BadgeDollarSign size={15} className="text-indigo-500 shrink-0" />
+          {[
+            { l: 'Bruto', v: formatCurrency(totals.bruto), cls: 'text-gray-900' },
+            { l: 'ISR', v: `-${formatCurrency(totals.isr)}`, cls: 'text-rose-600' },
+            { l: 'IMSS', v: `-${formatCurrency(totals.imss)}`, cls: 'text-rose-600' },
+            ...(totals.otros_gen > 0.005 ? [{ l: 'Otros desc.', v: `-${formatCurrency(totals.otros_gen)}`, cls: 'text-orange-500' }] : []),
+            ...(totals.individual > 0.005 ? [{ l: 'Desc. indiv.', v: `-${formatCurrency(totals.individual)}`, cls: 'text-amber-600' }] : []),
+          ].map((item, i) => (
+            <span key={i} className="flex items-baseline gap-1 text-xs">
+              <span className="text-gray-400">{item.l}:</span>
+              <span className={`font-semibold ${item.cls}`}>{item.v}</span>
+            </span>
+          ))}
+          <span className="ml-auto flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-1.5">
+            <span className="text-xs font-semibold text-indigo-900">Neto total:</span>
+            <span className="text-base font-bold text-indigo-700">{formatCurrency(totals.neto)}</span>
+          </span>
         </div>
       </div>
       )}

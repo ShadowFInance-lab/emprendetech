@@ -594,4 +594,7 @@ ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_url TEXT;
 ALTER TABLE products   ADD COLUMN IF NOT EXISTS variants     JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS variant_text TEXT;
 
+-- ─── 044: Ajuste de imagen de fondo del panel admin ─────────────────────────
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_fit TEXT NOT NULL DEFAULT 'cover';
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

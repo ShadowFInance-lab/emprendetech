@@ -18,13 +18,7 @@ export default async function SettingsPage() {
   const plan = ((profile?.plan as Plan) ?? 'free')
 
   return (
-    <div className="max-w-3xl space-y-6 pb-28">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configuración de tienda</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Personaliza cómo aparece tu tienda en el catálogo público
-        </p>
-      </div>
+    <div className="pb-28">
       <StoreSettingsForm store={store} plan={plan} />
     </div>
   )

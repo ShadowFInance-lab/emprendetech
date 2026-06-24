@@ -93,6 +93,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [bgFit, setBgFit] = useState(sx.bg_fit || 'cover')
   const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
   const [dashboardBgUrl, setDashboardBgUrl] = useState(sx.dashboard_bg_url || '')
+  const [dashboardBgFit, setDashboardBgFit] = useState((sx as {dashboard_bg_fit?: string|null}).dashboard_bg_fit || 'cover')
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
   const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
   const [buttonStyle, setButtonStyle] = useState(store.button_style ?? 'redondeado')
@@ -193,6 +194,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('bg_fit', bgFit)
     formData.set('online_sales', String(onlineSales))
     formData.set('dashboard_bg_url', dashboardBgUrl)
+    formData.set('dashboard_bg_fit', dashboardBgFit)
     formData.set('currency', currency)
     formData.set('bg_color', bgColor)
     formData.set('button_style', buttonStyle)
@@ -247,9 +249,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-24 max-w-5xl">
+    <form onSubmit={handleSubmit} className="pb-24">
       {/* Encabezado */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-6">
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-lg shadow-slate-500/20">
           <StoreIcon size={22} className="text-white" />
         </div>
@@ -258,6 +260,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           <p className="text-gray-500 text-sm">Personaliza tu tienda, diseño y redes sociales</p>
         </div>
       </div>
+
+      {/* Grid principal: settings (izq) + preview sticky (der) */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_310px] gap-6 items-start">
+      <div className="space-y-6 min-w-0">
 
       {/* Redes sociales — fila de tarjetas ARRIBA (como la referencia) */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
@@ -685,52 +691,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 </div>
               </div>
 
-              {/* Previews en vivo grandes */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs font-semibold text-gray-600 mb-1">PREVIEW CATÁLOGO EN VIVO</div>
-                  <div className="rounded-2xl border-2 border-gray-300 overflow-hidden shadow-sm">
-                    <div className="px-4 py-4 text-white text-base font-bold flex items-center justify-between" style={{background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`}}>
-                      <span>{store.name || 'Mi Tienda'}</span>
-                      <span className="text-[10px] px-2 py-0.5 bg-white/20 rounded-full">Catálogo</span>
-                    </div>
-                    <div className="p-5" style={{backgroundColor: bgColor}}>
-                      <div className="grid grid-cols-2 gap-4">
-                        {[1,2].map(n => (
-                          <div key={n} className="bg-white rounded-2xl border overflow-hidden text-sm shadow-sm">
-                            <div className="h-16 bg-gradient-to-br from-gray-100 to-gray-200" />
-                            <div className="p-3">
-                              <div className="font-semibold text-gray-800">Producto Ejemplo {n}</div>
-                              <div className="text-lg font-extrabold" style={{color: primaryColor}}>$450.00</div>
-                              <div className="mt-3 text-center text-white text-xs py-1.5 rounded-xl font-bold" style={{backgroundColor: buttonColor}}>Agregar al carrito</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-xs font-semibold text-gray-600 mb-1">PREVIEW PANEL ADMIN EN VIVO</div>
-                  <div className="rounded-2xl border-2 border-gray-300 overflow-hidden shadow-sm flex text-sm" style={{minHeight: '180px'}}>
-                    <div className="w-28 p-3 text-white" style={{backgroundColor: panelPrimary}}>
-                      <div className="text-xs font-bold mb-2 opacity-80">MENÚ</div>
-                      <div className="text-xs py-1 px-2 bg-white/20 rounded mb-1">Dashboard</div>
-                      <div className="text-xs py-1 px-2" style={{backgroundColor: panelButton}}>Ventas</div>
-                      <div className="text-xs py-1 px-2 mt-1">Empleados</div>
-                    </div>
-                    <div className="flex-1 p-3 bg-gray-100">
-                      <div className="h-6 rounded mb-2" style={{background: `linear-gradient(90deg, ${panelPrimary}, ${panelSecondary})`}} />
-                      <div className="bg-white rounded-lg p-3 text-sm shadow">
-                        <div className="font-semibold mb-1">Resumen del día</div>
-                        <button className="mt-1 w-full py-1.5 text-white rounded-lg text-xs font-bold" style={{backgroundColor: panelButton}}>Ver detalles</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Fondo del catálogo + estilo de botones — libres para todos */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <div>
@@ -778,13 +738,13 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   </div>
                   {/* Imagen de fondo del Dashboard / Panel Admin */}
                   <div className="pt-2 border-t border-gray-100 mt-2">
-                    <Label className="text-xs text-gray-500">Imagen de fondo del panel admin (dashboard)</Label>
+                    <Label className="text-xs text-gray-500">Imagen de fondo del panel admin</Label>
                     <div className="mt-1.5 flex items-center gap-2">
                       {dashboardBgUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={dashboardBgUrl} alt="Fondo dashboard" className="w-12 h-9 rounded-lg object-cover ring-1 ring-black/10" />
                       ) : (
-                        <span className="w-12 h-9 rounded-lg bg-gray-100 ring-1 ring-black/10" />
+                        <span className="w-12 h-9 rounded-lg bg-gray-100 ring-1 ring-black/10 flex items-center justify-center text-gray-300 text-[9px]">Sin imagen</span>
                       )}
                       <label className="text-xs text-blue-600 hover:underline cursor-pointer inline-flex items-center gap-1">
                         {uploadingDashboardBg ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
@@ -796,7 +756,20 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                         <button type="button" onClick={() => setDashboardBgUrl('')} className="text-[11px] text-gray-400 hover:text-red-500">Quitar</button>
                       )}
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Se aplica como fondo sutil del panel (con overlay para legibilidad).</p>
+                    {dashboardBgUrl && (
+                      <div className="mt-2">
+                        <Label className="text-[11px] text-gray-400">Ajuste del fondo del panel</Label>
+                        <div className="flex gap-1.5 mt-1">
+                          {[{ v: 'cover', l: 'Cubrir' }, { v: 'contain', l: 'Contener' }, { v: 'center', l: 'Centrar' }].map(o => (
+                            <button key={o.v} type="button" onClick={() => setDashboardBgFit(o.v)}
+                              className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${dashboardBgFit === o.v ? 'border-indigo-500 bg-indigo-50 text-indigo-600' : 'border-gray-200 text-gray-500 hover:border-indigo-300'}`}>
+                              {o.l}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-gray-400 mt-1">Se aplica con overlay semitransparente para legibilidad.</p>
                   </div>
                   <div>
                     <Label className="text-xs text-gray-500">Estilo de botones</Label>
@@ -814,41 +787,98 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   </div>
                 </div>
 
-              {/* Preview GRANDE del catálogo — con etiquetas claras */}
-              <div>
-                <Label className="text-sm font-bold text-gray-700 mb-2 block">🛍️ Vista previa del Catálogo Público (con tus colores)</Label>
-                <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-md">
-                  <div className="px-5 py-4 flex items-center justify-between"
-                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
-                    <span className="text-white font-bold text-lg">{store.name}</span>
-                    <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full">WhatsApp</span>
-                  </div>
-                  <div className="p-5 grid grid-cols-2 gap-3" style={{
-                    backgroundColor: bgColor,
-                    ...(backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
-                  }}>
-                    {[1, 2].map(i => (
-                      <div key={i} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                        <div className="h-20 bg-gradient-to-br from-gray-100 to-gray-200" />
-                        <div className="p-2.5">
-                          <p className="text-xs font-medium text-gray-800">Producto {i}</p>
-                          <p className="text-base font-extrabold" style={{ color: primaryColor }}>$450.00</p>
-                          <span className="block text-center text-white text-[11px] font-bold py-1.5 mt-1.5"
-                            style={{ backgroundColor: buttonColor, borderRadius: btnRadius }}>
-                            Pedir
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-[11px] text-gray-400 mt-1.5 text-center">
-                  Esta vista previa es solo visual — nunca cobra ni limita.
-                </p>
-              </div>
             </CardContent>
           </Card>
         </div>
+
+      </div>{/* fin columna izquierda */}
+
+      {/* ─── COLUMNA DERECHA: Preview sticky en vivo ─── */}
+      <div className="hidden xl:block">
+        <div className="sticky top-4 space-y-3">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Vista previa en vivo</p>
+
+          {/* Preview catálogo */}
+          <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-md">
+            {/* Header de la tienda */}
+            <div className="px-3 py-2.5 flex items-center justify-between"
+              style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+              <span className="text-white font-bold text-sm truncate max-w-[140px]">{store.name}</span>
+              <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-medium shrink-0">Catálogo</span>
+            </div>
+            {/* Productos */}
+            <div className="p-2.5" style={{
+              backgroundColor: bgColor,
+              ...(backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: bgFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}),
+            }}>
+              {skin === 'moderna' ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {[1, 2].map(n => (
+                    <div key={n} className="bg-white rounded-2xl overflow-hidden shadow-md border border-gray-100">
+                      <div className="h-12" style={{ background: `linear-gradient(135deg, ${primaryColor}30, ${secondaryColor}20)` }} />
+                      <div className="p-2">
+                        <div className="text-[10px] font-semibold text-gray-800 leading-tight">Producto {n}</div>
+                        <div className="text-sm font-extrabold mt-0.5" style={{ color: primaryColor }}>$450</div>
+                        <div className="mt-1.5 text-center text-white text-[9px] font-bold py-1" style={{ backgroundColor: buttonColor, borderRadius: btnRadius }}>Agregar</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white/90 rounded-xl overflow-hidden divide-y divide-gray-100">
+                  {[1, 2].map(n => (
+                    <div key={n} className="flex items-center gap-2 p-2">
+                      <div className="w-10 h-10 bg-gray-100 flex-shrink-0 rounded" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-medium text-gray-800">Producto {n}</div>
+                        <div className="text-xs font-bold" style={{ color: primaryColor }}>$450</div>
+                      </div>
+                      <button type="button" className="text-[10px] font-bold px-2 py-0.5 border" style={{ color: buttonColor, borderColor: buttonColor, borderRadius: btnRadius }}>+</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mt-2 text-center text-[9px] bg-white/70 rounded-lg py-0.5 text-gray-400">
+                Estilo: <span className="font-semibold text-gray-600">{skin === 'moderna' ? 'Moderna' : 'Minimalista'}</span>
+                {' · '}
+                {FONTS.find(f => f.id === fontFamily)?.label?.split(' ')[0] || fontFamily}
+              </div>
+            </div>
+          </div>
+
+          {/* Preview panel admin */}
+          <div className="rounded-2xl overflow-hidden border-2 border-gray-200 shadow-md">
+            <div className="flex" style={{ minHeight: '130px' }}>
+              <div className="w-20 p-2 text-white flex-shrink-0 flex flex-col gap-1" style={{ backgroundColor: panelPrimary }}>
+                <div className="text-[9px] font-bold opacity-60 mb-0.5">MENÚ</div>
+                <div className="text-[9px] py-0.5 px-1 bg-white/20 rounded">Dashboard</div>
+                <div className="text-[9px] py-0.5 px-1 rounded font-medium" style={{ backgroundColor: panelButton }}>Ventas</div>
+                <div className="text-[9px] py-0.5 px-1 opacity-70">Empleados</div>
+                <div className="text-[9px] py-0.5 px-1 opacity-70">Config</div>
+              </div>
+              <div className="flex-1 p-2 bg-gray-50">
+                <div className="h-4 rounded mb-2" style={{ background: `linear-gradient(90deg, ${panelPrimary}, ${panelSecondary})` }} />
+                <div className="bg-white rounded-lg p-2 shadow-sm">
+                  <div className="text-[10px] font-semibold text-gray-800 mb-1">Resumen del día</div>
+                  <div className="grid grid-cols-2 gap-1 mb-1.5">
+                    {['Ventas', 'Empleados'].map(l => (
+                      <div key={l} className="text-[9px] bg-gray-50 rounded p-1 text-gray-500">{l}: <strong>–</strong></div>
+                    ))}
+                  </div>
+                  <div className="py-1 text-center text-white text-[9px] font-bold rounded" style={{ backgroundColor: panelButton }}>Ver detalles</div>
+                </div>
+                {dashboardBgUrl && (
+                  <div className="mt-1 text-[9px] text-indigo-500 text-center">✓ Fondo de panel activo ({dashboardBgFit})</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-gray-400 text-center">Los colores cambian en tiempo real</p>
+        </div>
+      </div>
+
+      </div>{/* fin grid xl:grid-cols-[1fr_310px] */}
 
       {/* Modal de conexión de red social (sin campo de URL inline) */}
       {socialModal && (
