@@ -135,6 +135,21 @@ export async function getPayrollAction(period: PayrollPeriod, cycleDays?: number
   }
 }
 
+/** Jefe: actualiza el salario base de un empleado (employee_meta.salary). */
+export async function saveEmployeeSalaryAction(employeeId: string, salary: number): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+    const { data: prof } = await supabase.from('profiles').select('boss_id').eq('id', employeeId).maybeSingle()
+    if (prof?.boss_id !== user.id) return { success: false, error: 'Sin autorización' }
+    const { error } = await supabase.from('employee_meta')
+      .upsert({ employee_id: employeeId, salary: Math.max(0, salary || 0) }, { onConflict: 'employee_id' })
+    if (error) return { success: false, error: 'No se pudo guardar el salario' }
+    return { success: true }
+  } catch { return { success: false, error: 'Error' } }
+}
+
 export async function savePayrollDiscountAction(employeeId: string, periodStart: string, discount: number): Promise<ActionResult> {
   try {
     const supabase = await createClient()

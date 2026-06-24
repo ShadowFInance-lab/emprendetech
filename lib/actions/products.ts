@@ -102,6 +102,11 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
     slug = `${baseSlug}-${attempts}`
   }
 
+  // Variantes opcionales (JSON)
+  let variantsJson: unknown[] = []
+  const variantsRaw = formData.get('variants') as string | null
+  if (variantsRaw) { try { variantsJson = JSON.parse(variantsRaw) } catch { variantsJson = [] } }
+
   const { data: product, error } = await supabase
     .from('products')
     .insert({
@@ -118,6 +123,7 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
       is_featured: parsed.data.is_featured ?? false,
       is_new: parsed.data.is_new ?? true,
       is_active: parsed.data.is_active ?? true,
+      variants: variantsJson,
     })
     .select('id')
     .single()
@@ -163,6 +169,10 @@ export async function updateProductAction(
   const parsed = ProductSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
+  let variantsJsonUpd: unknown[] = []
+  const variantsRawUpd = formData.get('variants') as string | null
+  if (variantsRawUpd) { try { variantsJsonUpd = JSON.parse(variantsRawUpd) } catch { variantsJsonUpd = [] } }
+
   const { error } = await supabase
     .from('products')
     .update({
@@ -177,6 +187,7 @@ export async function updateProductAction(
       is_featured: parsed.data.is_featured ?? false,
       is_new: parsed.data.is_new ?? false,
       is_active: parsed.data.is_active ?? true,
+      variants: variantsJsonUpd,
     })
     .eq('id', productId)
     .eq('store_id', store.id) // seguridad: solo productos de su tienda

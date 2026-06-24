@@ -14,14 +14,16 @@ export interface CartItem {
   price: number
   qty: number
   image_url: string | null
+  variant_text: string | null
 }
 export interface CartView { items: CartItem[] }
 
-interface RawItem { id: string; product_id: string | null; name: string; price: number | string; qty: number; image_url: string | null }
+interface RawItem { id: string; product_id: string | null; name: string; price: number | string; qty: number; image_url: string | null; variant_text?: string | null }
 function mapItems(rows: RawItem[] | null): CartItem[] {
   return (rows ?? []).map(r => ({
     id: r.id, product_id: r.product_id ?? null, name: r.name,
     price: Number(r.price) || 0, qty: Number(r.qty) || 0, image_url: r.image_url ?? null,
+    variant_text: r.variant_text ?? null,
   }))
 }
 
@@ -50,6 +52,7 @@ export async function addToCartAction(
   storeId: string,
   item: { product_id: string; name: string; price: number; image_url?: string | null },
   qty = 1,
+  variantText?: string | null,
 ): Promise<CartView> {
   try {
     const supabase = createPublicClient()
@@ -63,16 +66,18 @@ export async function addToCartAction(
       id = cart.id as string
       const cookieStore = await cookies()
       const isProd = process.env.NODE_ENV === 'production'
-      cookieStore.set(COOKIE, id, { 
-        path: '/', 
-        maxAge: MAX_AGE, 
+      cookieStore.set(COOKIE, id, {
+        path: '/',
+        maxAge: MAX_AGE,
         sameSite: 'lax',
-        secure: isProd 
+        secure: isProd
       })
     }
-    // Si ya existe el mismo producto, suma cantidad.
-    const { data: existing, error: existErr } = await supabase
-      .from('cart_items').select('id, qty').eq('cart_id', id).eq('product_id', item.product_id).maybeSingle()
+    // Si ya existe el mismo producto CON la misma variante, suma cantidad.
+    let existQuery = supabase.from('cart_items').select('id, qty').eq('cart_id', id).eq('product_id', item.product_id)
+    if (variantText) existQuery = existQuery.eq('variant_text', variantText)
+    else existQuery = existQuery.is('variant_text', null)
+    const { data: existing, error: existErr } = await existQuery.maybeSingle()
     if (existErr) {
       console.error('[cart] check existing error', existErr)
       return { items: [] }
@@ -87,6 +92,7 @@ export async function addToCartAction(
       const { error: insErr } = await supabase.from('cart_items').insert({
         cart_id: id, product_id: item.product_id, name: item.name,
         price: item.price, qty, image_url: item.image_url ?? null,
+        variant_text: variantText ?? null,
       })
       if (insErr) {
         console.error('[cart] insert item error', insErr)

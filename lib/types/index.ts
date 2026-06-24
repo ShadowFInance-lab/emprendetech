@@ -76,6 +76,8 @@ export interface ProductImage {
   created_at: string
 }
 
+export interface ProductVariantGroup { name: string; values: string[] }
+
 export interface Product {
   id: string
   store_id: string
@@ -95,6 +97,7 @@ export interface Product {
   is_new: boolean
   total_sold: number
   sort_order: number
+  variants: ProductVariantGroup[]
   created_at: string
   updated_at: string
   // Relaciones

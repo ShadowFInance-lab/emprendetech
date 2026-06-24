@@ -324,6 +324,7 @@ export default function ModernaSkin({
                         <AddToCartButtons
                           variant="compact"
                           product={{ product_id: product.id, name: product.name, price: product.sale_price, image_url: primaryImage?.url ?? null }}
+                          productVariants={product.variants}
                         />
                       )}
                       {showWA && product.stock > 0 && (

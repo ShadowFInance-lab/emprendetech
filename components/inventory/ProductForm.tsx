@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  Loader2, Save, Trash2, ScanLine, ImagePlus, Tag, Package, Sparkles, Box,
+  Loader2, Save, Trash2, ScanLine, ImagePlus, Tag, Package, Sparkles, Box, Layers, Plus, X as XIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,7 @@ import {
   deleteProductAction,
   uploadProductImageAction,
 } from '@/lib/actions/products'
-import type { Product, Category } from '@/lib/types'
+import type { Product, Category, ProductVariantGroup } from '@/lib/types'
 import { SUPPORTED_CURRENCIES } from '@/lib/utils/format'
 
 interface ProductFormProps {
@@ -60,6 +60,9 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
   const [isNew, setIsNew] = useState(product?.is_new ?? true)
   const [isActive, setIsActive] = useState(product?.is_active ?? true)
 
+  const [variantGroups, setVariantGroups] = useState<ProductVariantGroup[]>(
+    Array.isArray(product?.variants) ? product.variants : []
+  )
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [photoProgress, setPhotoProgress] = useState<{ done: number; total: number } | null>(null)
   const [scannerOpen, setScannerOpen] = useState(false)
@@ -77,6 +80,7 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
     formData.set('is_active', isActive.toString())
     formData.set('category_id', categoryId)
     formData.set('currency', currency)
+    formData.set('variants', JSON.stringify(variantGroups))
 
     startTransition(async () => {
       if (isEditing) {
@@ -267,6 +271,57 @@ export default function ProductForm({ product, categories }: ProductFormProps) {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* VARIANTES */}
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5">
+            <SectionHeader
+              icon={<Layers size={18} className="text-white" />}
+              color="bg-gradient-to-br from-violet-500 to-purple-600"
+              title="Variantes (opcional)"
+              hint="Colores, tallas, materiales... El cliente elige antes de comprar."
+            />
+            <div className="space-y-3">
+              {variantGroups.map((group, gi) => (
+                <div key={gi} className="border border-gray-200 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={group.name}
+                      onChange={e => setVariantGroups(gs => gs.map((g, i) => i === gi ? { ...g, name: e.target.value } : g))}
+                      placeholder="Nombre del grupo (ej: Color, Talla)"
+                      className="flex-1 h-8 rounded-lg border border-gray-200 px-3 text-sm bg-white focus:outline-none focus:border-violet-400"
+                    />
+                    <button type="button" onClick={() => setVariantGroups(gs => gs.filter((_, i) => i !== gi))}
+                      className="text-gray-300 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    {group.values.map((val, vi) => (
+                      <span key={vi} className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 text-xs rounded-full px-2.5 py-0.5 font-medium">
+                        {val}
+                        <button type="button" onClick={() => setVariantGroups(gs => gs.map((g, i) => i === gi ? { ...g, values: g.values.filter((_, j) => j !== vi) } : g))}
+                          className="text-violet-400 hover:text-red-500 ml-0.5"><XIcon size={10} /></button>
+                      </span>
+                    ))}
+                    <input
+                      placeholder="+ valor y Enter"
+                      className="h-7 rounded-full border border-dashed border-gray-300 px-3 text-xs text-gray-500 focus:outline-none focus:border-violet-400 min-w-[100px] bg-white"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const v = e.currentTarget.value.trim()
+                          if (v) { setVariantGroups(gs => gs.map((g, i) => i === gi ? { ...g, values: [...g.values, v] } : g)); e.currentTarget.value = '' }
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <button type="button"
+                onClick={() => setVariantGroups(gs => [...gs, { name: '', values: [] }])}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-800">
+                <Plus size={15} /> Agregar grupo de variante
+              </button>
             </div>
           </div>
         </div>

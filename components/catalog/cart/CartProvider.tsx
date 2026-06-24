@@ -22,8 +22,8 @@ interface CartContext {
   subtotal: number
   loading: boolean
   pending: boolean
-  add: (p: ProductForCart) => void
-  buyNow: (p: ProductForCart) => void
+  add: (p: ProductForCart, variantText?: string) => void
+  buyNow: (p: ProductForCart, variantText?: string) => void
   setQty: (id: string, qty: number) => void
   remove: (id: string) => void
   clear: () => void
@@ -75,9 +75,9 @@ export function CartProvider({
     getCartAction().then(c => { setItems(c.items); setLoading(false) })
   }, [enabled])
 
-  function add(p: ProductForCart) {
+  function add(p: ProductForCart, variantText?: string) {
     startTransition(async () => {
-      const c = await addToCartAction(storeId, p, 1)
+      const c = await addToCartAction(storeId, p, 1, variantText ?? null)
       setItems(c.items)
       if (c.items.length > 0) {
         toast.success('Agregado al carrito')
@@ -86,9 +86,9 @@ export function CartProvider({
       }
     })
   }
-  function buyNow(p: ProductForCart) {
+  function buyNow(p: ProductForCart, variantText?: string) {
     startTransition(async () => {
-      const c = await addToCartAction(storeId, p, 1)
+      const c = await addToCartAction(storeId, p, 1, variantText ?? null)
       setItems(c.items)
       if (c.items.length > 0) {
         setView('checkout')

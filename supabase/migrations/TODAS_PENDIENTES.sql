@@ -589,4 +589,9 @@ ALTER TABLE reminders ADD COLUMN IF NOT EXISTS products             TEXT;
 -- ─── 042: imagen de fondo del panel admin (dashboard) ──────────────────────
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_url TEXT;
 
+-- ─── 043: Variantes de producto + campo de variante en carrito ─────────────
+-- variants: [{"name":"Color","values":["Rojo","Azul"]},{"name":"Talla","values":["S","M","L"]}]
+ALTER TABLE products   ADD COLUMN IF NOT EXISTS variants     JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS variant_text TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

@@ -9,7 +9,7 @@ import {
 import { Input } from '@/components/ui/input'
 import {
   getPayrollAction, savePayrollRowAction, getPayrollCycleAction, savePayrollCycleAction,
-  getDeductionsAction, saveDeductionAction, deleteDeductionAction,
+  getDeductionsAction, saveDeductionAction, deleteDeductionAction, saveEmployeeSalaryAction,
   type PayrollRow, type PayrollPeriod, type PayrollDeduction,
 } from '@/lib/actions/payroll'
 import { listStaffAction, saveStaffAction, type Staff } from '@/lib/actions/staff'
@@ -59,6 +59,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const [cycleAnchor, setCycleAnchor] = useState('')
   const [discounts, setDiscounts] = useState<Record<string, string>>({})
   const [bonuses, setBonuses] = useState<Record<string, string>>({})
+  const [bases, setBases] = useState<Record<string, string>>({})
   const [deductions, setDeductions] = useState<PayrollDeduction[]>([])
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
@@ -70,9 +71,9 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
     setLoading(true)
     const [res, ded, st] = await Promise.all([getPayrollAction(p, days, anchor || null), getDeductionsAction(), listStaffAction()])
     setRows(res.rows); setPeriodStart(res.periodStart); setDeductions(ded); setStaff(st)
-    const d: Record<string, string> = {}, b: Record<string, string> = {}
-    res.rows.forEach(r => { d[r.employeeId] = String(r.discount || 0); b[r.employeeId] = String(r.bonus || 0) })
-    setDiscounts(d); setBonuses(b); setLoading(false)
+    const d: Record<string, string> = {}, b: Record<string, string> = {}, bs: Record<string, string> = {}
+    res.rows.forEach(r => { d[r.employeeId] = String(r.discount || 0); b[r.employeeId] = String(r.bonus || 0); bs[r.employeeId] = String(r.base || 0) })
+    setDiscounts(d); setBonuses(b); setBases(bs); setLoading(false)
   }, [])
   // Carga el ciclo personalizado guardado (cada N días + fecha ancla)
   useEffect(() => { getPayrollCycleAction().then(c => { setCycleDays(c.days); setCycleAnchor(c.anchor || '') }) }, [])
@@ -99,9 +100,10 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const isrFor = (base: number) => amtOf(isrDed, base)
   const imssFor = (base: number) => amtOf(imssDed, base)
 
+  const baseOf = (r: PayrollRow) => parseFloat(bases[r.employeeId] ?? String(r.base)) || r.base
   const indiv = (r: PayrollRow) => parseFloat(discounts[r.employeeId] ?? '0') || 0
   const bonoOf = (r: PayrollRow) => parseFloat(bonuses[r.employeeId] ?? '0') || 0
-  const netOf = (r: PayrollRow) => Math.max(0, r.base + bonoOf(r) - generalFor(r.base) - indiv(r))
+  const netOf = (r: PayrollRow) => Math.max(0, baseOf(r) + bonoOf(r) - generalFor(baseOf(r)) - indiv(r))
   const netStaff = (s: Staff) => Math.max(0, s.salary + s.bonus - generalFor(s.salary) - s.discount)
   const totalCount = rows.length + staff.length
 
@@ -116,16 +118,16 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   }, [rows, staff, deductions, discounts, bonuses])
 
   const totals = useMemo(() => {
-    const bruto = rows.reduce((s, r) => s + r.base + bonoOf(r), 0) + staff.reduce((s, x) => s + x.salary + x.bonus, 0)
-    const isr = rows.reduce((s, r) => s + isrFor(r.base), 0) + staff.reduce((s, x) => s + isrFor(x.salary), 0)
-    const imss = rows.reduce((s, r) => s + imssFor(r.base), 0) + staff.reduce((s, x) => s + imssFor(x.salary), 0)
-    const general = rows.reduce((s, r) => s + generalFor(r.base), 0) + staff.reduce((s, x) => s + generalFor(x.salary), 0)
+    const bruto = rows.reduce((s, r) => s + baseOf(r) + bonoOf(r), 0) + staff.reduce((s, x) => s + x.salary + x.bonus, 0)
+    const isr = rows.reduce((s, r) => s + isrFor(baseOf(r)), 0) + staff.reduce((s, x) => s + isrFor(x.salary), 0)
+    const imss = rows.reduce((s, r) => s + imssFor(baseOf(r)), 0) + staff.reduce((s, x) => s + imssFor(x.salary), 0)
+    const general = rows.reduce((s, r) => s + generalFor(baseOf(r)), 0) + staff.reduce((s, x) => s + generalFor(x.salary), 0)
     const individual = rows.reduce((s, r) => s + indiv(r), 0) + staff.reduce((s, x) => s + x.discount, 0)
     const otros = general - isr - imss + individual
     const neto = rows.reduce((s, r) => s + netOf(r), 0) + staff.reduce((s, x) => s + netStaff(x), 0)
     return { bruto, isr, imss, otros, desc: general + individual, neto }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, staff, deductions, discounts, bonuses])
+  }, [rows, staff, deductions, discounts, bonuses, bases])
 
   const nextPay = periodStart ? fmtDate(new Date(periodEnd(period, periodStart, cycleDays).getTime() + 86400000)) : '—'
 
@@ -143,7 +145,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   function setStaffField(id: string, patch: Partial<Staff>) { setStaff(st => st.map(s => s.id === id ? { ...s, ...patch } : s)) }
   function saveStaffRow(s: Staff) {
     startTransition(async () => {
-      const r = await saveStaffAction(s.id, { days_worked: s.days_worked, discount: s.discount, bonus: s.bonus })
+      const r = await saveStaffAction(s.id, { salary: s.salary, days_worked: s.days_worked, discount: s.discount, bonus: s.bonus })
       if (r.success) toast.success('Guardado'); else toast.error(r.error ?? 'Error')
     })
   }
@@ -285,7 +287,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
       {/* Tabla de nómina */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Wallet size={16} className="text-indigo-600" /> Nómina · {periodLabel} <span className="ml-2 text-[10px] font-normal text-gray-400">(edita bonos/desc. — guarda al salir del campo)</span></p>
+          <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Wallet size={16} className="text-indigo-600" /> Nómina · {periodLabel} <span className="ml-2 text-[10px] font-normal text-gray-400">(edita sueldo/bonos/desc. — guarda al salir del campo)</span></p>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => requireUnlock(exportExcel)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100"><FileSpreadsheet size={13} /> Excel</button>
             <button onClick={() => requireUnlock(exportPDF)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100"><FileText size={13} /> PDF</button>
@@ -350,17 +352,32 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                           })}
                         </div>
                       </td>
-                      <td className="px-2 py-2 text-right border-b border-gray-100 whitespace-nowrap">{formatCurrency(r.base)}</td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                        <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-20 h-7 text-right text-xs mx-auto border border-gray-200 focus:border-indigo-400 rounded" />
+                        <Input type="number" min="0" step="0.01"
+                          value={bases[r.employeeId] ?? String(r.base)}
+                          onChange={e => setBases(b => ({ ...b, [r.employeeId]: e.target.value }))}
+                          onBlur={() => {
+                            const newBase = parseFloat(bases[r.employeeId] ?? '0') || 0
+                            if (Math.abs(newBase - r.base) > 0.01) {
+                              startTransition(() => saveEmployeeSalaryAction(r.employeeId, newBase)
+                                .then(res => { if (!res.success) toast.error(res.error ?? 'Error al guardar salario') }))
+                            }
+                          }}
+                          className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
-                      <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(r.base) > 0 ? `-${formatCurrency(isrFor(r.base))}` : '—'}</td>
-                      <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(r.base) > 0 ? `-${formatCurrency(imssFor(r.base))}` : '—'}</td>
+                      <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
+                        <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-24 h-7 text-right text-xs mx-auto border border-gray-200 focus:border-indigo-400 rounded" />
+                      </td>
+                      <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(baseOf(r)) > 0 ? `-${formatCurrency(isrFor(baseOf(r)))}` : '—'}</td>
+                      <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(baseOf(r)) > 0 ? `-${formatCurrency(imssFor(baseOf(r)))}` : '—'}</td>
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[160px]"><span className="line-clamp-1" title={r.notes || 'Sin incidencias'}>{r.notes || 'Sin incidencias'}</span></td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                        <Input type="number" min="0" value={discounts[r.employeeId] ?? '0'} onChange={e => setDiscounts(d => ({ ...d, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-20 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                        <Input type="number" min="0" value={discounts[r.employeeId] ?? '0'} onChange={e => setDiscounts(d => ({ ...d, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
-                      <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap">{formatCurrency(netOf(r))}</td>
+                      <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap"
+                        title={`Base ${formatCurrency(baseOf(r))} + Bono ${formatCurrency(bonoOf(r))} - Desc.gen ${formatCurrency(generalFor(baseOf(r)))} - Desc.indiv ${formatCurrency(indiv(r))} = ${formatCurrency(netOf(r))}`}>
+                        {formatCurrency(netOf(r))}
+                      </td>
                       <td className="px-2 py-2 text-center border-b border-gray-100" onClick={e => e.stopPropagation()}>{estadoChip(r.paid, () => togglePaid(r))}</td>
                       <td className="px-3 py-2 text-center border-b border-gray-100 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                         <button onClick={() => receipt({ name: r.name ?? 'Empleado', periodo: periodLabel, days: r.daysPresent, absences: 0, base: r.base, bonus: bonoOf(r), individual: indiv(r) })} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Recibo PDF"><ReceiptText size={15} /></button>
@@ -394,17 +411,22 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                         })}
                       </div>
                     </td>
-                    <td className="px-2 py-2 text-right border-b border-gray-100 whitespace-nowrap">{formatCurrency(s.salary)}</td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-20 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                      <Input type="number" min="0" step="0.01" value={s.salary} onChange={e => setStaffField(s.id, { salary: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                    </td>
+                    <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
+                      <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{isrFor(s.salary) > 0 ? `-${formatCurrency(isrFor(s.salary))}` : '—'}</td>
                     <td className="px-2 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap">{imssFor(s.salary) > 0 ? `-${formatCurrency(imssFor(s.salary))}` : '—'}</td>
                     <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[160px]"><span className="line-clamp-1" title={s.note || '—'}>{s.note || '—'}</span></td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" value={s.discount} onChange={e => setStaffField(s.id, { discount: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-20 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                      <Input type="number" min="0" value={s.discount} onChange={e => setStaffField(s.id, { discount: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
-                    <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap">{formatCurrency(netStaff(s))}</td>
+                    <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap"
+                      title={`Base ${formatCurrency(s.salary)} + Bono ${formatCurrency(s.bonus)} - Desc.gen ${formatCurrency(generalFor(s.salary))} - Desc.indiv ${formatCurrency(s.discount)} = ${formatCurrency(netStaff(s))}`}>
+                      {formatCurrency(netStaff(s))}
+                    </td>
                     <td className="px-2 py-2 text-center border-b border-gray-100" onClick={e => e.stopPropagation()}>{estadoChip(s.paid, () => toggleStaffPaid(s))}</td>
                     <td className="px-3 py-2 text-center border-b border-gray-100 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                       <button onClick={() => receipt({ name: s.name, periodo: 'Manual', days: s.days_worked, absences: s.absences, base: s.salary, bonus: s.bonus, individual: s.discount })} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Recibo PDF"><ReceiptText size={15} /></button>
