@@ -57,26 +57,45 @@ function periodStartDate(period: PayrollPeriod, cycleDays = 7, anchorISO?: strin
 }
 
 /** Lee el ciclo de nómina personalizado del dueño (cada N días + fecha ancla). */
-export async function getPayrollCycleAction(): Promise<{ days: number; anchor: string | null }> {
+export async function getPayrollCycleAction(): Promise<{ days: number; anchor: string | null; workWeekStart: number; workWeekEnd: number; payDay: string }> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { days: 7, anchor: null }
-    const { data } = await supabase.from('stores').select('payroll_cycle_days, payroll_cycle_anchor').eq('owner_id', user.id).maybeSingle()
-    return { days: Number(data?.payroll_cycle_days) || 7, anchor: (data?.payroll_cycle_anchor as string) ?? null }
-  } catch { return { days: 7, anchor: null } }
+    if (!user) return { days: 7, anchor: null, workWeekStart: 0, workWeekEnd: 4, payDay: 'friday' }
+    const { data } = await supabase.from('stores').select('payroll_cycle_days, payroll_cycle_anchor, payroll_work_week_start, payroll_work_week_end, payroll_pay_day').eq('owner_id', user.id).maybeSingle()
+    return {
+      days: Number(data?.payroll_cycle_days) || 7,
+      anchor: (data?.payroll_cycle_anchor as string) ?? null,
+      workWeekStart: Number(data?.payroll_work_week_start ?? 0),
+      workWeekEnd: Number(data?.payroll_work_week_end ?? 4),
+      payDay: (data?.payroll_pay_day as string) || 'friday'
+    }
+  } catch { return { days: 7, anchor: null, workWeekStart: 0, workWeekEnd: 4, payDay: 'friday' } }
 }
 
-/** Guarda el ciclo de nómina personalizado (días de corte + fecha de inicio). */
-export async function savePayrollCycleAction(days: number, anchor: string | null): Promise<ActionResult> {
+/** Guarda el ciclo de nómina personalizado (días de corte + fecha de inicio + semana laboral + día de pago). */
+export async function savePayrollCycleAction(days: number, anchor: string | null, workWeekStart = 0, workWeekEnd = 4, payDay = 'friday'): Promise<ActionResult> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
-    const { error } = await supabase.from('stores')
-      .update({ payroll_cycle_days: Math.max(1, days || 7), payroll_cycle_anchor: anchor || null })
-      .eq('owner_id', user.id)
-    if (error) return { success: false, error: 'No se pudo guardar el ciclo (¿corriste la migración 041?)' }
+    const updates: Record<string, unknown> = {
+      payroll_cycle_days: Math.max(1, days || 7),
+      payroll_cycle_anchor: anchor || null,
+      payroll_work_week_start: Math.max(0, Math.min(6, workWeekStart)),
+      payroll_work_week_end: Math.max(0, Math.min(6, workWeekEnd)),
+      payroll_pay_day: payDay || 'friday',
+    }
+    let { error } = await supabase.from('stores').update(updates).eq('owner_id', user.id)
+    if (error && /column|schema/i.test(error.message || '')) {
+      // fallback si columnas nuevas no existen aún
+      delete updates.payroll_work_week_start
+      delete updates.payroll_work_week_end
+      delete updates.payroll_pay_day
+      const retry = await supabase.from('stores').update(updates).eq('owner_id', user.id)
+      error = retry.error
+    }
+    if (error) return { success: false, error: 'No se pudo guardar el ciclo' }
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
 }

@@ -88,7 +88,7 @@ export async function saveAttendanceNoteAction(id: string, note: string): Promis
 }
 
 // ─── Asistencia manual (el jefe marca/edita días de un empleado con login) ───
-export type DayState = 'present' | 'absent' | 'justified' | 'none'
+export type DayState = 'present' | 'absent' | 'justified' | 'unpaid' | 'none'
 
 /** Jefe: la semana (lun-dom) de asistencia de un empleado. */
 export async function getEmployeeWeekAction(employeeId: string): Promise<AttendanceRow[]> {
@@ -118,6 +118,7 @@ export async function setEmployeeDayAction(employeeId: string, date: string, sta
     }
     const payload = state === 'present' ? { check_in: `${date}T09:00:00`, note: null }
       : state === 'justified' ? { check_in: null, check_out: null, note: 'Falta justificada' }
+      : state === 'unpaid' ? { check_in: null, check_out: null, note: 'Permiso sin goce' }
       : { check_in: null, check_out: null, note: null } // absent
     const { data: ex } = await supabase.from('employee_attendance')
       .select('id').eq('employee_id', employeeId).eq('work_date', date).maybeSingle()
