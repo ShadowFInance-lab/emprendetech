@@ -4,6 +4,7 @@ import { createPublicClient } from '@/lib/supabase/server'
 import ProductDetailView from '@/components/catalog/ProductDetailView'
 import { CartProvider } from '@/components/catalog/cart/CartProvider'
 import CartFab from '@/components/catalog/cart/CartFab'
+import WishlistFab from '@/components/catalog/cart/WishlistFab'
 
 export const revalidate = 600 // 10 minutos
 
@@ -153,6 +154,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           related={finalRelated}
         />
         <CartFab />
+        <WishlistFab slug={store.slug} color={store.primary_color ?? '#2563EB'} currency={store.currency ?? undefined} />
       </CartProvider>
     </>
   )

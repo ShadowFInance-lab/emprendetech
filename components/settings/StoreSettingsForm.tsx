@@ -262,7 +262,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       </div>
 
       {/* Grid principal: settings (izq) + preview sticky (der) */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_310px] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_310px] gap-6">
       <div className="space-y-6 min-w-0">
 
       {/* Redes sociales — fila de tarjetas ARRIBA (como la referencia) */}
@@ -687,6 +687,62 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     <ColorPickerField label="Principal" value={panelPrimary} onChange={setPanelPrimary} />
                     <ColorPickerField label="Secundario" value={panelSecondary} onChange={setPanelSecondary} />
                     <ColorPickerField label="Botones" value={panelButton} onChange={setPanelButton} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini preview en vivo — al lado de los colores */}
+              <div className="grid grid-cols-2 gap-3 mb-4 rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Catálogo</p>
+                  <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                    <div className="px-2 py-1.5 flex items-center justify-between"
+                      style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
+                      <span className="text-white text-[9px] font-bold truncate max-w-[80px]">{store.name}</span>
+                      <span className="text-[7px] bg-white/20 text-white px-1 py-0.5 rounded shrink-0">Público</span>
+                    </div>
+                    <div className="p-1.5 grid grid-cols-2 gap-1" style={{
+                      backgroundColor: bgColor,
+                      ...(backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: bgFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}),
+                    }}>
+                      {[1, 2].map(n => (
+                        <div key={n} className={skin === 'moderna' ? 'bg-white rounded-xl shadow-sm overflow-hidden' : 'bg-white/90 rounded overflow-hidden border border-gray-100'}>
+                          <div className="h-8" style={{ background: `linear-gradient(135deg, ${primaryColor}20, ${secondaryColor}15)` }} />
+                          <div className="p-1">
+                            <div className="text-[8px] font-semibold text-gray-800">Producto {n}</div>
+                            <div className="text-[9px] font-bold" style={{ color: primaryColor }}>$450</div>
+                            <div className="text-[7px] text-white text-center mt-0.5 py-0.5" style={{ backgroundColor: buttonColor, borderRadius: btnRadius }}>Agregar</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[8px] text-center text-gray-400 bg-white py-0.5 capitalize">
+                      {skin} · {FONTS.find(f => f.id === fontFamily)?.label?.split(' ')[0] || fontFamily}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Panel admin</p>
+                  <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                    <div className="h-2.5" style={{ background: `linear-gradient(90deg, ${panelPrimary}, ${panelSecondary})` }} />
+                    <div className="flex" style={{ minHeight: '90px' }}>
+                      <div className="w-14 p-1.5 text-white shrink-0 flex flex-col gap-0.5" style={{ backgroundColor: panelPrimary }}>
+                        <div className="text-[7px] opacity-50 mb-0.5">MENÚ</div>
+                        <div className="text-[7px] py-0.5 px-1 bg-white/15 rounded">Panel</div>
+                        <div className="text-[7px] py-0.5 px-1 rounded font-bold" style={{ backgroundColor: panelButton }}>Ventas</div>
+                        <div className="text-[7px] py-0.5 px-1 opacity-50">Config</div>
+                      </div>
+                      <div className="flex-1 p-1.5 bg-gray-50">
+                        <div className="text-[8px] font-semibold text-gray-700 mb-1">Hoy</div>
+                        <div className="grid grid-cols-2 gap-0.5 mb-1">
+                          {['Ventas', 'Empleados'].map(l => (
+                            <div key={l} className="text-[6px] bg-white rounded p-0.5 text-gray-400">{l}: —</div>
+                          ))}
+                        </div>
+                        <div className="text-[7px] text-white text-center py-0.5 rounded" style={{ backgroundColor: panelButton }}>Ver detalles</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

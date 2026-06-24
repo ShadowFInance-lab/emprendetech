@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { ShoppingCart, Zap, ChevronDown } from 'lucide-react'
+import { ShoppingCart, Zap, ChevronDown, Heart } from 'lucide-react'
 import { useCart, type ProductForCart } from './CartProvider'
+import { useWishlist } from './WishlistFab'
 import type { ProductVariantGroup } from '@/lib/types'
 
 /**
@@ -11,14 +12,16 @@ import type { ProductVariantGroup } from '@/lib/types'
  * Si el producto tiene variantes, primero muestra los selectores.
  */
 export default function AddToCartButtons({
-  product, variant = 'full', rounded = 'rounded-2xl', productVariants,
+  product, variant = 'full', rounded = 'rounded-2xl', productVariants, storeSlug,
 }: {
   product: ProductForCart
   variant?: 'full' | 'compact'
   rounded?: string
   productVariants?: ProductVariantGroup[] | null
+  storeSlug?: string
 }) {
   const { add, buyNow, color, pending } = useCart()
+  const wishlist = useWishlist(storeSlug ?? '')
   const groups = productVariants?.filter(g => g.name && g.values.length > 0) ?? []
   const [selected, setSelected] = useState<Record<string, string>>({})
 
@@ -58,33 +61,52 @@ export default function AddToCartButtons({
     </div>
   )
 
+  const wishlisted = wishlist.has(product.product_id)
+  const wishlistItem = { product_id: product.product_id, name: product.name, price: product.price, image_url: product.image_url ?? null }
+
   if (variant === 'compact') {
     if (groups.length > 0 && !allSelected) {
       return (
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById(`variants-${product.product_id}`)
-            el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          }}
-          className="flex items-center justify-center gap-1.5 w-full py-3 rounded-xl text-white text-sm font-bold shadow-lg transition-all hover:scale-[1.03] active:scale-95"
-          style={{ backgroundColor: color }}
-        >
-          <ChevronDown size={16} /> Elige opciones
-        </button>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById(`variants-${product.product_id}`)
+              el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-white text-sm font-bold shadow-lg transition-all hover:scale-[1.03] active:scale-95"
+            style={{ backgroundColor: color }}
+          >
+            <ChevronDown size={16} /> Elige opciones
+          </button>
+          {storeSlug && (
+            <button type="button" onClick={() => wishlist.toggle(wishlistItem)}
+              className={`w-12 rounded-xl flex items-center justify-center border-2 transition-all hover:scale-105 active:scale-95 ${wishlisted ? 'border-rose-400 bg-rose-50' : 'border-gray-200 bg-white'}`}>
+              <Heart size={16} className={wishlisted ? 'text-rose-500' : 'text-gray-300'} fill={wishlisted ? '#f43f5e' : 'none'} />
+            </button>
+          )}
+        </div>
       )
     }
     return (
-      <button
-        type="button"
-        onClick={() => add(product, allSelected ? variantText : undefined)}
-        disabled={pending}
-        className="flex items-center justify-center gap-1.5 w-full py-3 rounded-xl text-white text-sm font-bold shadow-lg transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-60"
-        style={{ backgroundColor: color }}
-      >
-        <ShoppingCart size={16} />
-        Agregar al carrito
-      </button>
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => add(product, allSelected ? variantText : undefined)}
+          disabled={pending}
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-white text-sm font-bold shadow-lg transition-all hover:scale-[1.03] active:scale-95 disabled:opacity-60"
+          style={{ backgroundColor: color }}
+        >
+          <ShoppingCart size={16} />
+          Agregar
+        </button>
+        {storeSlug && (
+          <button type="button" onClick={() => wishlist.toggle(wishlistItem)}
+            className={`w-12 rounded-xl flex items-center justify-center border-2 transition-all hover:scale-105 active:scale-95 ${wishlisted ? 'border-rose-400 bg-rose-50' : 'border-gray-200 bg-white'}`}>
+            <Heart size={16} className={wishlisted ? 'text-rose-500' : 'text-gray-300'} fill={wishlisted ? '#f43f5e' : 'none'} />
+          </button>
+        )}
+      </div>
     )
   }
 
@@ -100,15 +122,23 @@ export default function AddToCartButtons({
       >
         <Zap size={20} /> {allSelected ? 'Comprar ahora' : 'Elige una opción'}
       </button>
-      <button
-        type="button"
-        onClick={() => add(product, allSelected ? variantText : undefined)}
-        disabled={pending || !allSelected}
-        className={`flex w-full items-center justify-center gap-2.5 font-bold py-4 text-base hover:bg-gray-50 active:scale-[0.98] transition-all border-2 disabled:opacity-60 ${rounded}`}
-        style={{ color, borderColor: color }}
-      >
-        <ShoppingCart size={20} /> Agregar al carrito
-      </button>
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={() => add(product, allSelected ? variantText : undefined)}
+          disabled={pending || !allSelected}
+          className={`flex-1 flex items-center justify-center gap-2.5 font-bold py-4 text-base hover:bg-gray-50 active:scale-[0.98] transition-all border-2 disabled:opacity-60 ${rounded}`}
+          style={{ color, borderColor: color }}
+        >
+          <ShoppingCart size={20} /> Agregar al carrito
+        </button>
+        {storeSlug && (
+          <button type="button" onClick={() => wishlist.toggle(wishlistItem)}
+            className={`w-16 flex items-center justify-center border-2 transition-all hover:scale-105 active:scale-95 ${rounded} ${wishlisted ? 'border-rose-400 bg-rose-50' : 'border-gray-200 bg-white'}`}>
+            <Heart size={22} className={wishlisted ? 'text-rose-500' : 'text-gray-300'} fill={wishlisted ? '#f43f5e' : 'none'} />
+          </button>
+        )}
+      </div>
     </div>
   )
 }

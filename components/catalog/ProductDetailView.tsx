@@ -245,6 +245,7 @@ export default function ProductDetailView({ store, product, related }: Props) {
             {/* CTA: Carrito (si la tienda activó Vender Online) */}
             {online_sales && !isOut && (
               <AddToCartButtons
+                storeSlug={store.slug}
                 product={{ product_id: product.id, name: product.name, price: product.sale_price, image_url: activeImage ?? null }}
                 rounded={isMinimalista ? 'rounded-none' : 'rounded-2xl'}
                 productVariants={product.variants}

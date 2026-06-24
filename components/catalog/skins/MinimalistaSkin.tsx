@@ -251,6 +251,7 @@ export default function MinimalistaSkin({
                     <div className="mt-2">
                       <AddToCartButtons
                         variant="compact"
+                        storeSlug={store.slug}
                         product={{ product_id: product.id, name: product.name, price: product.sale_price, image_url: primaryImage?.url ?? null }}
                         productVariants={product.variants}
                       />

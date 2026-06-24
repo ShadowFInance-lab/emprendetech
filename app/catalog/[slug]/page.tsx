@@ -5,6 +5,7 @@ import ModernaSkin from '@/components/catalog/skins/ModernaSkin'
 import MinimalistaSkin from '@/components/catalog/skins/MinimalistaSkin'
 import { CartProvider } from '@/components/catalog/cart/CartProvider'
 import CartFab from '@/components/catalog/cart/CartFab'
+import WishlistFab from '@/components/catalog/cart/WishlistFab'
 import type { Store, Category, Product } from '@/lib/types'
 
 // ISR: revalidar cada 5 minutos
@@ -184,6 +185,7 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
           <ModernaSkin {...skinProps} />
         )}
         <CartFab />
+        <WishlistFab slug={store.slug} color={store.primary_color ?? '#2563EB'} currency={store.currency ?? undefined} />
       </CartProvider>
     </>
   )

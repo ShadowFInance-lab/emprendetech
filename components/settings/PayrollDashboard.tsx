@@ -410,12 +410,23 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Input type="number" min="0" max="31" value={s.days_worked}
-                          onChange={e => setStaffField(s.id, { days_worked: parseInt(e.target.value) || 0 })}
-                          onBlur={() => saveStaffRow(s)}
-                          className="w-14 h-7 text-center text-xs border border-gray-200 focus:border-indigo-400 rounded" />
-                        <span className="text-[10px] text-gray-400">días</span>
+                      <div className="flex items-center justify-center gap-1">
+                        {week.map((_, i) => {
+                          const worked = i < s.days_worked
+                          return (
+                            <span key={i}
+                              onClick={() => {
+                                const next = worked ? i : i + 1
+                                const updated = { ...s, days_worked: next }
+                                setStaffField(s.id, { days_worked: next })
+                                saveStaffRow(updated)
+                              }}
+                              title={`${WD[i]} — clic para cambiar (${i + 1} días)`}
+                              className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] cursor-pointer select-none transition-colors ${worked ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-gray-100 text-gray-300 hover:bg-gray-200'}`}>
+                              {worked ? <Check size={11} /> : '·'}
+                            </span>
+                          )
+                        })}
                       </div>
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>

@@ -66,41 +66,50 @@ export async function addToCartAction(
       id = cart.id as string
       const cookieStore = await cookies()
       const isProd = process.env.NODE_ENV === 'production'
-      cookieStore.set(COOKIE, id, {
-        path: '/',
-        maxAge: MAX_AGE,
-        sameSite: 'lax',
-        secure: isProd
-      })
+      cookieStore.set(COOKIE, id, { path: '/', maxAge: MAX_AGE, sameSite: 'lax', secure: isProd })
     }
-    // Si ya existe el mismo producto CON la misma variante, suma cantidad.
-    let existQuery = supabase.from('cart_items').select('id, qty').eq('cart_id', id).eq('product_id', item.product_id)
-    if (variantText) existQuery = existQuery.eq('variant_text', variantText)
-    else existQuery = existQuery.is('variant_text', null)
-    const { data: existing, error: existErr } = await existQuery.maybeSingle()
-    if (existErr) {
+
+    // Busca item existente con la misma variante.
+    // Si la columna variant_text no existe aún (migración 043 pendiente),
+    // ignora el error de columna y trata como "no existe" → insert.
+    const isMissingCol = (e: { code?: string; message?: string } | null) =>
+      !!e && (e.code === '42703' || /column|schema cache/i.test(e.message ?? ''))
+
+    let existing: { id: string; qty: number } | null = null
+    const baseQ = supabase.from('cart_items').select('id, qty').eq('cart_id', id).eq('product_id', item.product_id)
+    const { data: ex, error: existErr } = await (
+      variantText ? baseQ.eq('variant_text', variantText) : baseQ.is('variant_text', null)
+    ).maybeSingle()
+    if (!existErr) {
+      existing = ex
+    } else if (!isMissingCol(existErr)) {
       console.error('[cart] check existing error', existErr)
       return { items: [] }
     }
+    // isMissingCol → existing remains null → caeremos al insert
+
     if (existing) {
-      const { error: updErr } = await supabase.from('cart_items').update({ qty: (Number(existing.qty) || 0) + qty }).eq('id', existing.id)
-      if (updErr) {
-        console.error('[cart] update qty error', updErr)
-        return { items: [] }
-      }
+      const { error: updErr } = await supabase.from('cart_items')
+        .update({ qty: (Number(existing.qty) || 0) + qty }).eq('id', existing.id)
+      if (updErr) { console.error('[cart] update qty error', updErr); return { items: [] } }
     } else {
-      const { error: insErr } = await supabase.from('cart_items').insert({
+      // Intenta con variant_text; si la columna falta, reintenta sin ella.
+      let { error: insErr } = await supabase.from('cart_items').insert({
         cart_id: id, product_id: item.product_id, name: item.name,
         price: item.price, qty, image_url: item.image_url ?? null,
         variant_text: variantText ?? null,
       })
-      if (insErr) {
-        console.error('[cart] insert item error', insErr)
-        return { items: [] }
+      if (isMissingCol(insErr)) {
+        const r2 = await supabase.from('cart_items').insert({
+          cart_id: id, product_id: item.product_id, name: item.name,
+          price: item.price, qty, image_url: item.image_url ?? null,
+        })
+        insErr = r2.error
       }
+      if (insErr) { console.error('[cart] insert item error', insErr); return { items: [] } }
     }
     return { items: await readItems(id) }
-  } catch { return { items: [] } }
+  } catch (e) { console.error('[cart] exception', e); return { items: [] } }
 }
 
 /** Cambia la cantidad de un renglón (si llega a 0 se elimina). */
