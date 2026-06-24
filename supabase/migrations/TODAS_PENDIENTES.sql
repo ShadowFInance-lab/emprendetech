@@ -136,8 +136,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS quotes_public_token_idx
   ON quotes(public_token) WHERE public_token IS NOT NULL;
 
 -- ─── 018: Modo Jefe / Empleado (roles) ─────────────────────────────────────
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'owner'
-  CHECK (role IN ('owner','employee'));
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'owner';
+-- (El CHECK del rol se define más abajo con el set completo: owner/employee/supervisor/gerente)
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS boss_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 
 CREATE OR REPLACE FUNCTION boss_store_id()
@@ -445,6 +445,10 @@ ALTER TABLE employee_meta ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
 -- Rol supervisor (jefe / supervisor / empleado)
 ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+-- Normaliza cualquier rol inválido ANTES de aplicar el constraint (evita el error 23514).
+-- Dueños (sin boss_id) → 'owner'; el resto → 'employee'. No toca roles válidos.
+UPDATE profiles SET role = CASE WHEN boss_id IS NULL THEN 'owner' ELSE 'employee' END
+  WHERE role IS NULL OR role NOT IN ('owner','employee','supervisor','gerente');
 ALTER TABLE profiles ADD  CONSTRAINT profiles_role_check CHECK (role IN ('owner','employee','supervisor','gerente'));
 
 CREATE OR REPLACE FUNCTION set_employee_role(emp_id uuid, new_role text)
