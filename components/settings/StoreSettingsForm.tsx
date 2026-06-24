@@ -94,6 +94,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
   const [dashboardBgUrl, setDashboardBgUrl] = useState(sx.dashboard_bg_url || '')
   const [dashboardBgFit, setDashboardBgFit] = useState((sx as {dashboard_bg_fit?: string|null}).dashboard_bg_fit || 'cover')
+  const [dashboardBgColor, setDashboardBgColor] = useState(((sx as unknown) as { dashboard_bg_color?: string | null }).dashboard_bg_color || '#f1f5f9') // solid bg for main page / dashboard
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
   const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
   const [buttonStyle, setButtonStyle] = useState(store.button_style ?? 'redondeado')
@@ -195,6 +196,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('online_sales', String(onlineSales))
     formData.set('dashboard_bg_url', dashboardBgUrl)
     formData.set('dashboard_bg_fit', dashboardBgFit)
+    formData.set('dashboard_bg_color', dashboardBgColor)
     formData.set('currency', currency)
     formData.set('bg_color', bgColor)
     formData.set('button_style', buttonStyle)
@@ -649,18 +651,18 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       onClick={() => { setPrimaryColor(palette.p); setSecondaryColor(palette.s); setButtonColor(palette.b) }}
                       className={`group relative flex flex-col rounded-3xl overflow-hidden border-2 transition-all shadow-sm ${isActive ? 'border-gray-900 ring-2 ring-gray-900 ring-offset-2 scale-[1.01]' : 'border-gray-200 hover:border-gray-400'}`}
                     >
-                      <div className="h-24 p-2 flex flex-col justify-between" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
+                      <div className="h-20 p-1.5 flex flex-col justify-between" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
                         <div className="flex items-center justify-between">
                           <div className="flex gap-1">
-                            <div className="w-5 h-5 rounded-full ring-1 ring-white/60" style={{ backgroundColor: palette.p }} />
-                            <div className="w-5 h-5 rounded-full ring-1 ring-white/60" style={{ backgroundColor: palette.s }} />
+                            <div className="w-4 h-4 rounded-full ring-1 ring-white/60" style={{ backgroundColor: palette.p }} />
+                            <div className="w-4 h-4 rounded-full ring-1 ring-white/60" style={{ backgroundColor: palette.s }} />
                           </div>
-                          <div className="w-5 h-5 rounded-full ring-1 ring-white/60" style={{ backgroundColor: palette.b }} />
+                          <div className="w-4 h-4 rounded-full ring-1 ring-white/60" style={{ backgroundColor: palette.b }} />
                         </div>
-                        <div className="text-white text-xs font-bold drop-shadow-sm truncate">{palette.name}</div>
+                        <div className="text-white text-[10px] font-bold drop-shadow-sm truncate">{palette.name}</div>
                       </div>
-                      <div className={`py-1 text-center text-[10px] font-semibold flex items-center justify-center gap-1 ${isActive ? 'bg-gray-900 text-white' : 'bg-white text-gray-800 group-hover:bg-gray-50'}`}>
-                        {isActive ? <><Check size={11} /> Seleccionado</> : 'Usar esta paleta'}
+                      <div className={`py-0.5 text-center text-[9px] font-semibold flex items-center justify-center gap-1 ${isActive ? 'bg-gray-900 text-white' : 'bg-white text-gray-800 group-hover:bg-gray-50'}`}>
+                        {isActive ? <><Check size={10} /> Seleccionado</> : 'Usar esta paleta'}
                       </div>
                     </button>
                   )
@@ -827,6 +829,16 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       </div>
                     )}
                     <p className="text-[10px] text-gray-400 mt-1">Se aplica con overlay semitransparente para legibilidad.</p>
+                    {/* Color de fondo sólido para página principal / dashboard */}
+                    <div className="mt-2 flex items-center gap-2">
+                      <label className="relative cursor-pointer inline-block" title="Color de fondo sólido página principal">
+                        <span className="block w-8 h-8 rounded-lg ring-1 ring-black/10 shadow border" style={{ backgroundColor: dashboardBgColor }} />
+                        <input type="color" value={dashboardBgColor} onChange={e => setDashboardBgColor(e.target.value)}
+                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                      </label>
+                      <button type="button" className="text-xs px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-50" onClick={(e) => { const inp = (e.currentTarget.parentElement?.querySelector('input[type=color]') as HTMLInputElement); inp?.click(); }}>Color de fondo página principal</button>
+                      <span className="text-[10px] font-mono text-gray-500">{dashboardBgColor}</span>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs text-gray-500">Estilo de botones</Label>

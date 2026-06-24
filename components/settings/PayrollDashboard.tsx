@@ -92,6 +92,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const [bonuses, setBonuses] = useState<Record<string, string>>({})
   const [bases, setBases] = useState<Record<string, string>>({})
   const [deductions, setDeductions] = useState<PayrollDeduction[]>([])
+  // Per-row overrides for general deductions (editable individually per employee row)
+  const [generalOverrides, setGeneralOverrides] = useState<Record<string, Record<string, string>>>({}) // empId -> (dedId|concept) -> amount str
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState<{ id: string; name: string; discount: number } | null>(null)
@@ -137,7 +139,15 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const baseOf = (r: PayrollRow) => parseFloat(bases[r.employeeId] ?? String(r.base)) || r.base
   const indiv = (r: PayrollRow) => parseFloat(discounts[r.employeeId] ?? '0') || 0
   const bonoOf = (r: PayrollRow) => parseFloat(bonuses[r.employeeId] ?? '0') || 0
-  const netOf = (r: PayrollRow) => Math.max(0, baseOf(r) + bonoOf(r) - generalFor(baseOf(r)) - indiv(r))
+  const getRowGeneral = (empId: string, base: number) => {
+    const ov = generalOverrides[empId] || {}
+    return deductions.reduce((s, d) => {
+      const key = d.id || d.concept
+      if (ov[key] !== undefined) return s + (parseFloat(ov[key]) || 0)
+      return s + amtOf(d, base)
+    }, 0)
+  }
+  const netOf = (r: PayrollRow) => Math.max(0, baseOf(r) + bonoOf(r) - getRowGeneral(r.employeeId, baseOf(r)) - indiv(r))
   const netStaff = (s: Staff) => Math.max(0, s.salary + s.bonus - generalFor(s.salary) - s.discount)
   const totalCount = rows.length + staff.length
 
@@ -155,7 +165,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
     const bruto = rows.reduce((s, r) => s + baseOf(r) + bonoOf(r), 0) + staff.reduce((s, x) => s + x.salary + x.bonus, 0)
     const isr = rows.reduce((s, r) => s + isrFor(baseOf(r)), 0) + staff.reduce((s, x) => s + isrFor(x.salary), 0)
     const imss = rows.reduce((s, r) => s + imssFor(baseOf(r)), 0) + staff.reduce((s, x) => s + imssFor(x.salary), 0)
-    const general = rows.reduce((s, r) => s + generalFor(baseOf(r)), 0) + staff.reduce((s, x) => s + generalFor(x.salary), 0)
+    const general = rows.reduce((s, r) => s + getRowGeneral(r.employeeId, baseOf(r)), 0) + staff.reduce((s, x) => s + generalFor(x.salary), 0)
     const individual = rows.reduce((s, r) => s + indiv(r), 0) + staff.reduce((s, x) => s + x.discount, 0)
     const otros = general - isr - imss + individual
     const otros_gen = general - isr - imss
@@ -506,10 +516,35 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                         <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-24 h-7 text-right text-xs mx-auto border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
                       {deductions.map((d, idx) => {
-                        const amt = amtOf(d, baseOf(r))
+                        const key = d.id || d.concept
+                        const ov = generalOverrides[r.employeeId]?.[key]
+                        const amtStr = ov !== undefined ? ov : String(amtOf(d, baseOf(r)))
                         return (
-                          <td key={d.id || idx} className="px-1 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap text-[10px]" title={`${d.concept}: ${d.kind==='percent' ? d.value+'%' : '$'+d.value}`}>
-                            {amt > 0.005 ? `-${formatCurrency(amt)}` : '—'}
+                          <td key={d.id || idx} className="px-1 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={amtStr}
+                              onChange={e => {
+                                const v = e.target.value
+                                setGeneralOverrides(prev => ({
+                                  ...prev,
+                                  [r.employeeId]: { ...(prev[r.employeeId] || {}), [key]: v }
+                                }))
+                              }}
+                              onBlur={() => {
+                                // adjust individual discount to keep net consistent with the edited general amt (persist via indiv)
+                                const newGenAmt = parseFloat(amtStr) || 0
+                                const origGen = amtOf(d, baseOf(r))
+                                const delta = newGenAmt - origGen
+                                const newInd = (parseFloat(discounts[r.employeeId] ?? '0') || 0) + delta
+                                setDiscounts(dd => ({ ...dd, [r.employeeId]: String(Math.max(0, newInd)) }))
+                                // trigger save for the row
+                                saveRow(r)
+                              }}
+                              className="w-16 h-6 text-right text-[10px] border border-violet-200 focus:border-violet-400 rounded"
+                            />
                           </td>
                         )
                       })}
@@ -572,10 +607,34 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     {deductions.map((d, idx) => {
-                      const amt = amtOf(d, s.salary)
+                      const key = d.id || d.concept
+                      const ov = generalOverrides[s.id]?.[key]
+                      const amtStr = ov !== undefined ? ov : String(amtOf(d, s.salary))
                       return (
-                        <td key={d.id || idx} className="px-1 py-2 text-right text-rose-600 border-b border-gray-100 whitespace-nowrap text-[10px]" title={`${d.concept}`}>
-                          {amt > 0.005 ? `-${formatCurrency(amt)}` : '—'}
+                        <td key={d.id || idx} className="px-1 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={amtStr}
+                            onChange={e => {
+                              const v = e.target.value
+                              setGeneralOverrides(prev => ({
+                                ...prev,
+                                [s.id]: { ...(prev[s.id] || {}), [key]: v }
+                              }))
+                            }}
+                            onBlur={() => {
+                              const newGenAmt = parseFloat(amtStr) || 0
+                              const origGen = amtOf(d, s.salary)
+                              const delta = newGenAmt - origGen
+                              const newInd = (s.discount || 0) + delta
+                              const updated = { ...s, discount: Math.max(0, newInd) }
+                              setStaffField(s.id, { discount: updated.discount })
+                              saveStaffRow(updated)
+                            }}
+                            className="w-16 h-6 text-right text-[10px] border border-violet-200 focus:border-violet-400 rounded"
+                          />
                         </td>
                       )
                     })}
