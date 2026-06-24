@@ -50,6 +50,12 @@ function hoursOf(ci: string | null, co: string | null): number {
   return h > 0 && h < 24 ? h : 0
 }
 const fmtH = (h: number) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}h ${pad(m % 60)}m` }
+function formatDayShort(iso: string): string {
+  try {
+    const d = new Date(iso + 'T00:00:00')
+    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }).replace('.', '')
+  } catch { return iso.slice(5) }
+}
 
 type DayStatus = 'present' | 'justified' | 'unpaid' | 'absent' | 'none'
 const STATUS_LABEL: Record<DayStatus, string> = {
@@ -424,7 +430,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                           }}
                           onBlur={() => saveDed(idx)}
                           onClick={e=>e.stopPropagation()}
-                          className="w-9 h-4 text-[8px] text-center border border-violet-200 rounded bg-white mt-0.5"
+                          className="w-12 h-5 text-[9px] text-center border border-violet-300 rounded bg-white mt-0.5"
+                          title={`Editar ${d.concept}`}
                         />
                       </div>
                     </th>
@@ -475,7 +482,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                                   await setEmployeeDayAction(r.employeeId, date, next === 'none' ? 'none' : (next as 'present' | 'absent' | 'justified' | 'unpaid'))
                                   refresh(period, cycleDays, cycleAnchor)
                                 }}
-                                title={`${WD[i]} ${date.slice(5)} — ${tip} (clic cambia)`}
+                                title={`${formatDayShort(date)} (${WD[i]}) — ${tip} (clic cambia estado)`}
                                 className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] cursor-pointer select-none hover:scale-110 transition-all ${cls}`}
                               >{icon}</span>
                             )
