@@ -64,8 +64,8 @@ export default function ColorPickerField({ label, value, onChange }: { label: st
               <label className="relative w-10 h-10 rounded-lg ring-1 ring-black/10 cursor-pointer shrink-0" style={{ background: value }}>
                 <input type="color" value={value} onChange={e => onChange(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" />
               </label>
-              <input value={value} onChange={e => { const v = e.target.value.trim(); onChange(v.startsWith('#') || v === '' ? v : `#${v}`) }} maxLength={7} placeholder="#000000" className="flex-1 font-mono text-sm border border-gray-200 rounded-lg px-2 h-10 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-              <button type="button" onClick={() => setOpen(false)} className="h-10 px-3 rounded-lg bg-gray-900 text-white text-sm font-semibold">Listo</button>
+              <span className="flex-1 text-sm text-gray-500">Color personalizado · toca el cuadro</span>
+              <button type="button" onClick={() => setOpen(false)} className="h-10 px-4 rounded-lg bg-gray-900 text-white text-sm font-semibold">Listo</button>
             </div>
           </div>
         </div>

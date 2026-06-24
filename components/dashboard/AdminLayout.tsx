@@ -51,7 +51,7 @@ export default async function AdminLayout({
       <Sidebar store={store} profile={profile} />
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64" style={contentStyle}>
         <Header store={store} />
-        <main className="flex-1 p-4 lg:p-6 overflow-auto bg-white/70 backdrop-blur-[1px]">
+        <main className="flex-1 p-4 lg:p-6 overflow-auto bg-white/90">
           {children}
         </main>
       </div>

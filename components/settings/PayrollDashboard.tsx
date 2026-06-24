@@ -50,7 +50,7 @@ function hoursOf(ci: string | null, co: string | null): number {
 }
 const fmtH = (h: number) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}h ${pad(m % 60)}m` }
 
-export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid = true }: { createSlot?: ReactNode; refreshSignal?: number; isPaid?: boolean }) {
+export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid = true, compact = false }: { createSlot?: ReactNode; refreshSignal?: number; isPaid?: boolean; compact?: boolean }) {
   const [period, setPeriod] = useState<PayrollPeriod>('week')
   const [rows, setRows] = useState<PayrollRow[]>([])
   const [staff, setStaff] = useState<Staff[]>([])
@@ -431,7 +431,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
         )}
       </div>
 
-      {/* Descuentos generales + Resumen */}
+      {/* Descuentos generales + Resumen (solo en la vista completa "Ver Nómina") */}
+      {!compact && (
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
@@ -472,6 +473,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
           </div>
         </div>
       </div>
+      )}
 
       {editing && <EmployeeEditModal employeeId={editing.id} employeeName={editing.name} periodStart={periodStart} initialDiscount={editing.discount} onClose={() => setEditing(null)} onSaved={() => refresh(period)} />}
       {editingStaff && <StaffEditModal staff={editingStaff} onClose={() => setEditingStaff(null)} onSaved={() => refresh(period)} />}

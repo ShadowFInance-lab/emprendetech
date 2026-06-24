@@ -123,8 +123,8 @@ export default function EmployeesSection({ plan }: { plan: string }) {
         <button onClick={() => setShowNomina(true)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold shadow-sm transition-colors">
           <Wallet size={15} /> Ver Nómina
         </button>
-        {/* Crear empleado + KPIs + nómina + descuentos + resumen */}
-        <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} />
+        {/* Inline: crear empleado + KPIs + tabla. Descuentos/resumen solo en "Ver Nómina". */}
+        <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} compact />
         <TasksManager employees={employees} />
       </div>
 
