@@ -102,6 +102,16 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const [timeOut, setTimeOut] = useState('')
   const { requireUnlock, gate } = useBossGate()
 
+  // Reset per-row edits when changing historical period
+  useEffect(() => {
+    setGeneralOverrides({})
+    setHoursOverrides({})
+    setDaysOverrides({})
+    setDiscounts({})
+    setBonuses({})
+    setBases({})
+  }, [period])
+
   useEffect(() => {
     if (!daySelector) { setTimeIn(''); setTimeOut(''); return }
     // try to find current times from data
@@ -140,7 +150,17 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   }
 
   const periodLabel = PERIODS.find(p => p.id === period)?.label ?? ''
-  const week = useMemo(() => thisWeekDates(), [])
+  const week = useMemo(() => {
+    if (periodStart) {
+      const start = new Date(periodStart + 'T00:00:00')
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(start)
+        d.setDate(start.getDate() + i)
+        return toISO(d)
+      })
+    }
+    return thisWeekDates()
+  }, [periodStart])
   const today = toISO(new Date())
 
   const isrDed = deductions.find(d => /isr/i.test(d.concept))
