@@ -92,6 +92,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   // Per-row overrides for general deductions (editable individually per employee row)
   const [generalOverrides, setGeneralOverrides] = useState<Record<string, Record<string, string>>>({}) // empId -> (dedId|concept) -> amount str
   const [hoursOverrides, setHoursOverrides] = useState<Record<string, string>>({})
+  const [staffDayStatuses, setStaffDayStatuses] = useState<Record<string, Record<string, DayStatus>>>({}) // staffId -> date -> status for individual colors
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState<{ id: string; name: string; discount: number } | null>(null)
@@ -105,6 +106,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   useEffect(() => {
     setGeneralOverrides({})
     setHoursOverrides({})
+    setStaffDayStatuses({})
     setDiscounts({})
     setBonuses({})
     setBases({})
@@ -641,10 +643,10 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
                         {week.map((date, i) => {
-                          const worked = i < s.days_worked
-                          const st = worked ? 'present' : 'absent'
-                          const cls = DAY_COLORS[st]
-                          const icon = worked ? <Check size={11} /> : '·'
+                          const defaultStatus = i < s.days_worked ? 'present' : 'none'
+                          const status = staffDayStatuses[s.id]?.[date] || defaultStatus
+                          const cls = DAY_COLORS[status]
+                          const icon = DAY_ICON(status)
                           return (
                             <span key={i}
                               onClick={() => {
@@ -711,7 +713,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
               </tbody>
               <tfoot>
                 <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[7px]">
-                  <td className="px-0.5 py-0 sticky left-0 bg-indigo-50 z-10" colSpan={9 + Math.max(0, deductions.length - 3)} title={`Totales · ${totalCount} empleado(s)`}>{totalCount}</td>
+                  <td className="px-0.5 py-0 sticky left-0 bg-indigo-50 z-10" colSpan={9} title={`Totales · ${totalCount} empleado(s)`}>{totalCount}</td>
                   <td className="px-0.5 py-0 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
                   <td className="px-0.5 py-0" />
                   <td className="px-0.5 py-0 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
@@ -757,7 +759,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
         )}
 
         {/* Tira resumen compacta - recortada más pequeña para no tapar números */}
-        <div className="border-t border-gray-100 pt-0.5 flex flex-wrap items-center gap-1 text-[9px]">
+        <div className="border-t border-gray-100 pt-0 flex flex-wrap items-center gap-1 text-[8px]">
           <BadgeDollarSign size={10} className="text-indigo-500 shrink-0" />
           {[
             { l: 'Bruto', v: formatCurrency(totals.bruto), cls: 'text-gray-900' },
@@ -770,9 +772,9 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
               <span className={`font-semibold ${item.cls}`}>{item.v}</span>
             </span>
           ))}
-          <span className="ml-auto flex items-center gap-1 rounded-lg bg-indigo-50 px-1.5 py-0">
-            <span className="text-[9px] font-semibold text-indigo-900">Neto:</span>
-            <span className="text-xs font-bold text-indigo-700">{formatCurrency(totals.neto)}</span>
+          <span className="ml-auto flex items-center gap-1 rounded-lg bg-indigo-50 px-1 py-0">
+            <span className="text-[8px] font-semibold text-indigo-900">Neto:</span>
+            <span className="text-[10px] font-bold text-indigo-700">{formatCurrency(totals.neto)}</span>
           </span>
         </div>
       </div>
@@ -804,7 +806,11 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       await setEmployeeDayAction(empId, date, opt.t as 'present' | 'absent' | 'justified' | 'unpaid' | 'none')
                       updateLocalAttendance(empId, date, opt.t)
                     } else {
-                      // no logueado (staff/registro): ajustar days_worked y guardar
+                      // no logueado (staff/registro): set individual status for color + ajustar days_worked y guardar
+                      setStaffDayStatuses(prev => ({
+                        ...prev,
+                        [empId]: { ...(prev[empId] || {}), [date]: opt.t }
+                      }));
                       const stf = staff.find(s => s.id === empId)
                       if (stf) {
                         const idx = week.findIndex(d => d === date)
