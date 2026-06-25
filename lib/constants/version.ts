@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.55'
-export const APP_BUILD = '2026-06-24' // v7.55: nómina toda tabla editable (días por círculo + generales por fila), paletas más compactas, botón color fondo página principal, quitar opacidad blanca en imagen fondo
+export const APP_VERSION = 'v7.56'
+export const APP_BUILD = '2026-06-25' // v7.56: fondo color con nombres, imagen clara sin opaco + recuadros semi + auto letras; nómina selector colores solo + horas/días edit + quitar desc.indiv + todas por empleado; config compacto

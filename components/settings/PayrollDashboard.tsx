@@ -58,9 +58,6 @@ function formatDayShort(iso: string): string {
 }
 
 type DayStatus = 'present' | 'justified' | 'unpaid' | 'absent' | 'none'
-const STATUS_LABEL: Record<DayStatus, string> = {
-  present: 'Presente', justified: 'Justificado', unpaid: 'Permiso sin goce', absent: 'Falta', none: 'Sin registro'
-}
 function getDayStatus(d: { checkIn: string | null; note: string | null } | undefined): DayStatus {
   if (!d) return 'none'
   if (d.checkIn) return 'present'
@@ -94,10 +91,12 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   const [deductions, setDeductions] = useState<PayrollDeduction[]>([])
   // Per-row overrides for general deductions (editable individually per employee row)
   const [generalOverrides, setGeneralOverrides] = useState<Record<string, Record<string, string>>>({}) // empId -> (dedId|concept) -> amount str
+  const [hoursOverrides, setHoursOverrides] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState<{ id: string; name: string; discount: number } | null>(null)
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
+  const [daySelector, setDaySelector] = useState<{ empId: string; date: string } | null>(null)
   const { requireUnlock, gate } = useBossGate()
 
   const refresh = useCallback(async (p: PayrollPeriod, days?: number, anchor?: string) => {
@@ -262,59 +261,48 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   }
 
   async function exportAll() {
-    // Mass: Excel completo + PDF
-    await exportExcelAll()
-    await exportPDFAll()
-    toast.success('Descargadas nóminas completas (Excel + PDF)')
+    // Por empleado: archivos individuales (no uno solo)
+    for (const r of rows) {
+      await exportOneForEmployee(r, true)
+    }
+    for (const s of staff) {
+      await exportOneForEmployee(s, false)
+    }
+    toast.success('Archivos individuales por empleado generados')
   }
 
-  async function exportExcelAll() {
+  async function exportOneForEmployee(item: PayrollRow | Staff, isEmp: boolean) {
+    const name = isEmp ? (item.name ?? 'Empleado') : ((item as Staff).name || 'Empleado')
+    const safe = name.replace(/\s+/g, '-').toLowerCase()
+    // Excel individual
     const XLSX = await import('xlsx')
     const wb = XLSX.utils.book_new()
-    const nomina = [
-      ...rows.map(r => {
-        const b = parseFloat(bases[r.employeeId] ?? String(r.base)) || r.base
-        const bon = parseFloat(bonuses[r.employeeId] ?? '0') || 0
-        const dis = parseFloat(discounts[r.employeeId] ?? '0') || 0
-        const n = Math.max(0, b + bon - generalFor(b) - dis)
-        return { Empleado: r.name ?? '', Tipo: 'Con acceso', Tel: r.phone ?? '', 'Días': r.daysPresent, Base: b, Bono: bon, DescInd: dis, Neto: Math.round(n*100)/100, Estado: r.paid ? 'Pagado' : 'Pendiente' }
-      }),
-      ...staff.map(s => {
-        const n = Math.max(0, s.salary + s.bonus - generalFor(s.salary) - s.discount)
-        return { Empleado: s.name, Tipo: 'Registro', Tel: s.phone ?? '', 'Días': s.days_worked, Base: s.salary, Bono: s.bonus, DescInd: s.discount, Neto: Math.round(n*100)/100, Estado: s.paid ? 'Pagado' : 'Pendiente' }
-      }),
-    ]
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(nomina.length ? nomina : [{ Empleado: '' }]), 'Nómina')
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet((deductions.length ? deductions : [{ concept: '' } as PayrollDeduction]).map(d => ({ Concepto: d.concept, Tipo: d.kind === 'percent' ? 'Porcentaje' : 'Monto', Valor: d.kind === 'percent' ? `${d.value}%` : d.value }))), 'Descuentos-Generales')
-    XLSX.writeFile(wb, `nominas-todas-${periodLabel.toLowerCase()}-${periodStart}.xlsx`)
-  }
-
-  async function exportPDFAll() {
+    const rowData = isEmp ? {
+      Empleado: name, Tipo: 'Con acceso', Tel: (item as PayrollRow).phone ?? '', 'Días': (item as PayrollRow).daysPresent, Base: (item as PayrollRow).base, Bono: parseFloat(bonuses[(item as PayrollRow).employeeId]??'0')||0 , Neto: Math.round(netOf(item as PayrollRow)*100)/100, Estado: (item as PayrollRow).paid ? 'Pagado':'Pendiente'
+    } : {
+      Empleado: name, Tipo: 'Registro', Tel: (item as Staff).phone ?? '', 'Días': (item as Staff).days_worked, Base: (item as Staff).salary, Bono: (item as Staff).bonus, Neto: Math.round(netStaff(item as Staff)*100)/100, Estado: (item as Staff).paid ? 'Pagado':'Pendiente'
+    }
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([rowData]), 'Nómina')
+    XLSX.writeFile(wb, `nomina-${safe}-${periodLabel.toLowerCase()}-${periodStart}.xlsx`)
+    // PDF individual
     const { jsPDF } = await import('jspdf')
     const autoTable = (await import('jspdf-autotable')).default
-    const doc = new jsPDF('l')
-    doc.setFontSize(16); doc.text('Nóminas Completas (todas)', 14, 16)
-    doc.setFontSize(10); doc.setTextColor(120); doc.text(`Periodo: ${periodLabel} · ${periodStart} · Desc. gen: ${deductions.length}`, 14, 23)
+    const doc = new jsPDF()
+    doc.setFontSize(14); doc.text(`Nómina - ${name}`, 14, 16)
+    doc.setFontSize(10); doc.text(`Periodo: ${periodLabel} · ${periodStart}`, 14, 22)
     autoTable(doc, {
       startY: 28,
-      head: [['Empleado', 'Tipo', 'Días', 'Base', 'Bono', 'Neto', 'Estado']],
+      head: [['Concepto', 'Valor']],
       body: [
-        ...rows.map(r => [r.name ?? '', 'Acceso', r.daysPresent, formatCurrency(r.base), formatCurrency(bonoOf(r)), formatCurrency(netOf(r)), r.paid ? 'Pagado' : 'Pendiente']),
-        ...staff.map(s => [s.name, 'Registro', s.days_worked, formatCurrency(s.salary), formatCurrency(s.bonus), formatCurrency(netStaff(s)), s.paid ? 'Pagado' : 'Pendiente']),
+        ['Días', isEmp ? (item as PayrollRow).daysPresent : (item as Staff).days_worked],
+        ['Base', formatCurrency(isEmp ? (item as PayrollRow).base : (item as Staff).salary)],
+        ['Bono', formatCurrency(isEmp ? (parseFloat(bonuses[(item as PayrollRow).employeeId]??'0')||0) : (item as Staff).bonus)],
+        ['Neto', formatCurrency(isEmp ? netOf(item as PayrollRow) : netStaff(item as Staff))],
+        ['Estado', isEmp ? ((item as PayrollRow).paid?'Pagado':'Pendiente') : ((item as Staff).paid?'Pagado':'Pendiente')],
       ],
-      foot: [['TOTALES', '', '', formatCurrency(totals.bruto), '', formatCurrency(totals.neto), '']],
-      styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [79, 70, 229] }, footStyles: { fillColor: [238, 242, 255], textColor: 40, fontStyle: 'bold' },
+      styles: { fontSize: 9 }
     })
-    // Add deductions list
-    const y = ((doc as unknown) as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || 80
-    doc.text('Descuentos generales aplicados', 14, y + 10)
-    autoTable(doc, {
-      startY: y + 14,
-      head: [['Concepto', 'Tipo', 'Valor']],
-      body: deductions.map(d => [d.concept, d.kind, d.kind==='percent' ? d.value+'%' : formatCurrency(d.value)]),
-      styles: { fontSize: 8 }
-    })
-    doc.save(`nominas-todas-${periodLabel.toLowerCase()}-${periodStart}.pdf`)
+    doc.save(`nomina-${safe}-${periodLabel.toLowerCase()}-${periodStart}.pdf`)
   }
 
   async function exportPDF() {
@@ -447,7 +435,6 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     </th>
                   ))}
                   <th className="text-left px-2 py-2.5 font-semibold border-b border-indigo-100">Notas</th>
-                  <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Desc. indiv.</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100">Neto</th>
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Estado</th>
                   <th className="text-center px-3 py-2.5 font-semibold border-b border-indigo-100">Acciones</th>
@@ -473,7 +460,16 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.branch ?? '—'}</td>
                       <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkIn ?? null)}</td>
                       <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkOut ?? null)}</td>
-                      <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtH(hours)}</td>
+                      <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={hoursOverrides[r.employeeId] ?? hours.toFixed(1)}
+                          onChange={e => setHoursOverrides(h => ({...h, [r.employeeId]: e.target.value }))}
+                          className="w-16 h-6 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded"
+                        />
+                      </td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
                           {week.map((date, i) => {
@@ -481,18 +477,15 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                             const status = getDayStatus(d)
                             const late = status === 'present' && (d?.note || '').toLowerCase().includes('tarde')
                             const cls = late ? 'bg-amber-100 text-amber-600' : DAY_COLORS[status]
-                            const tip = late ? ' · llegada tarde' : STATUS_LABEL[status]
                             const icon = late ? <Clock4 size={10} /> : DAY_ICON(status)
                             return (
                               <span
                                 key={date}
-                                onClick={async (e) => {
+                                onClick={(e) => {
                                   e.stopPropagation()
-                                  const next: DayStatus = status === 'present' ? 'justified' : status === 'justified' ? 'unpaid' : status === 'unpaid' ? 'absent' : status === 'absent' ? 'none' : 'present'
-                                  await setEmployeeDayAction(r.employeeId, date, next === 'none' ? 'none' : (next as 'present' | 'absent' | 'justified' | 'unpaid'))
-                                  refresh(period, cycleDays, cycleAnchor)
+                                  setDaySelector({ empId: r.employeeId, date })
                                 }}
-                                title={`${formatDayShort(date)} (${WD[i]}) — ${tip} (clic cambia estado)`}
+                                title={`${formatDayShort(date)} (${WD[i]}) — clic para cambiar`}
                                 className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] cursor-pointer select-none hover:scale-110 transition-all ${cls}`}
                               >{icon}</span>
                             )
@@ -549,11 +542,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                         )
                       })}
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[120px]"><span className="line-clamp-1" title={r.notes || ''}>{r.notes || '—'}</span></td>
-                      <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                        <Input type="number" min="0" value={discounts[r.employeeId] ?? '0'} onChange={e => setDiscounts(d => ({ ...d, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
-                      </td>
                       <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap"
-                        title={`Base ${formatCurrency(baseOf(r))} + Bono ${formatCurrency(bonoOf(r))} - Desc.gen ${formatCurrency(generalFor(baseOf(r)))} - Desc.indiv ${formatCurrency(indiv(r))} = ${formatCurrency(netOf(r))}`}>
+                        title={`Base ${formatCurrency(baseOf(r))} + Bono ${formatCurrency(bonoOf(r))} - Desc.gen ${formatCurrency(getRowGeneral(r.employeeId, baseOf(r)))} - Indiv ${formatCurrency(indiv(r))} = ${formatCurrency(netOf(r))}`}>
                         {formatCurrency(netOf(r))}
                       </td>
                       <td className="px-2 py-2 text-center border-b border-gray-100" onClick={e => e.stopPropagation()}>{estadoChip(r.paid, () => togglePaid(r))}</td>
@@ -639,11 +629,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       )
                     })}
                     <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[120px]"><span className="line-clamp-1" title={s.note || ''}>{s.note || '—'}</span></td>
-                    <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" value={s.discount} onChange={e => setStaffField(s.id, { discount: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
-                    </td>
                     <td className="px-2 py-2 text-right font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap"
-                      title={`Base ${formatCurrency(s.salary)} + Bono ${formatCurrency(s.bonus)} - Desc.gen ${formatCurrency(generalFor(s.salary))} - Desc.indiv ${formatCurrency(s.discount)} = ${formatCurrency(netStaff(s))}`}>
+                      title={`Base ${formatCurrency(s.salary)} + Bono ${formatCurrency(s.bonus)} - Desc.gen ${formatCurrency(generalFor(s.salary))} = ${formatCurrency(netStaff(s))}`}>
                       {formatCurrency(netStaff(s))}
                     </td>
                     <td className="px-2 py-2 text-center border-b border-gray-100" onClick={e => e.stopPropagation()}>{estadoChip(s.paid, () => toggleStaffPaid(s))}</td>
@@ -726,6 +713,32 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
       {editing && <EmployeeEditModal employeeId={editing.id} employeeName={editing.name} periodStart={periodStart} initialDiscount={editing.discount} onClose={() => setEditing(null)} onSaved={() => refresh(period)} />}
       {editingStaff && <StaffEditModal staff={editingStaff} onClose={() => setEditingStaff(null)} onSaved={() => refresh(period)} />}
       {gate}
+
+      {/* Day type selector: solo colores, sin nombres */}
+      {daySelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDaySelector(null)}>
+          <div className="bg-white rounded-xl shadow p-2 flex gap-2" onClick={e=>e.stopPropagation()}>
+            {[
+              { t: 'present' as DayStatus, c: 'bg-emerald-500' },
+              { t: 'absent' as DayStatus, c: 'bg-red-500' },
+              { t: 'justified' as DayStatus, c: 'bg-blue-500' },
+              { t: 'unpaid' as DayStatus, c: 'bg-violet-500' },
+            ].map(opt => (
+              <button
+                key={opt.t}
+                onClick={async () => {
+                  await setEmployeeDayAction(daySelector.empId, daySelector.date, opt.t as 'present' | 'absent' | 'justified' | 'unpaid')
+                  setDaySelector(null)
+                  refresh(period, cycleDays, cycleAnchor)
+                }}
+                className={`w-8 h-8 rounded-full ${opt.c} border-2 border-white shadow hover:scale-110`}
+                title={opt.t}
+              />
+            ))}
+            <button onClick={() => setDaySelector(null)} className="text-xs px-2">✕</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

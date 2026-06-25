@@ -43,6 +43,7 @@ export default async function AdminLayout({
   const fit = s.dashboard_bg_fit || 'cover'
   const bgSize = fit === 'contain' ? 'contain' : 'cover'
   const bgPos = fit === 'center' ? 'center center' : 'center'
+  const hasBg = !!(dashBg || dashBgColor)
   const contentStyle: CSSProperties = dashBg ? {
     backgroundImage: `url(${dashBg})`,
     backgroundSize: bgSize,
@@ -50,12 +51,22 @@ export default async function AdminLayout({
     backgroundRepeat: 'no-repeat',
   } : (dashBgColor ? { backgroundColor: dashBgColor } : {})
 
+  // Auto text color for clear visibility on fondo
+  const textColor = dashBgColor && dashBgColor.startsWith('#') ? (() => {
+    const h = dashBgColor.slice(1)
+    const r = parseInt(h.slice(0,2)||'0',16)
+    const g = parseInt(h.slice(2,4)||'0',16)
+    const b = parseInt(h.slice(4,6)||'0',16)
+    const lum = (0.299*r + 0.587*g + 0.114*b)/255
+    return lum > 0.6 ? '#111827' : '#f8fafc'
+  })() : undefined
+
   return (
     <div className="min-h-screen bg-gray-50 flex mb-theme" style={themeVars}>
       <Sidebar store={store} profile={profile} />
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64" style={contentStyle}>
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64" style={{...contentStyle, ...(textColor ? {color: textColor} : {}) }}>
         <Header store={store} />
-        <main className={`flex-1 p-4 lg:p-6 overflow-auto ${dashBg || dashBgColor ? 'bg-white/5' : 'bg-white/90'}`}>
+        <main className={`flex-1 p-4 lg:p-6 overflow-auto ${hasBg ? 'bg-white/10' : 'bg-white/90'}`} style={textColor ? {color: textColor} : undefined}>
           {children}
         </main>
       </div>

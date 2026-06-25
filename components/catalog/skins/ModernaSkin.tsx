@@ -251,7 +251,7 @@ export default function ModernaSkin({
               return (
                 <div
                   key={product.id}
-                  className="group bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden flex flex-col border border-gray-100/80 hover:-translate-y-1"
+                  className={`group ${store.background_url ? 'bg-white/75 backdrop-blur-sm' : 'bg-white'} rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden flex flex-col border border-gray-100/80 hover:-translate-y-1`}
                 >
                   {/* Imagen */}
                   <Link href={productUrl} className="block relative overflow-hidden aspect-square bg-gray-100">

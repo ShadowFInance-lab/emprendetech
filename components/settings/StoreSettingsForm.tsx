@@ -33,6 +33,17 @@ const COLOR_PALETTES = [
   { name: 'Real', p: '#4F46E5', s: '#3730A3', b: '#DB2777' },
 ]
 
+const FONDO_NAMED_COLORS = [
+  { name: 'Blanco', hex: '#ffffff' },
+  { name: 'Gris claro', hex: '#f8fafc' },
+  { name: 'Gris', hex: '#e5e7eb' },
+  { name: 'Azul suave', hex: '#dbeafe' },
+  { name: 'Verde menta', hex: '#d1fae5' },
+  { name: 'Rosa pálido', hex: '#fce7f3' },
+  { name: 'Amarillo claro', hex: '#fef9c3' },
+  { name: 'Negro suave', hex: '#1f2937' },
+]
+
 const SKINS = [
   { id: 'moderna', label: 'Moderna', description: 'Gradientes, cards con sombra, bold' },
   { id: 'minimalista', label: 'Minimalista', description: 'Línea fina, limpio, tipografía elegante' },
@@ -749,18 +760,27 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 </div>
               </div>
 
-              {/* Fondo del catálogo + estilo de botones — libres para todos */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              {/* Fondo del catálogo + estilo de botones — compacto */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-sm">
                   <div>
                     <Label className="text-xs text-gray-500">Fondo del catálogo</Label>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <label className="relative cursor-pointer inline-block">
-                        <span className="block w-14 h-10 rounded-xl ring-1 ring-black/10 shadow" style={{ backgroundColor: bgColor }} />
-                        <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)}
-                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
-                      </label>
-                      <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{bgColor}</span>
-                      <button type="button" className="text-xs px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-50" onClick={(e) => { const inp = (e.currentTarget.parentElement?.querySelector('input[type=color]') as HTMLInputElement); inp?.click(); }}>Color de fondo</button>
+                    <div className="mt-1.5">
+                      <div className="flex flex-wrap gap-1.5 mb-1">
+                        {FONDO_NAMED_COLORS.map(c => (
+                          <button
+                            key={c.hex}
+                            type="button"
+                            onClick={() => setBgColor(c.hex)}
+                            title={c.name}
+                            className={`w-6 h-6 rounded border ${bgColor === c.hex ? 'ring-2 ring-blue-500' : 'border-gray-300'}`}
+                            style={{ backgroundColor: c.hex }}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="font-mono text-gray-500">{bgColor}</span>
+                        <span className="text-gray-400">({FONDO_NAMED_COLORS.find(c=>c.hex===bgColor)?.name || 'custom'})</span>
+                      </div>
                     </div>
                     {/* Imagen de fondo opcional (se ve detrás del catálogo) */}
                     <div className="mt-2 flex items-center gap-2">
@@ -829,15 +849,24 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       </div>
                     )}
                     <p className="text-[10px] text-gray-400 mt-1">Se aplica con overlay semitransparente para legibilidad.</p>
-                    {/* Color de fondo sólido para página principal / dashboard */}
-                    <div className="mt-2 flex items-center gap-2">
-                      <label className="relative cursor-pointer inline-block" title="Color de fondo sólido página principal">
-                        <span className="block w-8 h-8 rounded-lg ring-1 ring-black/10 shadow border" style={{ backgroundColor: dashboardBgColor }} />
-                        <input type="color" value={dashboardBgColor} onChange={e => setDashboardBgColor(e.target.value)}
-                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
-                      </label>
-                      <button type="button" className="text-xs px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-50" onClick={(e) => { const inp = (e.currentTarget.parentElement?.querySelector('input[type=color]') as HTMLInputElement); inp?.click(); }}>Color de fondo página principal</button>
-                      <span className="text-[10px] font-mono text-gray-500">{dashboardBgColor}</span>
+                    {/* Color de fondo sólido para página principal / dashboard - con nombres */}
+                    <div className="mt-1.5">
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {FONDO_NAMED_COLORS.map(c => (
+                          <button
+                            key={c.hex}
+                            type="button"
+                            onClick={() => setDashboardBgColor(c.hex)}
+                            title={c.name}
+                            className={`w-5 h-5 rounded border ${dashboardBgColor === c.hex ? 'ring-2 ring-blue-500' : 'border-gray-300'}`}
+                            style={{ backgroundColor: c.hex }}
+                          />
+                        ))}
+                      </div>
+                      <div className="text-[10px] flex items-center gap-1">
+                        <span className="font-mono text-gray-500">{dashboardBgColor}</span>
+                        <span className="text-gray-400">({FONDO_NAMED_COLORS.find(c=>c.hex===dashboardBgColor)?.name || ''})</span>
+                      </div>
                     </div>
                   </div>
                   <div>

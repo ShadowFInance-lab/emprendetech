@@ -50,7 +50,7 @@ export default function MinimalistaSkin({
       `}</style>
 
       {/* ─── HEADER ───────────────────────────────────────────── */}
-      <header className="border-b border-gray-100 sticky top-0 z-40 bg-white/95 backdrop-blur-sm">
+      <header className={`border-b border-gray-100 sticky top-0 z-40 ${store.background_url ? 'bg-white/80' : 'bg-white/95'} backdrop-blur-sm`}>
         <div className="max-w-5xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo + nombre */}
