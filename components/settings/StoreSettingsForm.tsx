@@ -743,6 +743,14 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                 <div>
                   <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Panel admin</p>
                   <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm" style={dashboardBgUrl ? { backgroundImage: `url(${dashboardBgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+                    <div className="flex justify-end px-1 pt-0.5">
+                      <div className="flex gap-0.5">
+                        <span className="w-2 h-2 rounded-full ring-1 ring-black/10" style={{ backgroundColor: panelPrimary }} title="Principal panel" />
+                        <span className="w-2 h-2 rounded-full ring-1 ring-black/10" style={{ backgroundColor: panelSecondary }} title="Secundario panel" />
+                        <span className="w-2 h-2 rounded-full ring-1 ring-black/10" style={{ backgroundColor: panelButton }} title="Botones panel" />
+                        <span className="w-2 h-2 rounded-full ring-1 ring-black/10" style={{ backgroundColor: dashboardBgColor }} title="Fondo" />
+                      </div>
+                    </div>
                     <div className="h-2.5" style={{ background: `linear-gradient(90deg, ${panelPrimary}, ${panelSecondary})` }} />
                     <div className="flex" style={{ minHeight: '90px', background: dashboardBgUrl ? 'rgba(255,255,255,0.7)' : undefined }}>
                       <div className="w-14 p-1.5 text-white shrink-0 flex flex-col gap-0.5" style={{ backgroundColor: panelPrimary }}>
@@ -868,8 +876,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                         ))}
                       </div>
                       <div className="text-[10px] flex items-center gap-1">
-                        <span className="font-mono text-gray-500">{dashboardBgColor}</span>
-                        <span className="text-gray-400">({FONDO_NAMED_COLORS.find(c=>c.hex===dashboardBgColor)?.name || ''})</span>
+                        <span className="text-gray-400">{FONDO_NAMED_COLORS.find(c=>c.hex===dashboardBgColor)?.name || 'custom'}</span>
                       </div>
                     </div>
                   </div>
