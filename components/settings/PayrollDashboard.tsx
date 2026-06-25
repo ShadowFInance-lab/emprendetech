@@ -719,8 +719,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[6px]">
-                  <td className="px-0 py-0 sticky left-0 bg-indigo-50 z-10" colSpan={9} title={`Totales · ${totalCount} empleado(s)`}>{totalCount}</td>
+                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[5px]">
+                  <td className="px-0 py-0 sticky left-0 bg-indigo-50 z-10" colSpan={9}>{totalCount}</td>
                   <td className="px-0 py-0 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
                   <td className="px-0 py-0" />
                   <td className="px-0 py-0 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
