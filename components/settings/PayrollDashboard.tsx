@@ -182,6 +182,32 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
       return s + amtOf(d, base)
     }, 0)
   }
+
+  // Optimistic local updates for day changes - no full page reload
+  function updateLocalAttendance(empId: string, date: string, status: DayStatus) {
+    setRows(prev => prev.map(r => {
+      if (r.employeeId !== empId) return r
+      const newCheckIn = status === 'present' ? `${date}T09:00:00` : null
+      const newNote = status === 'justified' ? 'Falta justificada' : status === 'unpaid' ? 'Permiso sin goce' : null
+      let updatedDays = r.days.map(d => d.date === date ? { ...d, checkIn: newCheckIn, checkOut: status === 'present' ? d.checkOut : null, note: newNote } : d)
+      if (!updatedDays.some(d => d.date === date)) {
+        updatedDays = [...updatedDays, { date, checkIn: newCheckIn, checkOut: null, note: newNote }].sort((a,b) => a.date.localeCompare(b.date))
+      }
+      const newPresent = updatedDays.filter(d => !!d.checkIn).length
+      return { ...r, days: updatedDays, daysPresent: newPresent }
+    }))
+  }
+
+  function updateLocalTimes(empId: string, date: string, ci: string | null, co: string | null) {
+    setRows(prev => prev.map(r => {
+      if (r.employeeId !== empId) return r
+      const newCI = ci ? `${date}T${ci}:00` : null
+      const newCO = co ? `${date}T${co}:00` : null
+      const updatedDays = r.days.map(d => d.date === date ? { ...d, checkIn: newCI, checkOut: newCO } : d)
+      const newPresent = updatedDays.filter(d => !!d.checkIn).length
+      return { ...r, days: updatedDays, daysPresent: newPresent }
+    }))
+  }
   const netOf = (r: PayrollRow) => Math.max(0, baseOf(r) + bonoOf(r) - getRowGeneral(r.employeeId, baseOf(r)) - indiv(r))
   const netStaff = (s: Staff) => Math.max(0, s.salary + s.bonus - generalFor(s.salary) - s.discount)
   const totalCount = rows.length + staff.length
@@ -683,8 +709,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[10px]">
-                  <td className="px-2 py-1 sticky left-0 bg-indigo-50 z-10" colSpan={9 + Math.max(0, deductions.length - 3)}>Totales · {totalCount} emp(s)</td>
+                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[9px]">
+                  <td className="px-1 py-0.5 sticky left-0 bg-indigo-50 z-10" colSpan={9 + Math.max(0, deductions.length - 3)} title={`Totales · ${totalCount} empleado(s)`}>{totalCount}</td>
                   <td className="px-1 py-1 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
                   <td className="px-1 py-1" />
                   <td className="px-1 py-1 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
@@ -769,8 +795,26 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 <button
                   key={opt.t}
                   onClick={async () => {
-                    await setEmployeeDayAction(daySelector.empId, daySelector.date, opt.t as 'present' | 'absent' | 'justified' | 'unpaid')
-                    refresh(period, cycleDays, cycleAnchor)
+                    const empId = daySelector.empId
+                    const date = daySelector.date
+                    const isLogueado = rows.some(r => r.employeeId === empId)
+                    if (isLogueado) {
+                      await setEmployeeDayAction(empId, date, opt.t as 'present' | 'absent' | 'justified' | 'unpaid')
+                      updateLocalAttendance(empId, date, opt.t)
+                    } else {
+                      // no logueado (staff/registro): ajustar days_worked y guardar
+                      const stf = staff.find(s => s.id === empId)
+                      if (stf) {
+                        const idx = week.findIndex(d => d === date)
+                        let newDw = stf.days_worked || 0
+                        if (opt.t === 'present') newDw = Math.max(newDw, idx + 1)
+                        else newDw = Math.min(newDw, idx)
+                        const updated = { ...stf, days_worked: Math.max(0, newDw) }
+                        setStaffField(empId, { days_worked: updated.days_worked })
+                        saveStaffRow(updated)
+                      }
+                    }
+                    setDaySelector(null)
                   }}
                   className={`w-8 h-8 rounded-full ${opt.c} border-2 border-white shadow hover:scale-110`}
                   title={opt.t}
@@ -781,14 +825,22 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
             <div className="flex gap-1 text-xs">
               <input type="time" value={timeIn} onChange={e=>setTimeIn(e.target.value)} onBlur={async () => {
                 if (timeIn || timeOut) {
-                  await setEmployeeDayTimesAction(daySelector.empId, daySelector.date, timeIn, timeOut)
-                  refresh(period, cycleDays, cycleAnchor)
+                  const empId = daySelector.empId
+                  const date = daySelector.date
+                  if (rows.some(r => r.employeeId === empId)) {
+                    await setEmployeeDayTimesAction(empId, date, timeIn, timeOut)
+                    updateLocalTimes(empId, date, timeIn, timeOut)
+                  }
                 }
               }} className="border rounded px-1" />
               <input type="time" value={timeOut} onChange={e=>setTimeOut(e.target.value)} onBlur={async () => {
                 if (timeIn || timeOut) {
-                  await setEmployeeDayTimesAction(daySelector.empId, daySelector.date, timeIn, timeOut)
-                  refresh(period, cycleDays, cycleAnchor)
+                  const empId = daySelector.empId
+                  const date = daySelector.date
+                  if (rows.some(r => r.employeeId === empId)) {
+                    await setEmployeeDayTimesAction(empId, date, timeIn, timeOut)
+                    updateLocalTimes(empId, date, timeIn, timeOut)
+                  }
                 }
               }} className="border rounded px-1" />
             </div>

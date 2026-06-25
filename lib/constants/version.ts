@@ -4,4 +4,4 @@
  * Súbelo cada vez que despliegues cambios grandes.
  */
 export const APP_VERSION = 'v7.58'
-export const APP_BUILD = '2026-06-25' // v7.58: historial nómina - selector periodo (Semanal/Catorcenal/Quincenal/Mensual/Personalizado), refresca tabla/días/totales por rango, descargas usan periodo seleccionado, Todas nóminas por empleado del periodo actual
+export const APP_BUILD = '2026-06-25' // v7.58: Nómina barra totales compacta (sin "Totales · X"), día changes solo actualizan fila local (sin reload), staff guardan días/horas, selector periodo + Mensual para historial
