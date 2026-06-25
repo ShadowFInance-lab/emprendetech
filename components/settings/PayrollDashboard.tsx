@@ -185,6 +185,12 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   function updateLocalAttendance(empId: string, date: string, status: DayStatus) {
     setRows(prev => prev.map(r => {
       if (r.employeeId !== empId) return r
+      if (status === 'none') {
+        // sin registro / blanco: remove the day entry
+        const filteredDays = r.days.filter(d => d.date !== date)
+        const newPresent = filteredDays.filter(d => !!d.checkIn).length
+        return { ...r, days: filteredDays, daysPresent: newPresent }
+      }
       const newCheckIn = status === 'present' ? `${date}T09:00:00` : null
       const newNote = status === 'justified' ? 'Falta justificada' : status === 'unpaid' ? 'Permiso sin goce' : null
       let updatedDays = r.days.map(d => d.date === date ? { ...d, checkIn: newCheckIn, checkOut: status === 'present' ? d.checkOut : null, note: newNote } : d)
@@ -471,7 +477,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
               <thead className="bg-indigo-50 text-indigo-900 text-xs">
                 <tr>
                   <th className="text-left px-3 py-2.5 font-semibold sticky left-0 bg-indigo-50 z-20 border-b border-indigo-100">Empleado</th>
-                  {['Teléfono', 'Emergencia', 'NSS', 'Sucursal', 'Entrada', 'Salida', 'Horas'].map(h => <th key={h} className="text-left px-2 py-2.5 font-semibold border-b border-indigo-100 whitespace-nowrap">{h}</th>)}
+                  {['Teléfono', 'Emergencia', 'NSS', 'Sucursal', 'Entrada', 'Salida', 'Horas'].map(h => <th key={h} className="text-left px-1 py-2.5 font-semibold border-b border-indigo-100 whitespace-nowrap">{h}</th>)}
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Días (L-D)</th>
                   <th className="text-right px-2 py-2.5 font-semibold border-b border-indigo-100">Pago base</th>
                   <th className="text-center px-2 py-2.5 font-semibold border-b border-indigo-100">Bonos</th>
@@ -514,12 +520,12 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                           <span className="text-[9px] bg-emerald-50 text-emerald-600 rounded px-1 py-0.5">Acceso</span>
                         </div>
                       </td>
-                      <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.phone ?? '—'}</td>
-                      <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.emergency ?? '—'}</td>
-                      <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.insurance ?? '—'}</td>
-                      <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.branch ?? '—'}</td>
-                      <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkIn ?? null)}</td>
-                      <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkOut ?? null)}</td>
+                      <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.phone ?? '—'}</td>
+                      <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.emergency ?? '—'}</td>
+                      <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.insurance ?? '—'}</td>
+                      <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.branch ?? '—'}</td>
+                      <td className="px-1 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkIn ?? null)}</td>
+                      <td className="px-1 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkOut ?? null)}</td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                         <Input
                           type="number"
@@ -527,7 +533,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                           step="0.1"
                           value={hoursOverrides[r.employeeId] ?? hours.toFixed(1)}
                           onChange={e => setHoursOverrides(h => ({...h, [r.employeeId]: e.target.value }))}
-                          className="w-16 h-6 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded"
+                          className="w-20 h-6 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded"
                         />
                       </td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
@@ -563,10 +569,10 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                                 .then(res => { if (!res.success) toast.error(res.error ?? 'Error al guardar salario') }))
                             }
                           }}
-                          className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                          className="w-28 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                        <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-24 h-7 text-right text-xs mx-auto border border-gray-200 focus:border-indigo-400 rounded" />
+                        <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-20 h-7 text-right text-xs mx-auto border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
                       {deductions.map((d, idx) => {
                         const key = d.id || d.concept
@@ -596,7 +602,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                                 // trigger save for the row
                                 saveRow(r)
                               }}
-                              className="w-16 h-6 text-right text-[10px] border border-violet-200 focus:border-violet-400 rounded"
+                              className="w-18 h-6 text-right text-[10px] border border-violet-200 focus:border-violet-400 rounded"
                             />
                           </td>
                         )
@@ -623,14 +629,14 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                         <span className="text-[9px] bg-slate-200 text-slate-600 rounded px-1 py-0.5">Registro</span>
                       </div>
                     </td>
-                    <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.phone ?? '—'}</td>
-                    <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.emergency_phone ?? '—'}</td>
-                    <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.insurance_no ?? '—'}</td>
-                    <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.branch ?? '—'}</td>
+                    <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.phone ?? '—'}</td>
+                    <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.emergency_phone ?? '—'}</td>
+                    <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.insurance_no ?? '—'}</td>
+                    <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.branch ?? '—'}</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" step="0.1" value={hoursOverrides[s.id] ?? '0'} onChange={e => setHoursOverrides(h => ({...h, [s.id]: e.target.value}))} className="w-14 h-6 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                      <Input type="number" min="0" step="0.1" value={hoursOverrides[s.id] ?? '0'} onChange={e => setHoursOverrides(h => ({...h, [s.id]: e.target.value}))} className="w-18 h-6 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
@@ -653,10 +659,10 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       </div>
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" step="0.01" value={s.salary} onChange={e => setStaffField(s.id, { salary: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                      <Input type="number" min="0" step="0.01" value={s.salary} onChange={e => setStaffField(s.id, { salary: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-28 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                      <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-20 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     {deductions.map((d, idx) => {
                       const key = d.id || d.concept
@@ -685,7 +691,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                               setStaffField(s.id, { discount: updated.discount })
                               saveStaffRow(updated)
                             }}
-                            className="w-16 h-6 text-right text-[10px] border border-violet-200 focus:border-violet-400 rounded"
+                            className="w-18 h-6 text-right text-[10px] border border-violet-200 focus:border-violet-400 rounded"
                           />
                         </td>
                       )
@@ -704,7 +710,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[8px]">
+                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[7px]">
                   <td className="px-0.5 py-0 sticky left-0 bg-indigo-50 z-10" colSpan={9 + Math.max(0, deductions.length - 3)} title={`Totales · ${totalCount} empleado(s)`}>{totalCount}</td>
                   <td className="px-0.5 py-0 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
                   <td className="px-0.5 py-0" />
@@ -786,6 +792,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 { t: 'absent' as DayStatus, c: 'bg-red-500' },
                 { t: 'justified' as DayStatus, c: 'bg-blue-500' },
                 { t: 'unpaid' as DayStatus, c: 'bg-violet-500' },
+                { t: 'none' as DayStatus, c: 'bg-white border-2 border-gray-400' },
               ].map(opt => (
                 <button
                   key={opt.t}
@@ -794,7 +801,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     const date = daySelector.date
                     const isLogueado = rows.some(r => r.employeeId === empId)
                     if (isLogueado) {
-                      await setEmployeeDayAction(empId, date, opt.t as 'present' | 'absent' | 'justified' | 'unpaid')
+                      await setEmployeeDayAction(empId, date, opt.t as 'present' | 'absent' | 'justified' | 'unpaid' | 'none')
                       updateLocalAttendance(empId, date, opt.t)
                     } else {
                       // no logueado (staff/registro): ajustar days_worked y guardar
