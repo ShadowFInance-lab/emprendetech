@@ -712,7 +712,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     <div className="px-2 py-1.5 flex items-center justify-between"
                       style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
                       <span className="text-white text-[9px] font-bold truncate max-w-[80px]">{store.name}</span>
-                      <span className="text-[7px] bg-white/20 text-white px-1 py-0.5 rounded shrink-0">Público</span>
+                      <div className="flex gap-0.5">
+                        <span className="w-2 h-2 rounded-full ring-1 ring-white/50" style={{ backgroundColor: primaryColor }} title="Principal" />
+                        <span className="w-2 h-2 rounded-full ring-1 ring-white/50" style={{ backgroundColor: secondaryColor }} title="Secundario" />
+                        <span className="w-2 h-2 rounded-full ring-1 ring-white/50" style={{ backgroundColor: buttonColor }} title="Botones" />
+                        <span className="w-2 h-2 rounded-full ring-1 ring-white/50" style={{ backgroundColor: bgColor }} title="Fondo" />
+                      </div>
                     </div>
                     <div className="p-1.5 grid grid-cols-2 gap-1" style={{
                       backgroundColor: bgColor,
@@ -778,8 +783,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                         ))}
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="font-mono text-gray-500">{bgColor}</span>
-                        <span className="text-gray-400">({FONDO_NAMED_COLORS.find(c=>c.hex===bgColor)?.name || 'custom'})</span>
+                        <span className="text-gray-400">{FONDO_NAMED_COLORS.find(c=>c.hex===bgColor)?.name || 'custom'}</span>
                       </div>
                     </div>
                     {/* Imagen de fondo opcional (se ve detrás del catálogo) */}

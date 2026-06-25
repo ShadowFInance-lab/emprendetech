@@ -4,4 +4,4 @@
  * Súbelo cada vez que despliegues cambios grandes.
  */
 export const APP_VERSION = 'v7.61'
-export const APP_BUILD = '2026-06-25' // v7.61: staff no logueados seleccionan días por círculo + blanco/sin registro, guardan, solo círculos sin nums; totals compacto solo nums no tapa; más espacio números.
+export const APP_BUILD = '2026-06-25' // v7.61: Nómina recortar barra verde/naranja + días solo nombre color; Config agregar fondo en preview arriba + paletas solo nombre no hex.

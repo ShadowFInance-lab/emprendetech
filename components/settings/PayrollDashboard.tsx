@@ -73,6 +73,13 @@ const DAY_COLORS: Record<DayStatus, string> = {
   absent: 'bg-red-100 text-red-600 ring-1 ring-red-300',
   none: 'bg-gray-100 text-gray-400'
 }
+const DAY_COLOR_NAME: Record<DayStatus, string> = {
+  present: 'verde',
+  justified: 'azul',
+  unpaid: 'morado',
+  absent: 'rojo',
+  none: 'blanco'
+}
 const DAY_ICON = (s: DayStatus) => s === 'present' ? <Check size={10} /> : s === 'justified' ? <Check size={9} /> : s === 'unpaid' ? 'P' : s === 'absent' ? <X size={10} /> : '·'
 
 export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid = true, compact = false }: { createSlot?: ReactNode; refreshSignal?: number; isPaid?: boolean; compact?: boolean }) {
@@ -553,7 +560,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                                   e.stopPropagation()
                                   setDaySelector({ empId: r.employeeId, date })
                                 }}
-                                title={`${formatDayShort(date)} (${WD[i]}) — clic para cambiar`}
+                                title={`${formatDayShort(date)} (${WD[i]}) — ${DAY_COLOR_NAME[status]}`}
                                 className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] cursor-pointer select-none hover:scale-110 transition-all ${cls}`}
                               >{icon}</span>
                             )
@@ -652,7 +659,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                               onClick={() => {
                                 setDaySelector({ empId: s.id, date: week[i] })
                               }}
-                              title={`${WD[i]} — clic para selector tipo + editar`}
+                              title={`${WD[i]} — ${DAY_COLOR_NAME[status]}`}
                               className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] cursor-pointer select-none transition-colors ${cls}`}>
                               {icon}
                             </span>
@@ -759,22 +766,22 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
         )}
 
         {/* Tira resumen compacta - recortada más pequeña para no tapar números */}
-        <div className="border-t border-gray-100 pt-0 flex flex-wrap items-center gap-1 text-[8px]">
-          <BadgeDollarSign size={10} className="text-indigo-500 shrink-0" />
+        <div className="border-t border-gray-100 pt-0 flex flex-wrap items-center gap-0.5 text-[7px]">
+          <BadgeDollarSign size={8} className="text-indigo-500 shrink-0" />
           {[
             { l: 'Bruto', v: formatCurrency(totals.bruto), cls: 'text-gray-900' },
             { l: 'ISR', v: `-${formatCurrency(totals.isr)}`, cls: 'text-rose-600' },
             { l: 'IMSS', v: `-${formatCurrency(totals.imss)}`, cls: 'text-rose-600' },
             ...(totals.otros_gen > 0.005 ? [{ l: 'Otros', v: `-${formatCurrency(totals.otros_gen)}`, cls: 'text-orange-500' }] : []),
           ].map((item, i) => (
-            <span key={i} className="flex items-baseline gap-0.5 text-[9px]">
+            <span key={i} className="flex items-baseline gap-0.5 text-[7px]">
               <span className="text-gray-400">{item.l}:</span>
               <span className={`font-semibold ${item.cls}`}>{item.v}</span>
             </span>
           ))}
-          <span className="ml-auto flex items-center gap-1 rounded-lg bg-indigo-50 px-1 py-0">
-            <span className="text-[8px] font-semibold text-indigo-900">Neto:</span>
-            <span className="text-[10px] font-bold text-indigo-700">{formatCurrency(totals.neto)}</span>
+          <span className="ml-auto flex items-center gap-0.5 rounded-lg bg-indigo-50 px-1 py-0">
+            <span className="text-[7px] font-semibold text-indigo-900">Neto:</span>
+            <span className="text-[9px] font-bold text-indigo-700">{formatCurrency(totals.neto)}</span>
           </span>
         </div>
       </div>
@@ -825,7 +832,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     setDaySelector(null)
                   }}
                   className={`w-8 h-8 rounded-full ${opt.c} border-2 border-white shadow hover:scale-110`}
-                  title={opt.t}
+                  title={DAY_COLOR_NAME[opt.t]}
                 />
               ))}
             </div>
