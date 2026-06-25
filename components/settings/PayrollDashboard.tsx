@@ -92,7 +92,6 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   // Per-row overrides for general deductions (editable individually per employee row)
   const [generalOverrides, setGeneralOverrides] = useState<Record<string, Record<string, string>>>({}) // empId -> (dedId|concept) -> amount str
   const [hoursOverrides, setHoursOverrides] = useState<Record<string, string>>({})
-  const [daysOverrides, setDaysOverrides] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState<{ id: string; name: string; discount: number } | null>(null)
@@ -106,7 +105,6 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   useEffect(() => {
     setGeneralOverrides({})
     setHoursOverrides({})
-    setDaysOverrides({})
     setDiscounts({})
     setBonuses({})
     setBases({})
@@ -636,26 +634,23 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
-                        {week.map((_, i) => {
-                          const worked = i < (parseInt(daysOverrides[s.id] ?? String(s.days_worked)) || s.days_worked)
+                        {week.map((date, i) => {
+                          const worked = i < s.days_worked
+                          const st = worked ? 'present' : 'absent'
+                          const cls = DAY_COLORS[st]
+                          const icon = worked ? <Check size={11} /> : '·'
                           return (
                             <span key={i}
                               onClick={() => {
-                                setDaySelector({ empId: s.id, date: week[i] })  // reuse selector for staff too; type may not persist but opens
+                                setDaySelector({ empId: s.id, date: week[i] })
                               }}
-                              title={`${WD[i]} — clic para selector tipo + editar (días/horas)`}
-                              className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] cursor-pointer select-none transition-colors ${worked ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-gray-100 text-gray-300 hover:bg-gray-200'}`}>
-                              {worked ? <Check size={11} /> : '·'}
+                              title={`${WD[i]} — clic para selector tipo + editar`}
+                              className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] cursor-pointer select-none transition-colors ${cls}`}>
+                              {icon}
                             </span>
                           )
                         })}
                       </div>
-                      <Input type="number" min="0" value={daysOverrides[s.id] ?? String(s.days_worked)} onChange={e => setDaysOverrides(d => ({...d, [s.id]: e.target.value}))} onBlur={() => {
-                        const val = parseInt(daysOverrides[s.id] ?? String(s.days_worked)) || 0
-                        const updated = { ...s, days_worked: val }
-                        setStaffField(s.id, { days_worked: val })
-                        saveStaffRow(updated)
-                      }} className="mt-0.5 w-10 h-5 text-[9px] text-center border border-gray-200 rounded" />
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <Input type="number" min="0" step="0.01" value={s.salary} onChange={e => setStaffField(s.id, { salary: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
@@ -709,17 +704,17 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[9px]">
-                  <td className="px-1 py-0.5 sticky left-0 bg-indigo-50 z-10" colSpan={9 + Math.max(0, deductions.length - 3)} title={`Totales · ${totalCount} empleado(s)`}>{totalCount}</td>
-                  <td className="px-1 py-1 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
-                  <td className="px-1 py-1" />
-                  <td className="px-1 py-1 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
-                  <td className="px-1 py-1 text-right text-rose-600">-{formatCurrency(totals.imss)}</td>
-                  <td className="px-1 py-1 text-right text-orange-600">{totals.otros_gen > 0.005 ? `-${formatCurrency(totals.otros_gen)}` : '—'}</td>
-                  <td className="px-1 py-1" />
-                  <td className="px-1 py-1" />
-                  <td className="px-1 py-1 text-right text-indigo-700 font-bold">{formatCurrency(totals.neto)}</td>
-                  <td className="px-1 py-1" /><td className="px-1 py-1" />
+                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[8px]">
+                  <td className="px-0.5 py-0 sticky left-0 bg-indigo-50 z-10" colSpan={9 + Math.max(0, deductions.length - 3)} title={`Totales · ${totalCount} empleado(s)`}>{totalCount}</td>
+                  <td className="px-0.5 py-0 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
+                  <td className="px-0.5 py-0" />
+                  <td className="px-0.5 py-0 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
+                  <td className="px-0.5 py-0 text-right text-rose-600">-{formatCurrency(totals.imss)}</td>
+                  <td className="px-0.5 py-0 text-right text-orange-600">{totals.otros_gen > 0.005 ? `-${formatCurrency(totals.otros_gen)}` : '—'}</td>
+                  <td className="px-0.5 py-0" />
+                  <td className="px-0.5 py-0" />
+                  <td className="px-0.5 py-0 text-right text-indigo-700 font-bold">{formatCurrency(totals.neto)}</td>
+                  <td className="px-0.5 py-0" /><td className="px-0.5 py-0" />
                 </tr>
               </tfoot>
             </table>
