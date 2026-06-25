@@ -12,7 +12,7 @@ import {
   getDeductionsAction, saveDeductionAction, deleteDeductionAction, saveEmployeeSalaryAction,
   type PayrollRow, type PayrollPeriod, type PayrollDeduction,
 } from '@/lib/actions/payroll'
-import { setEmployeeDayAction } from '@/lib/actions/attendance'
+import { setEmployeeDayAction, setEmployeeDayTimesAction } from '@/lib/actions/attendance'
 import { listStaffAction, saveStaffAction, type Staff } from '@/lib/actions/staff'
 import { formatCurrency } from '@/lib/utils/format'
 import EmployeeEditModal from './EmployeeEditModal'
@@ -92,12 +92,28 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
   // Per-row overrides for general deductions (editable individually per employee row)
   const [generalOverrides, setGeneralOverrides] = useState<Record<string, Record<string, string>>>({}) // empId -> (dedId|concept) -> amount str
   const [hoursOverrides, setHoursOverrides] = useState<Record<string, string>>({})
+  const [daysOverrides, setDaysOverrides] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
   const [editing, setEditing] = useState<{ id: string; name: string; discount: number } | null>(null)
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
   const [daySelector, setDaySelector] = useState<{ empId: string; date: string } | null>(null)
+  const [timeIn, setTimeIn] = useState('')
+  const [timeOut, setTimeOut] = useState('')
   const { requireUnlock, gate } = useBossGate()
+
+  useEffect(() => {
+    if (!daySelector) { setTimeIn(''); setTimeOut(''); return }
+    // try to find current times from data
+    const empRow = rows.find(r => r.employeeId === daySelector.empId)
+    if (empRow) {
+      const d = empRow.days.find(dd => dd.date === daySelector.date)
+      if (d) {
+        setTimeIn(d.checkIn ? d.checkIn.slice(11,16) : '')
+        setTimeOut(d.checkOut ? d.checkOut.slice(11,16) : '')
+      }
+    }
+  }, [daySelector, rows])
 
   const refresh = useCallback(async (p: PayrollPeriod, days?: number, anchor?: string) => {
     setLoading(true)
@@ -391,7 +407,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
       </div>
 
       {/* Tabla de nómina */}
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+      <div className="rounded-2xl border border-gray-100 bg-white/80 shadow-sm p-4">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Wallet size={16} className="text-indigo-600" /> Nómina · {periodLabel} <span className="ml-2 text-[10px] font-normal text-gray-400">(edita sueldo/bonos/desc. — guarda al salir del campo)</span></p>
           <div className="flex items-center gap-2 flex-wrap">
@@ -446,7 +462,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                   const hours = r.days.reduce((a, d) => a + hoursOf(d.checkIn, d.checkOut), 0)
                   const present = r.days.filter(d => d.checkIn); const last = present[present.length - 1]
                   return (
-                    <tr key={r.employeeId} onClick={() => setEditing({ id: r.employeeId, name: r.name ?? 'Empleado', discount: indiv(r) })} className="group bg-white hover:bg-indigo-50/30 cursor-pointer">
+                    <tr key={r.employeeId} onClick={() => setEditing({ id: r.employeeId, name: r.name ?? 'Empleado', discount: indiv(r) })} className="group bg-white/90 hover:bg-indigo-50/30 cursor-pointer">
                       <td className="px-3 py-2 sticky left-0 bg-white group-hover:bg-indigo-50/30 z-10 border-b border-gray-100">
                         <div className="flex items-center gap-2">
                           <span className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{(r.name || '?').charAt(0).toUpperCase()}</span>
@@ -555,7 +571,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                   )
                 })}
                 {staff.map(s => (
-                  <tr key={s.id} onClick={() => setEditingStaff(s)} className="group bg-slate-50/40 hover:bg-indigo-50/30 cursor-pointer">
+                  <tr key={s.id} onClick={() => setEditingStaff(s)} className="group bg-slate-50/60 hover:bg-indigo-50/30 cursor-pointer">
                     <td className="px-3 py-2 sticky left-0 bg-slate-50 group-hover:bg-indigo-50/30 z-10 border-b border-gray-100">
                       <div className="flex items-center gap-2">
                         <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold flex-shrink-0">{(s.name || '?').charAt(0).toUpperCase()}</span>
@@ -569,26 +585,31 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     <td className="px-2 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{s.branch ?? '—'}</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
-                    <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
+                    <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
+                      <Input type="number" min="0" step="0.1" value={hoursOverrides[s.id] ?? '0'} onChange={e => setHoursOverrides(h => ({...h, [s.id]: e.target.value}))} className="w-14 h-6 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                    </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
                         {week.map((_, i) => {
-                          const worked = i < s.days_worked
+                          const worked = i < (parseInt(daysOverrides[s.id] ?? String(s.days_worked)) || s.days_worked)
                           return (
                             <span key={i}
                               onClick={() => {
-                                const next = worked ? i : i + 1
-                                const updated = { ...s, days_worked: next }
-                                setStaffField(s.id, { days_worked: next })
-                                saveStaffRow(updated)
+                                setDaySelector({ empId: s.id, date: week[i] })  // reuse selector for staff too; type may not persist but opens
                               }}
-                              title={`${WD[i]} — clic para cambiar (${i + 1} días)`}
+                              title={`${WD[i]} — clic para selector tipo + editar (días/horas)`}
                               className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] cursor-pointer select-none transition-colors ${worked ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-gray-100 text-gray-300 hover:bg-gray-200'}`}>
                               {worked ? <Check size={11} /> : '·'}
                             </span>
                           )
                         })}
                       </div>
+                      <Input type="number" min="0" value={daysOverrides[s.id] ?? String(s.days_worked)} onChange={e => setDaysOverrides(d => ({...d, [s.id]: e.target.value}))} onBlur={() => {
+                        const val = parseInt(daysOverrides[s.id] ?? String(s.days_worked)) || 0
+                        const updated = { ...s, days_worked: val }
+                        setStaffField(s.id, { days_worked: val })
+                        saveStaffRow(updated)
+                      }} className="mt-0.5 w-10 h-5 text-[9px] text-center border border-gray-200 rounded" />
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <Input type="number" min="0" step="0.01" value={s.salary} onChange={e => setStaffField(s.id, { salary: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-24 h-7 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
@@ -642,17 +663,17 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-xs">
-                  <td className="px-3 py-2 sticky left-0 bg-indigo-50 z-10" colSpan={9 + Math.max(0, deductions.length - 3)}>Totales · {totalCount} empleado(s)</td>
-                  <td className="px-2 py-2 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
-                  <td className="px-2 py-2" />
-                  <td className="px-2 py-2 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
-                  <td className="px-2 py-2 text-right text-rose-600">-{formatCurrency(totals.imss)}</td>
-                  <td className="px-2 py-2 text-right text-orange-600">{totals.otros_gen > 0.005 ? `-${formatCurrency(totals.otros_gen)}` : '—'}</td>
-                  <td className="px-2 py-2" />
-                  <td className="px-2 py-2" />
-                  <td className="px-2 py-2 text-right text-indigo-700 font-bold">{formatCurrency(totals.neto)}</td>
-                  <td className="px-2 py-2" /><td className="px-3 py-2" />
+                <tr className="bg-indigo-50/70 font-semibold text-gray-800 text-[10px]">
+                  <td className="px-2 py-1 sticky left-0 bg-indigo-50 z-10" colSpan={9 + Math.max(0, deductions.length - 3)}>Totales · {totalCount} emp(s)</td>
+                  <td className="px-1 py-1 text-right text-gray-900">{formatCurrency(totals.bruto)}</td>
+                  <td className="px-1 py-1" />
+                  <td className="px-1 py-1 text-right text-rose-600">-{formatCurrency(totals.isr)}</td>
+                  <td className="px-1 py-1 text-right text-rose-600">-{formatCurrency(totals.imss)}</td>
+                  <td className="px-1 py-1 text-right text-orange-600">{totals.otros_gen > 0.005 ? `-${formatCurrency(totals.otros_gen)}` : '—'}</td>
+                  <td className="px-1 py-1" />
+                  <td className="px-1 py-1" />
+                  <td className="px-1 py-1 text-right text-indigo-700 font-bold">{formatCurrency(totals.neto)}</td>
+                  <td className="px-1 py-1" /><td className="px-1 py-1" />
                 </tr>
               </tfoot>
             </table>
@@ -662,7 +683,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
 
       {/* Descuentos generales + tira resumen compacta */}
       {!compact && (
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
+      <div className="rounded-2xl border border-gray-100 bg-white/80 shadow-sm p-4 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5"><Receipt size={16} className="text-indigo-600" /> Descuentos generales</p>
           <button onClick={() => addDed()} className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800"><Plus size={14} /> Agregar</button>
@@ -688,23 +709,23 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
           </div>
         )}
 
-        {/* Tira resumen compacta - más pequeña para no tapar */}
-        <div className="border-t border-gray-100 pt-1.5 flex flex-wrap items-center gap-2 text-[10px]">
-          <BadgeDollarSign size={12} className="text-indigo-500 shrink-0" />
+        {/* Tira resumen compacta - recortada más pequeña para no tapar números */}
+        <div className="border-t border-gray-100 pt-0.5 flex flex-wrap items-center gap-1 text-[9px]">
+          <BadgeDollarSign size={10} className="text-indigo-500 shrink-0" />
           {[
             { l: 'Bruto', v: formatCurrency(totals.bruto), cls: 'text-gray-900' },
             { l: 'ISR', v: `-${formatCurrency(totals.isr)}`, cls: 'text-rose-600' },
             { l: 'IMSS', v: `-${formatCurrency(totals.imss)}`, cls: 'text-rose-600' },
             ...(totals.otros_gen > 0.005 ? [{ l: 'Otros', v: `-${formatCurrency(totals.otros_gen)}`, cls: 'text-orange-500' }] : []),
           ].map((item, i) => (
-            <span key={i} className="flex items-baseline gap-0.5 text-[10px]">
+            <span key={i} className="flex items-baseline gap-0.5 text-[9px]">
               <span className="text-gray-400">{item.l}:</span>
               <span className={`font-semibold ${item.cls}`}>{item.v}</span>
             </span>
           ))}
-          <span className="ml-auto flex items-center gap-1 rounded-lg bg-indigo-50 px-2 py-0.5">
-            <span className="text-[10px] font-semibold text-indigo-900">Neto:</span>
-            <span className="text-sm font-bold text-indigo-700">{formatCurrency(totals.neto)}</span>
+          <span className="ml-auto flex items-center gap-1 rounded-lg bg-indigo-50 px-1.5 py-0">
+            <span className="text-[9px] font-semibold text-indigo-900">Neto:</span>
+            <span className="text-xs font-bold text-indigo-700">{formatCurrency(totals.neto)}</span>
           </span>
         </div>
       </div>
@@ -714,28 +735,44 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
       {editingStaff && <StaffEditModal staff={editingStaff} onClose={() => setEditingStaff(null)} onSaved={() => refresh(period)} />}
       {gate}
 
-      {/* Day type selector: solo colores, sin nombres */}
+      {/* Day type selector: solo colores, sin nombres + hora entrada/salida editable */}
       {daySelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDaySelector(null)}>
-          <div className="bg-white rounded-xl shadow p-2 flex gap-2" onClick={e=>e.stopPropagation()}>
-            {[
-              { t: 'present' as DayStatus, c: 'bg-emerald-500' },
-              { t: 'absent' as DayStatus, c: 'bg-red-500' },
-              { t: 'justified' as DayStatus, c: 'bg-blue-500' },
-              { t: 'unpaid' as DayStatus, c: 'bg-violet-500' },
-            ].map(opt => (
-              <button
-                key={opt.t}
-                onClick={async () => {
-                  await setEmployeeDayAction(daySelector.empId, daySelector.date, opt.t as 'present' | 'absent' | 'justified' | 'unpaid')
-                  setDaySelector(null)
+          <div className="bg-white rounded-xl shadow p-3 flex flex-col gap-2" onClick={e=>e.stopPropagation()}>
+            <div className="flex gap-2">
+              {[
+                { t: 'present' as DayStatus, c: 'bg-emerald-500' },
+                { t: 'absent' as DayStatus, c: 'bg-red-500' },
+                { t: 'justified' as DayStatus, c: 'bg-blue-500' },
+                { t: 'unpaid' as DayStatus, c: 'bg-violet-500' },
+              ].map(opt => (
+                <button
+                  key={opt.t}
+                  onClick={async () => {
+                    await setEmployeeDayAction(daySelector.empId, daySelector.date, opt.t as 'present' | 'absent' | 'justified' | 'unpaid')
+                    refresh(period, cycleDays, cycleAnchor)
+                  }}
+                  className={`w-8 h-8 rounded-full ${opt.c} border-2 border-white shadow hover:scale-110`}
+                  title={opt.t}
+                />
+              ))}
+            </div>
+            <div className="text-xs">Hora entrada/salida (para el día):</div>
+            <div className="flex gap-1 text-xs">
+              <input type="time" value={timeIn} onChange={e=>setTimeIn(e.target.value)} onBlur={async () => {
+                if (timeIn || timeOut) {
+                  await setEmployeeDayTimesAction(daySelector.empId, daySelector.date, timeIn, timeOut)
                   refresh(period, cycleDays, cycleAnchor)
-                }}
-                className={`w-8 h-8 rounded-full ${opt.c} border-2 border-white shadow hover:scale-110`}
-                title={opt.t}
-              />
-            ))}
-            <button onClick={() => setDaySelector(null)} className="text-xs px-2">✕</button>
+                }
+              }} className="border rounded px-1" />
+              <input type="time" value={timeOut} onChange={e=>setTimeOut(e.target.value)} onBlur={async () => {
+                if (timeIn || timeOut) {
+                  await setEmployeeDayTimesAction(daySelector.empId, daySelector.date, timeIn, timeOut)
+                  refresh(period, cycleDays, cycleAnchor)
+                }
+              }} className="border rounded px-1" />
+            </div>
+            <button onClick={() => setDaySelector(null)} className="text-xs self-end px-2 py-0.5 border rounded">Cerrar</button>
           </div>
         </div>
       )}

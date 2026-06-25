@@ -62,11 +62,11 @@ export default async function AdminLayout({
   })() : undefined
 
   return (
-    <div className="min-h-screen bg-gray-50 flex mb-theme" style={themeVars}>
+    <div className={`min-h-screen flex mb-theme ${hasBg ? 'bg-transparent' : 'bg-gray-50'}`} style={themeVars}>
       <Sidebar store={store} profile={profile} />
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64" style={{...contentStyle, ...(textColor ? {color: textColor} : {}) }}>
         <Header store={store} />
-        <main className={`flex-1 p-4 lg:p-6 overflow-auto ${hasBg ? 'bg-white/10' : 'bg-white/90'}`} style={textColor ? {color: textColor} : undefined}>
+        <main className={`flex-1 p-4 lg:p-6 overflow-auto ${hasBg ? 'bg-transparent' : 'bg-white/90'}`} style={textColor ? {color: textColor} : undefined}>
           {children}
         </main>
       </div>
