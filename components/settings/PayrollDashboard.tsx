@@ -602,10 +602,10 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                                 .then(res => { if (!res.success) toast.error(res.error ?? 'Error al guardar salario') }))
                             }
                           }}
-                          className="w-28 h-7 text-right text-sm font-semibold border border-gray-200 focus:border-indigo-400 rounded" />
+                          className="w-28 h-7 text-right text-sm font-bold border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                        <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-20 h-7 text-right text-sm font-semibold mx-auto border border-gray-200 focus:border-indigo-400 rounded" />
+                        <Input type="number" min="0" value={bonuses[r.employeeId] ?? '0'} onChange={e => setBonuses(b => ({ ...b, [r.employeeId]: e.target.value }))} onBlur={() => saveRow(r)} className="w-20 h-7 text-right text-sm font-bold mx-auto border border-gray-200 focus:border-indigo-400 rounded" />
                       </td>
                       {deductions.map((d, idx) => {
                         const key = d.id || d.concept
@@ -635,13 +635,13 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                                 // trigger save for the row
                                 saveRow(r)
                               }}
-                              className="w-18 h-6 text-right text-sm font-semibold border border-violet-200 focus:border-violet-400 rounded"
+                              className="w-18 h-6 text-right text-sm font-bold border border-violet-200 focus:border-violet-400 rounded"
                             />
                           </td>
                         )
                       })}
                       <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[120px]"><span className="line-clamp-1" title={r.notes || ''}>{r.notes || '—'}</span></td>
-                      <td className="px-2 py-2 text-right text-sm font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap"
+                      <td className="px-2 py-2 text-right text-sm font-bold text-indigo-800 border-b border-gray-100 whitespace-nowrap bg-indigo-50/30"
                         title={`Base ${formatCurrency(baseOf(r))} + Bono ${formatCurrency(bonoOf(r))} - Desc.gen ${formatCurrency(getRowGeneral(r.employeeId, baseOf(r)))} - Indiv ${formatCurrency(indiv(r))} = ${formatCurrency(netOf(r))}`}>
                         {formatCurrency(netOf(r))}
                       </td>
@@ -691,10 +691,10 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       </div>
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" step="0.01" value={s.salary} onChange={e => setStaffField(s.id, { salary: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-28 h-7 text-right text-sm font-semibold border border-gray-200 focus:border-indigo-400 rounded" />
+                      <Input type="number" min="0" step="0.01" value={s.salary} onChange={e => setStaffField(s.id, { salary: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-28 h-7 text-right text-sm font-bold border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-20 h-7 text-right text-sm font-semibold border border-gray-200 focus:border-indigo-400 rounded" />
+                      <Input type="number" min="0" value={s.bonus} onChange={e => setStaffField(s.id, { bonus: parseFloat(e.target.value) || 0 })} onBlur={() => saveStaffRow(s)} className="w-20 h-7 text-right text-sm font-bold border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     {deductions.map((d, idx) => {
                       const key = d.id || d.concept
@@ -723,13 +723,13 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                               setStaffField(s.id, { discount: updated.discount })
                               saveStaffRow(updated)
                             }}
-                            className="w-18 h-6 text-right text-sm font-semibold border border-violet-200 focus:border-violet-400 rounded"
+                            className="w-18 h-6 text-right text-sm font-bold border border-violet-200 focus:border-violet-400 rounded"
                           />
                         </td>
                       )
                     })}
                     <td className="px-2 py-2 text-gray-500 border-b border-gray-100 max-w-[120px]"><span className="line-clamp-1" title={s.note || ''}>{s.note || '—'}</span></td>
-                    <td className="px-2 py-2 text-right text-sm font-bold text-gray-900 border-b border-gray-100 whitespace-nowrap"
+                    <td className="px-2 py-2 text-right text-sm font-bold text-indigo-800 border-b border-gray-100 whitespace-nowrap bg-indigo-50/30"
                       title={`Base ${formatCurrency(s.salary)} + Bono ${formatCurrency(s.bonus)} - Desc.gen ${formatCurrency(generalFor(s.salary))} = ${formatCurrency(netStaff(s))}`}>
                       {formatCurrency(netStaff(s))}
                     </td>
@@ -742,24 +742,13 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                 ))}
               </tbody>
               <tfoot>
-                <tr className="text-sm border-t border-gray-200">
-                  <td colSpan={COLS_BEFORE_MONEY} className="p-0 border-0 bg-transparent" />
-                  <td className="px-2 py-1 text-right font-semibold text-gray-900 whitespace-nowrap">
-                    {formatCurrency(totals.baseOnly)}
-                  </td>
-                  <td className="px-2 py-1 text-right font-semibold text-gray-900 whitespace-nowrap">
-                    {formatCurrency(totals.bonusOnly)}
-                  </td>
-                  {deductions.map((d, i) => (
-                    <td key={d.id || i} className="px-1 py-1 text-right font-semibold text-rose-600 whitespace-nowrap">
-                      -{formatCurrency(totals.perDeduction[i] ?? 0)}
-                    </td>
-                  ))}
-                  <td className="p-0 border-0 bg-transparent" />
-                  <td className="px-2 py-1 text-right text-sm font-bold text-indigo-800 bg-indigo-50/80 whitespace-nowrap">
+                {/* Solo desde la columna Neto hacia la derecha: más compacta, no tapa números de otras columnas */}
+                <tr className="text-sm border-t border-gray-200 bg-indigo-50/50">
+                  <td colSpan={COLS_BEFORE_MONEY + 2 + deductions.length + 1} className="p-0 border-0 bg-transparent" />
+                  <td className="px-2 py-1 text-right text-sm font-bold text-indigo-900 bg-indigo-100 whitespace-nowrap">
                     {formatCurrency(totals.neto)}
                   </td>
-                  <td colSpan={2} className="p-0 border-0 bg-indigo-50/40" />
+                  <td colSpan={2} className="p-0 border-0 bg-transparent" />
                 </tr>
               </tfoot>
             </table>

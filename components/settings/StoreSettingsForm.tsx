@@ -134,6 +134,21 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   }, [])
   useEffect(() => { loadIdentities() }, [loadIdentities])
 
+  // Sync color (and related) states from fresh server prop after save + router.refresh()
+  // Ensures changes are visible immediately and on full page refresh.
+  useEffect(() => {
+    const sxSync = store as { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; dashboard_bg_color?: string | null }
+    if (store.primary_color) setPrimaryColor(store.primary_color)
+    if (store.secondary_color) setSecondaryColor(store.secondary_color)
+    if (store.button_color) setButtonColor(store.button_color)
+    if (sxSync.panel_primary) setPanelPrimary(sxSync.panel_primary)
+    if (sxSync.panel_secondary) setPanelSecondary(sxSync.panel_secondary)
+    if (sxSync.panel_button) setPanelButton(sxSync.panel_button)
+    if (store.bg_color) setBgColor(store.bg_color)
+    if (sxSync.dashboard_bg_color) setDashboardBgColor(sxSync.dashboard_bg_color)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store])
+
   async function toggleLogin(provider: string) {
     const supabase = createClient()
     const connected = identities.some(i => i.provider === provider)
