@@ -66,6 +66,7 @@ export default function StorePaymentSection() {
       ) : (
         <div className="space-y-3">
           <button 
+            type="button"
             onClick={() => { window.location.href = '/api/oauth/mercadopago/start'; }}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl text-base flex items-center justify-center gap-2"
           >
