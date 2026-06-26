@@ -12,6 +12,20 @@ const PLAN_PRICES: Record<string, { amount: number; title: string; recurring: bo
   vip_plus: { amount: 1599, title: 'Mercanta Business — VIP Plus (pago único)', recurring: false },
 }
 
+// ========================================================
+// TARJETAS DE PRUEBA MERCADO PAGO (SANDBOX - MXN)
+// ========================================================
+// Estas tarjetas hacen que el botón "Pagar" funcione (no gris) en modo test.
+// Usa SIEMPRE email de comprador de prueba en el payer de la preferencia.
+//
+// Visa:          4509 9535 6623 3704   | CVV 123 | fecha futura (ej 11/30)
+// Mastercard:    5031 7557 3453 0604   | CVV 123 | fecha futura
+// Amex:          3711 803032 57522     | CVV 1234| fecha futura
+// (Otras: ver dashboard MP Sandbox > Test accounts > Tarjetas)
+//
+// Email comprador prueba recomendado: test_user_12345678@testuser.com
+// ========================================================
+
 export interface MeteredUsage {
   salesThisMonth: number
   included: number
@@ -112,9 +126,17 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
         currency_id: 'MXN',
       },
     ],
-    payer: { email: user.email ?? undefined },
+    // Payer con email de PRUEBA (sandbox) — evita botón "Pagar" gris en MP
+    // Usa un email de comprador de prueba de tu cuenta MP Sandbox
+    payer: { email: 'test_user_12345678@testuser.com' },
     metadata: { user_id: user.id, plan },
     external_reference: `${user.id}|${plan}`,
+    // installments + payment_methods para habilitar cuotas y métodos de pago en test
+    payment_methods: {
+      installments: 12,
+      excluded_payment_methods: [],
+      excluded_payment_types: [],
+    },
     // Solo si hay URL https válida (si no, la preferencia se crea igual y abre el checkout)
     ...(httpsUrl ? {
       back_urls: {
@@ -307,6 +329,14 @@ export async function createSalePaymentLink(
       unit_price: Math.round(amount * 100) / 100,
       currency_id: 'MXN',
     }],
+    // Payer con email de PRUEBA (sandbox) — arregla botón "Pagar" gris
+    payer: { email: 'test_user_12345678@testuser.com' },
+    // installments + payment_methods habilitan cuotas y tarjetas de prueba
+    payment_methods: {
+      installments: 12,
+      excluded_payment_methods: [],
+      excluded_payment_types: [],
+    },
     ...(httpsUrl ? {
       back_urls: { success: `${appUrl}/sales`, failure: `${appUrl}/sales/new`, pending: `${appUrl}/sales` },
       auto_return: 'approved' as const,
