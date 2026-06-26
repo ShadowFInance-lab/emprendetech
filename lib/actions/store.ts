@@ -143,8 +143,12 @@ export async function updateStoreAction(
 
   if (error) return { success: false, error: 'Error al guardar los cambios' }
 
-  // Revalidar settings + catálogo público (los cambios de branding se ven al instante)
-  revalidatePath('/settings')
+  // Revalidar layout completo para que colores/fondo se vean al refrescar cualquier ruta
+  revalidatePath('/', 'layout')
+  revalidatePath('/settings', 'layout')
+  revalidatePath('/dashboard')
+  revalidatePath('/inventory')
+  revalidatePath('/sales')
   const { data: storeRow } = await supabase
     .from('stores').select('slug').eq('id', storeId).single()
   if (storeRow?.slug) revalidatePath(`/catalog/${storeRow.slug}`)
@@ -228,7 +232,9 @@ export async function uploadStoreImage(
     return { success: false, error: `Se subió la imagen pero no se guardó el enlace.${hint}` }
   }
 
-  revalidatePath('/settings')
+  revalidatePath('/', 'layout')
+  revalidatePath('/settings', 'layout')
+  revalidatePath('/dashboard')
   const { data: storeRow } = await supabase.from('stores').select('slug').eq('id', storeId).single()
   if (storeRow?.slug) revalidatePath(`/catalog/${storeRow.slug}`)
   return { success: true, url: publicUrl }

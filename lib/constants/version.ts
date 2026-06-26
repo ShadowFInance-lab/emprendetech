@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.62'
-export const APP_BUILD = '2026-06-25' // v7.62: Nómina barra totales tiny solo números; días solo círculos nombre color + blanco; staff igual y guardan; sin refresh full; Config fondo en preview + paletas solo nombre.
+export const APP_VERSION = 'v7.64'
+export const APP_BUILD = '2026-06-25' // v7.64: Nómina tfoot compacto desde Neto; números grandes; colores staff persisten en week_attendance; config colores revalida dashboard.

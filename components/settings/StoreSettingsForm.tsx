@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -78,6 +79,7 @@ function GoogleGlyph() {
 interface Props { store: Store; plan?: Plan }
 
 export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
+  const router = useRouter()
   const allowedSkins = getPlanLimits(plan).skins
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
@@ -217,6 +219,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       if (result.success) {
         toast.success('Configuración guardada')
         setSaved(true)
+        router.refresh()
         setTimeout(() => setSaved(false), 2500)
       } else {
         toast.error(result.error ?? 'Error al guardar')
@@ -636,7 +639,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       <button
                         key={c.name}
                         type="button"
-                        onClick={() => { setPrimaryColor(c.p); setSecondaryColor(c.s); setButtonColor(c.b) }}
+                        onClick={() => { setPrimaryColor(c.p); setSecondaryColor(c.s); setButtonColor(c.b); setPanelPrimary(c.p); setPanelSecondary(c.s); setPanelButton(c.b) }}
                         className={`flex items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all ${
                           active ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300'
                         }`}
@@ -659,7 +662,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     <button
                       key={palette.name}
                       type="button"
-                      onClick={() => { setPrimaryColor(palette.p); setSecondaryColor(palette.s); setButtonColor(palette.b) }}
+                      onClick={() => { setPrimaryColor(palette.p); setSecondaryColor(palette.s); setButtonColor(palette.b); setPanelPrimary(palette.p); setPanelSecondary(palette.s); setPanelButton(palette.b) }}
                       className={`group relative flex flex-col rounded-3xl overflow-hidden border-2 transition-all shadow-sm ${isActive ? 'border-gray-900 ring-2 ring-gray-900 ring-offset-2 scale-[1.01]' : 'border-gray-200 hover:border-gray-400'}`}
                     >
                       <div className="h-20 p-1.5 flex flex-col justify-between" style={{ background: `linear-gradient(135deg, ${palette.p}, ${palette.s})` }}>
