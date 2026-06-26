@@ -873,7 +873,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     updateLocalTimes(empId, date, timeIn, timeOut)
                   }
                 }
-              }} className="border rounded px-1" />
+              }} className="w-20 h-6 text-xs border border-gray-200 focus:border-indigo-400 rounded px-1" />
               <input type="time" value={timeOut} onChange={e=>setTimeOut(e.target.value)} onBlur={async () => {
                 if (timeIn || timeOut) {
                   const empId = daySelector.empId
@@ -883,7 +883,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     updateLocalTimes(empId, date, timeIn, timeOut)
                   }
                 }
-              }} className="border rounded px-1" />
+              }} className="w-20 h-6 text-xs border border-gray-200 focus:border-indigo-400 rounded px-1" />
             </div>
             <button onClick={() => setDaySelector(null)} className="text-xs self-end px-2 py-0.5 border rounded">Cerrar</button>
           </div>

@@ -124,21 +124,31 @@ export async function updateStoreAction(
     .eq('id', storeId)
     .eq('owner_id', user.id)
 
-  // Si alguna columna nueva aún no existe (migraciones pendientes: 009/011/012/014),
-  // reintenta SIN esas columnas para no romper el guardado completo.
-  // Supabase devuelve 42703 (Postgres) o PGRST204 (PostgREST schema cache).
+  // Si alguna columna nueva aún no existe, reintenta sin los campos problemáticos antiguos.
+  // IMPORTANTE: Nunca strippear los campos de colores/panel/fondo para que siempre se guarden.
   const isMissingColumn = error && (
     error.code === '42703' ||
     error.code === 'PGRST204' ||
     /column|schema cache/i.test(error.message ?? '')
   )
   if (isMissingColumn) {
-    for (const k of ['currency', 'sales_pin', 'youtube', 'bg_color', 'button_style', 'background_url', 'dashboard_bg_url', 'dashboard_bg_fit', 'dashboard_bg_color', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_fit', 'online_sales']) {
+    const stripOnly = ['currency', 'sales_pin', 'youtube', 'button_style', 'online_sales']
+    for (const k of stripOnly) {
       delete (updates as Record<string, unknown>)[k]
     }
     const retry = await supabase
       .from('stores').update(updates).eq('id', storeId).eq('owner_id', user.id)
     error = retry.error
+
+    // Asegurar que los colores siempre se intenten guardar por separado (incluso si hubo fallback)
+    const colorKeys = ['primary_color', 'secondary_color', 'button_color', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_color', 'dashboard_bg_color', 'dashboard_bg_url', 'dashboard_bg_fit', 'bg_fit', 'background_url']
+    const colorUpdates: Record<string, unknown> = {}
+    for (const k of colorKeys) {
+      if (k in updates && updates[k] !== undefined) colorUpdates[k] = updates[k]
+    }
+    if (Object.keys(colorUpdates).length > 0) {
+      await supabase.from('stores').update(colorUpdates).eq('id', storeId).eq('owner_id', user.id)
+    }
   }
 
   if (error) return { success: false, error: 'Error al guardar los cambios' }

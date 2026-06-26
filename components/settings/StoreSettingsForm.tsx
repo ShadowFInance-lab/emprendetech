@@ -235,6 +235,16 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         toast.success('Configuración guardada')
         setSaved(true)
         router.refresh()
+
+        // Aplicar colores inmediatamente en la UI actual (sidebar, header, etc.)
+        // para que se vean al guardar, no solo en próximo refresh.
+        try {
+          const r = document.documentElement
+          r.style.setProperty('--brand', panelPrimary || primaryColor || '#4f46e5')
+          r.style.setProperty('--brand-2', panelSecondary || secondaryColor || '#7c3aed')
+          r.style.setProperty('--brand-btn', panelButton || buttonColor || '#4f46e5')
+        } catch {}
+
         setTimeout(() => setSaved(false), 2500)
       } else {
         toast.error(result.error ?? 'Error al guardar')
