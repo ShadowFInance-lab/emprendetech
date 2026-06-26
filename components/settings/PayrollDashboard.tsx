@@ -557,8 +557,8 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                       <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.emergency ?? '—'}</td>
                       <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.insurance ?? '—'}</td>
                       <td className="px-1 py-2 text-gray-500 border-b border-gray-100 whitespace-nowrap">{r.branch ?? '—'}</td>
-                      <td className="px-1 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkIn ?? null)}</td>
-                      <td className="px-1 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkOut ?? null)}</td>
+                      <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkIn ?? null)}</td>
+                      <td className="px-2 py-2 text-gray-600 border-b border-gray-100 whitespace-nowrap">{fmtTime(last?.checkOut ?? null)}</td>
                       <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                         <Input
                           type="number"
@@ -669,7 +669,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 text-gray-300 border-b border-gray-100">—</td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
-                      <Input type="number" min="0" step="0.1" value={hoursOverrides[s.id] ?? '0'} onChange={e => setHoursOverrides(h => ({...h, [s.id]: e.target.value}))} className="w-18 h-6 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
+                      <Input type="number" min="0" step="0.1" value={hoursOverrides[s.id] ?? '0'} onChange={e => setHoursOverrides(h => ({...h, [s.id]: e.target.value}))} className="w-20 h-6 text-right text-xs border border-gray-200 focus:border-indigo-400 rounded" />
                     </td>
                     <td className="px-2 py-2 border-b border-gray-100" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
@@ -864,7 +864,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
             </div>
             <div className="text-xs">Hora entrada/salida (para el día):</div>
             <div className="flex gap-1 text-xs">
-              <input type="time" value={timeIn} onChange={e=>setTimeIn(e.target.value)} onBlur={async () => {
+              <Input type="time" value={timeIn} onChange={e=>setTimeIn(e.target.value)} onBlur={async () => {
                 if (timeIn || timeOut) {
                   const empId = daySelector.empId
                   const date = daySelector.date
@@ -874,7 +874,7 @@ export default function PayrollDashboard({ createSlot, refreshSignal = 0, isPaid
                   }
                 }
               }} className="w-20 h-6 text-xs border border-gray-200 focus:border-indigo-400 rounded px-1" />
-              <input type="time" value={timeOut} onChange={e=>setTimeOut(e.target.value)} onBlur={async () => {
+              <Input type="time" value={timeOut} onChange={e=>setTimeOut(e.target.value)} onBlur={async () => {
                 if (timeIn || timeOut) {
                   const empId = daySelector.empId
                   const date = daySelector.date

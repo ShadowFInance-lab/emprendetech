@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import type { CSSProperties } from 'react'
+import { unstable_noStore } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import Header from '@/components/dashboard/Header'
@@ -13,6 +14,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
+  unstable_noStore() // fuerza datos frescos (sin caché) para que colores de tienda se apliquen al refrescar
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

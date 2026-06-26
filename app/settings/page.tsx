@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { unstable_noStore } from 'next/cache'
 import type { Plan } from '@/lib/types'
 import StoreSettingsForm from '@/components/settings/StoreSettingsForm'
 
 export default async function SettingsPage() {
+  unstable_noStore() // fuerza store fresco para que cambios de color se apliquen inmediatamente al refrescar
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

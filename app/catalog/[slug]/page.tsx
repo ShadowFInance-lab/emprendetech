@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { unstable_noStore } from 'next/cache'
 import { createPublicClient } from '@/lib/supabase/server'
 import ModernaSkin from '@/components/catalog/skins/ModernaSkin'
 import MinimalistaSkin from '@/components/catalog/skins/MinimalistaSkin'
@@ -8,8 +9,9 @@ import CartFab from '@/components/catalog/cart/CartFab'
 import WishlistFab from '@/components/catalog/cart/WishlistFab'
 import type { Store, Category, Product } from '@/lib/types'
 
-// ISR: revalidar cada 5 minutos
-export const revalidate = 300
+// Forzar datos frescos de tienda (colores etc) al refrescar, sin caché
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 interface PageProps {
   params: { slug: string }
@@ -57,6 +59,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 // ─── PÁGINA PRINCIPAL DEL CATÁLOGO ──────────────────────────
 export default async function CatalogPage({ params, searchParams }: PageProps) {
+  unstable_noStore()
   const supabase = createPublicClient()
 
   // 1. Cargar tienda (con manejo defensivo de errores de conexión)

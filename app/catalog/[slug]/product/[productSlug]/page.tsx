@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { unstable_noStore } from 'next/cache'
 import { createPublicClient } from '@/lib/supabase/server'
 import ProductDetailView from '@/components/catalog/ProductDetailView'
 import { CartProvider } from '@/components/catalog/cart/CartProvider'
 import CartFab from '@/components/catalog/cart/CartFab'
 import WishlistFab from '@/components/catalog/cart/WishlistFab'
 
-export const revalidate = 600 // 10 minutos
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 interface PageProps {
   params: { slug: string; productSlug: string }
@@ -51,6 +53,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
+  unstable_noStore()
   const supabase = createPublicClient()
 
   // Cargar tienda
