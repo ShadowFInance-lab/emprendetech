@@ -375,9 +375,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         </div>
       )}
 
-      {/* ─── MÉTODOS DE PAGO / CONECTAR MERCADO PAGO ──── */}
-      <StorePaymentSection />
-
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">
           <StoreIcon size={14} /> General
@@ -542,6 +539,11 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </div>
             </CardContent>
           </Card>
+
+            {/* Métodos de pago visible para todos */}
+            <div className="col-span-2 mt-1">
+              <StorePaymentSection />
+            </div>
           </div>
       {/* ─── NOTIFICACIONES ─────────────────────────── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-3">
