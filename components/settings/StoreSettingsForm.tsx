@@ -19,6 +19,7 @@ import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
 import ColorPickerField from './ColorPickerField'
 import OrderReceptionSection from './OrderReceptionSection'
+import StorePaymentSection from './StorePaymentSection'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -366,19 +367,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </div>
           {/* Recepción de pedidos: integrada con el toggle de Vender Online */}
           {onlineSales && <OrderReceptionSection embedded />}
-
-          {/* Botón para conectar cuenta de pagos (Mercado Pago OAuth) */}
-          <div className="pt-2 border-t border-gray-100">
-            <a
-              href="/api/oauth/mercadopago/start"
-              className="inline-flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
-            >
-              Conectar mi cuenta de Mercado Pago
-            </a>
-            <p className="text-[11px] text-gray-400 mt-1.5">
-              Conecta vía OAuth para procesar pagos online sin pegar token manualmente.
-            </p>
-          </div>
         </div>
       ) : (
         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 flex items-center gap-2">
@@ -386,6 +374,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           Vender Online disponible en plan pago.
         </div>
       )}
+
+      {/* ─── MÉTODOS DE PAGO / CONECTAR MERCADO PAGO ──── */}
+      <StorePaymentSection />
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">

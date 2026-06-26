@@ -4,4 +4,4 @@
  * Súbelo cada vez que despliegues cambios grandes.
  */
 export const APP_VERSION = 'v7.69'
-export const APP_BUILD = '2026-06-26' // v7.69: Agregar botón visible "Conectar mi cuenta de Mercado Pago" en sección Vender Online de StoreSettingsForm. Abre /api/oauth/mercadopago/start para flujo Connect. Commit v7.69 push.
+export const APP_BUILD = '2026-06-26' // v7.69: Agregar sección "Pagos con Mercado Pago" + botón claro "Conectar mi cuenta de Mercado Pago (OAuth)" visible después de Vender Online en StoreSettingsForm (/settings). Usa flujo /api/oauth/mercadopago/start. Commit v7.69 push.

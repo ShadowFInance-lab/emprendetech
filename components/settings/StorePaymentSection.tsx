@@ -84,6 +84,17 @@ export default function StorePaymentSection() {
           <p className="text-[11px] text-gray-400">
             Pega tu Access Token de <span className="font-medium">Mercado Pago → Tus integraciones → tu app → Credenciales</span>. Se guarda en tu tienda y nunca se muestra en el catálogo.
           </p>
+
+          {/* Botón visible para conectar vía OAuth (flujo recomendado) */}
+          <div className="pt-2">
+            <a
+              href="/api/oauth/mercadopago/start"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition"
+            >
+              Conectar mi cuenta de Mercado Pago (OAuth)
+            </a>
+            <p className="text-[10px] text-gray-400 mt-1 text-center">Usa OAuth para conectar sin pegar token (requiere CLIENT_ID en Vercel).</p>
+          </div>
         </div>
       )}
     </div>
