@@ -12,10 +12,10 @@ import PayrollDashboard from './PayrollDashboard'
 import TasksManager from './TasksManager'
 import TeamChatPanel from '@/components/team/TeamChatPanel'
 
-const PAID = ['emprendedor', 'negocio', 'vip_plus']
+const FULL_ACCESS = ['free', 'vip_plus', 'emprendedor', 'negocio'] // Modo Gratis completo para free/vip_plus + planes pago
 
 export default function EmployeesSection({ plan }: { plan: string }) {
-  const isPaid = PAID.includes(plan)
+  const isPaid = FULL_ACCESS.includes(plan)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isPending, startTransition] = useTransition()
   const [form, setForm] = useState({ name: '', password: '' })

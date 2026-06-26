@@ -12,7 +12,7 @@ export interface Employee {
   role?: 'owner' | 'employee' | 'supervisor'
 }
 
-const PAID_PLANS = ['emprendedor', 'negocio', 'vip_plus']
+const FULL_ACCESS_PLANS = ['free', 'vip_plus', 'emprendedor', 'negocio'] // Modo Gratis completo: free/vip dan acceso total sin cobro
 
 /** Rol + plan del usuario actual. Tolerante si la migración 018 no se aplicó. */
 export async function getMyRole(): Promise<{ role: 'owner' | 'employee'; plan: string; bossId: string | null }> {
@@ -45,8 +45,8 @@ export async function createEmployeeAction(input: { name: string; password: stri
 
     const { data: me } = await supabase.from('profiles').select('plan, role').eq('id', user.id).maybeSingle()
     if (me?.role === 'employee') return { success: false, error: 'Solo el dueño puede crear empleados' }
-    if (!me || !PAID_PLANS.includes(me.plan)) {
-      return { success: false, error: 'Las cuentas de empleado están disponibles en planes de pago.' }
+    if (!me || !FULL_ACCESS_PLANS.includes(me.plan)) {
+      return { success: false, error: 'Las cuentas de empleado están disponibles en Modo Gratis completo.' }
     }
 
     const name = (input.name || '').trim()

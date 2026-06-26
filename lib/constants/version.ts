@@ -4,4 +4,4 @@
  * Súbelo cada vez que despliegues cambios grandes.
  */
 export const APP_VERSION = 'v7.66'
-export const APP_BUILD = '2026-06-25' // v7.66: Fix error guardar colores: agregar dashboard_bg_color en TODAS_PENDIENTES.sql + 042_dashboard_bg.sql + lib/types + updateStoreAction ahora separa core/colors y maneja columna faltante sin fallar todo el save. Build limpio.
+export const APP_BUILD = '2026-06-25' // v7.66: Activar Modo Gratis completo para VIP Plus / free: isPaid=true, full limits en free, activateFreeModeAction, botón grande en /subscription, empleados/nómina/export sin cobro. Build limpio.

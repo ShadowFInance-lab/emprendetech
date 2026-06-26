@@ -16,14 +16,14 @@ export const PLAN_LIMITS: Record<Plan, {
   extra_sale_fee?: number             // costo por venta adicional (MXN)
 }> = {
   free: {
-    max_products: 100,
-    max_categories: 10,
-    max_images_per_product: 3,
-    skins: ['moderna'],
-    can_export_pdf: false,
-    can_export_excel: false,
-    show_ads: true,
-    label: 'Gratis',
+    max_products: Infinity,
+    max_categories: Infinity,
+    max_images_per_product: 20,
+    skins: ['moderna', 'minimalista'],
+    can_export_pdf: true,
+    can_export_excel: true,
+    show_ads: false,
+    label: 'Gratis (Modo Completo)',
     price_monthly: null,
     price_label: 'Gratis',
   },

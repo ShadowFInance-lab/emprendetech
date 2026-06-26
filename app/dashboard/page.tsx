@@ -107,9 +107,11 @@ export default async function DashboardPage() {
   // ─── Uso VIP Plus (contador de ventas medidas) ───────────
   const { data: profilePlan } = await supabase
     .from('profiles').select('plan').eq('id', user.id).single()
-  const vipUsage = profilePlan?.plan === 'vip_plus' ? await getMeteredUsage() : null
+  const currentPlan = (profilePlan?.plan ?? 'free') as string
+  const vipUsage = currentPlan === 'vip_plus' ? await getMeteredUsage() : null
   const vipPct = vipUsage ? Math.min(100, (vipUsage.salesThisMonth / vipUsage.included) * 100) : 0
-  const isPaid = (profilePlan?.plan ?? 'free') !== 'free'
+  // Modo Gratis completo: free y vip_plus (y otros) dan acceso total sin cobro
+  const isPaid = true // Modo Gratis completo: free/vip_plus + planes pagos dan acceso total sin cobro
 
   // ─── Ventas detalladas (para exportar PDF/Excel por rango) ──
   // Una sola query desde la fecha más temprana (semana o inicio de mes),

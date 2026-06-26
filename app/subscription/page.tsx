@@ -4,16 +4,16 @@ import { CreditCard, CheckCircle2, AlertCircle, Zap, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
 import { isMercadoPagoConfigured } from '@/lib/mercadopago/client'
-import { getMeteredUsage, confirmCheckoutReturn } from '@/lib/actions/subscriptions'
+import { getMeteredUsage, confirmCheckoutReturn, activateFreeModeAction } from '@/lib/actions/subscriptions'
 import { formatCurrency } from '@/lib/utils/format'
 import UpgradeButton from '@/components/subscription/UpgradeButton'
 import type { Plan } from '@/lib/types'
 
 const PLAN_FEATURES: Record<Plan, string[]> = {
-  free: ['100 productos', 'Catálogo público', '5 paletas básicas', 'POS básico', 'Con anuncios ligeros'],
+  free: ['Todo ilimitado', 'Sin anuncios', 'Exportar PDF/Excel', 'Nómina completa', 'Catálogo + pagos', 'Modo Gratis total'],
   emprendedor: ['5,000 productos', 'Sin anuncios', 'Personaliza 3 tonos', 'Exportar PDF/Excel', 'Reportes completos'],
   negocio: ['Productos ilimitados', 'Todo de Emprendedor', 'Usuarios adicionales', 'Dominio propio', 'Respaldos'],
-  vip_plus: ['Todo ilimitado', 'Pago único $1,599', '1,000 ventas/mes incluidas', 'Solo $0.50 por venta extra (con Mercado Pago)'],
+  vip_plus: ['Todo ilimitado', 'Modo Gratis (sin cobro)', '1,000 ventas/mes incluidas', 'Solo $0.50 por venta extra (con Mercado Pago)'],
 }
 
 const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
@@ -108,6 +108,26 @@ export default async function SubscriptionPage({
           </div>
         </CardContent>
       </Card>
+
+      {/* Botón grande para activar Modo Gratis completo (free / vip_plus) */}
+      <form action={activateFreeModeAction} className="block">
+        <div className="bg-gradient-to-br from-emerald-600 to-green-700 rounded-3xl p-8 text-white text-center shadow-2xl ring-1 ring-white/20">
+          <div className="text-5xl mb-3">🆓</div>
+          <p className="uppercase tracking-[3px] text-emerald-200 text-sm font-bold mb-1">MODO GRATIS TOTAL</p>
+          <h3 className="text-4xl font-black mb-2">Usar en Modo Gratis</h3>
+          <p className="text-emerald-100 max-w-md mx-auto mb-6 text-sm">
+            Activa acceso completo a nómina, catálogo, pagos en línea, empleados, reportes, exports y todas las funciones.
+            Sin cobro, sin límites. Ideal para VIP Plus y planes Free.
+          </p>
+          <button
+            type="submit"
+            className="bg-white hover:bg-emerald-50 active:scale-[0.985] transition text-emerald-800 font-extrabold text-xl px-12 py-4 rounded-2xl shadow-xl inline-flex items-center gap-3"
+          >
+            Activar todas las funciones ahora →
+          </button>
+          <p className="text-xs mt-4 opacity-75">Se activará como VIP Plus (acceso total sin cargo extra)</p>
+        </div>
+      </form>
 
       {/* Contador de ventas medidas (VIP Plus) */}
       {currentPlan === 'vip_plus' && (

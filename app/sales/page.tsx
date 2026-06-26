@@ -38,9 +38,9 @@ export default async function SalesPage() {
   }
   if (!store) redirect('/onboarding')
 
-  // Exportar es función de planes de pago
-  const { data: profile } = await supabase.from('profiles').select('plan').eq('id', user.id).single()
-  const isPaid = (profile?.plan ?? 'free') !== 'free'
+  // Exportar disponible en Modo Gratis completo (free / vip_plus)
+  await supabase.from('profiles').select('plan').eq('id', user.id).single()
+  const isPaid = true // Modo Gratis completo activado
 
   // Ventas con cliente
   const { data: sales } = await supabase

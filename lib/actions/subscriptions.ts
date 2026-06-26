@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 import { getMercadoPagoClient, getMercadoPagoClientFor, isMercadoPagoConfigured, Preference } from '@/lib/mercadopago/client'
 import { Payment } from 'mercadopago'
 import type { Plan } from '@/lib/types'
@@ -264,6 +265,34 @@ export async function confirmCheckoutReturn(params: {
     console.error('confirmCheckoutReturn error:', err)
     return { activated: false }
   }
+}
+
+/**
+ * Activa Modo Gratis completo (para VIP Plus / free).
+ * Da acceso total a nómina, catálogo, pagos, exports, empleados, etc. sin cobro.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function activateFreeModeAction(_formData: FormData): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  // VIP Plus o free = modo gratis total (sin cobro, full features)
+  const { error } = await supabase.from('profiles').update({
+    plan: 'vip_plus',
+    plan_status: 'active',
+    plan_expires_at: null,
+  }).eq('id', user.id)
+
+  if (error) {
+    console.error('activateFreeModeAction error:', error)
+    return
+  }
+
+  revalidatePath('/subscription')
+  revalidatePath('/dashboard')
+  revalidatePath('/settings')
+  revalidatePath('/sales')
 }
 
 export async function getMercadoPagoStatus(): Promise<{ configured: boolean }> {
