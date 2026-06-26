@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.69'
-export const APP_BUILD = '2026-06-26' // v7.69: Agregar sección "Pagos con Mercado Pago" + botón claro "Conectar mi cuenta de Mercado Pago (OAuth)" visible después de Vender Online en StoreSettingsForm (/settings). Usa flujo /api/oauth/mercadopago/start. Commit v7.69 push.
+export const APP_VERSION = 'v7.70'
+export const APP_BUILD = '2026-06-26' // v7.70: Conexión simple sin tokens manuales - Quitar input "Guardar token", botón grande "Conectar mi cuenta de Mercado Pago" vía OAuth en StorePaymentSection (visible en General para todos los planes). Commit v7.70 push.
