@@ -65,12 +65,13 @@ export default function StorePaymentSection() {
         </div>
       ) : (
         <div className="space-y-3">
-          <a
-            href="/api/oauth/mercadopago/start"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-600 px-6 py-3 text-base font-semibold text-white shadow hover:opacity-90 active:scale-[0.985] transition"
+          <button
+            onClick={() => { window.location.href = '/api/oauth/mercadopago/start' }}
+            disabled={isPending}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-600 px-6 py-3 text-base font-semibold text-white shadow hover:opacity-90 active:scale-[0.985] transition disabled:opacity-50"
           >
             <Wallet size={18} /> Conectar mi cuenta de Mercado Pago
-          </a>
+          </button>
           <p className="text-[11px] text-gray-400 text-center">
             Inicia sesión en Mercado Pago y autoriza la app. No necesitas pegar tokens manuales.
           </p>

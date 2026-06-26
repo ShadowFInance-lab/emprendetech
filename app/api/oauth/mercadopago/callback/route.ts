@@ -48,11 +48,15 @@ export async function GET(req: NextRequest) {
     const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
     if (!store) return fail()
 
-    await supabase.from('store_payment_config').upsert({
+    const { error: upsertErr } = await supabase.from('store_payment_config').upsert({
       store_id: store.id,
       mercadopago_access_token: token.access_token,
       updated_at: new Date().toISOString(),
     })
+    if (upsertErr) {
+      console.error('[MP OAUTH] error guardando token:', upsertErr)
+      return fail()
+    }
 
     const res = NextResponse.redirect(`${origin}/settings?mp=ok`)
     res.cookies.delete('mp_oauth_state')

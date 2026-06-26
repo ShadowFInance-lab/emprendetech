@@ -110,6 +110,8 @@ TIKTOK_CLIENT_SECRET=...
 ```
 NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=APP_USR-...      (Public Key)
 MERCADOPAGO_ACCESS_TOKEN=APP_USR-...                (Access Token — SECRETO)
+MERCADOPAGO_CLIENT_ID=...                           (para OAuth Connect de cuenta tienda)
+MERCADOPAGO_CLIENT_SECRET=...                       (para OAuth Connect de cuenta tienda)
 NEXT_PUBLIC_APP_URL=https://emprendetech-shadow-black-s-projects.vercel.app
 ```
 > ⚠️ **Después de agregar/cambiar variables, haz REDEPLOY** (Vercel solo las aplica a deploys nuevos). Verifica en **`/api/mp-status`** que digan `true`.
@@ -137,6 +139,8 @@ NEXT_PUBLIC_APP_URL=https://emprendetech-shadow-black-s-projects.vercel.app
 | `NEXT_PUBLIC_APP_URL` | URLs de retorno + webhook | Vercel | ⚠️ **crítica** para pagos |
 | `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | Checkout | Vercel | ⚠️ verifica en /api/mp-status |
 | `MERCADOPAGO_ACCESS_TOKEN` | Preferencia + webhook | Vercel | ⚠️ verifica en /api/mp-status |
+| `MERCADOPAGO_CLIENT_ID` | OAuth Connect tienda | Vercel | para botón "Conectar MP" |
+| `MERCADOPAGO_CLIENT_SECRET` | OAuth Connect tienda | Vercel | para botón "Conectar MP" |
 | Google Client ID/Secret | Login + Conectar Google | **Supabase** (no en la app) | ⬜ por configurar |
 | Facebook App ID/Secret | Login + Conectar Facebook | **Supabase** (no en la app) | ⬜ por configurar |
 | `TIKTOK_CLIENT_KEY` / `_SECRET` | Conectar TikTok (OAuth propio) | Vercel | ⬜ requiere app aprobada |
