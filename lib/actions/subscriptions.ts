@@ -268,8 +268,8 @@ export async function confirmCheckoutReturn(params: {
 }
 
 /**
- * Activa Modo Gratis completo (para VIP Plus / free).
- * Da acceso total a nómina, catálogo, pagos, exports, empleados, etc. sin cobro.
+ * Activa Modo Gratis simple (para usuarios VIP Plus).
+ * Cambia plan a "free" y da acceso completo a todas las funciones sin cobro.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function activateFreeModeAction(_formData: FormData): Promise<void> {
@@ -277,9 +277,9 @@ export async function activateFreeModeAction(_formData: FormData): Promise<void>
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  // VIP Plus o free = modo gratis total (sin cobro, full features)
+  // Activar Modo Gratis simple: cambiar a "free" con acceso completo (para VIP Plus)
   const { error } = await supabase.from('profiles').update({
-    plan: 'vip_plus',
+    plan: 'free',
     plan_status: 'active',
     plan_expires_at: null,
   }).eq('id', user.id)

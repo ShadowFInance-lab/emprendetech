@@ -109,25 +109,22 @@ export default async function SubscriptionPage({
         </CardContent>
       </Card>
 
-      {/* Botón grande para activar Modo Gratis completo (free / vip_plus) */}
-      <form action={activateFreeModeAction} className="block">
-        <div className="bg-gradient-to-br from-emerald-600 to-green-700 rounded-3xl p-8 text-white text-center shadow-2xl ring-1 ring-white/20">
-          <div className="text-5xl mb-3">🆓</div>
-          <p className="uppercase tracking-[3px] text-emerald-200 text-sm font-bold mb-1">MODO GRATIS TOTAL</p>
-          <h3 className="text-4xl font-black mb-2">Usar en Modo Gratis</h3>
-          <p className="text-emerald-100 max-w-md mx-auto mb-6 text-sm">
-            Activa acceso completo a nómina, catálogo, pagos en línea, empleados, reportes, exports y todas las funciones.
-            Sin cobro, sin límites. Ideal para VIP Plus y planes Free.
+      {/* Opción simple para Modo Gratis (solo para VIP Plus) */}
+      {currentPlan === 'vip_plus' && (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+          <p className="text-sm text-gray-600 mb-2">
+            Eres VIP Plus. Puedes cambiar a <strong>Modo Gratis completo</strong> (plan free con acceso total).
           </p>
-          <button
-            type="submit"
-            className="bg-white hover:bg-emerald-50 active:scale-[0.985] transition text-emerald-800 font-extrabold text-xl px-12 py-4 rounded-2xl shadow-xl inline-flex items-center gap-3"
-          >
-            Activar todas las funciones ahora →
-          </button>
-          <p className="text-xs mt-4 opacity-75">Se activará como VIP Plus (acceso total sin cargo extra)</p>
+          <form action={activateFreeModeAction} className="inline">
+            <button
+              type="submit"
+              className="text-sm px-4 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-100 font-medium"
+            >
+              Cambiar a Modo Gratis (free)
+            </button>
+          </form>
         </div>
-      </form>
+      )}
 
       {/* Contador de ventas medidas (VIP Plus) */}
       {currentPlan === 'vip_plus' && (
