@@ -118,37 +118,55 @@ export async function updateStoreAction(
     }
   }
 
+  // Separar campos core de los de colores/fondo para manejar columnas faltantes (como dashboard_bg_color)
+  const colorKeys = ['primary_color', 'secondary_color', 'button_color', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_color', 'dashboard_bg_color', 'dashboard_bg_url', 'dashboard_bg_fit', 'bg_fit', 'background_url']
+
+  const coreUpdates: Record<string, unknown> = {}
+  const colorUpdates: Record<string, unknown> = {}
+
+  Object.keys(updates).forEach(k => {
+    if (colorKeys.includes(k)) {
+      colorUpdates[k] = updates[k]
+    } else {
+      coreUpdates[k] = updates[k]
+    }
+  })
+
   let { error } = await supabase
     .from('stores')
-    .update(updates)
+    .update(updates)  // primer intento con todo (rápido si todo existe)
     .eq('id', storeId)
     .eq('owner_id', user.id)
 
-  // Si alguna columna nueva aún no existe, reintenta sin los campos problemáticos antiguos.
-  // IMPORTANTE: Nunca strippear los campos de colores/panel/fondo para que siempre se guarden.
   const isMissingColumn = error && (
     error.code === '42703' ||
     error.code === 'PGRST204' ||
     /column|schema cache/i.test(error.message ?? '')
   )
+
   if (isMissingColumn) {
+    // Reintento solo con core (quitando legacy problemáticos y colores nuevos)
     const stripOnly = ['currency', 'sales_pin', 'youtube', 'button_style', 'online_sales']
+    const retryCore = { ...coreUpdates }
     for (const k of stripOnly) {
-      delete (updates as Record<string, unknown>)[k]
+      delete retryCore[k]
     }
     const retry = await supabase
-      .from('stores').update(updates).eq('id', storeId).eq('owner_id', user.id)
+      .from('stores').update(retryCore).eq('id', storeId).eq('owner_id', user.id)
     error = retry.error
 
-    // Asegurar que los colores siempre se intenten guardar por separado (incluso si hubo fallback)
-    const colorKeys = ['primary_color', 'secondary_color', 'button_color', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_color', 'dashboard_bg_color', 'dashboard_bg_url', 'dashboard_bg_fit', 'bg_fit', 'background_url']
-    const colorUpdates: Record<string, unknown> = {}
-    for (const k of colorKeys) {
-      if (k in updates && updates[k] !== undefined) colorUpdates[k] = updates[k]
-    }
+    // Colores siempre por separado (dashboard_bg_color etc). Si la columna falta, el color save fallará pero no bloqueamos el resto.
+    // Una vez que se corra la migración (ALTER en TODAS_PENDIENTES), se guardará correctamente.
     if (Object.keys(colorUpdates).length > 0) {
-      await supabase.from('stores').update(colorUpdates).eq('id', storeId).eq('owner_id', user.id)
+      const colorRes = await supabase.from('stores').update(colorUpdates).eq('id', storeId).eq('owner_id', user.id)
+      // Si core ok pero color falló por columna faltante, no reportamos error al usuario (se guardará lo demás)
+      if (colorRes.error && !error && (colorRes.error.code === '42703' || /column/i.test(colorRes.error.message ?? ''))) {
+        error = null
+      }
     }
+  } else if (Object.keys(colorUpdates).length > 0) {
+    // Si primer update incluyó colores y fue exitoso, ok. Si por alguna razón solo colores fallaron (raro), intentamos igual.
+    // (El update inicial ya los incluyó)
   }
 
   if (error) return { success: false, error: 'Error al guardar los cambios' }

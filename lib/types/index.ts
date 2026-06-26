@@ -41,12 +41,18 @@ export interface Store {
   primary_color: string
   secondary_color: string
   button_color: string
+  panel_primary: string | null
+  panel_secondary: string | null
+  panel_button: string | null
   font_family: string
   product_order: string
   currency: string
   bg_color: string | null
   background_url: string | null
   button_style: string | null
+  dashboard_bg_url: string | null
+  dashboard_bg_fit: string | null
+  dashboard_bg_color: string | null
   sales_pin: string | null
   low_stock_alert: number
   show_prices: boolean

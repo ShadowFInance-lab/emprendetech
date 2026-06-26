@@ -6,5 +6,6 @@
 -- ============================================================================
 
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_url TEXT;
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_color TEXT;  -- color sólido de fondo para el panel admin
 
--- ✅ Listo. Imagen de fondo del dashboard habilitada.
+-- ✅ Listo. Imagen de fondo del dashboard + color sólido habilitados.

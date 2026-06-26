@@ -597,4 +597,8 @@ ALTER TABLE cart_items ADD COLUMN IF NOT EXISTS variant_text TEXT;
 -- ─── 044: Ajuste de imagen de fondo del panel admin ─────────────────────────
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_fit TEXT NOT NULL DEFAULT 'cover';
 
+-- ─── 045: Color sólido de fondo del panel admin (dashboard_bg_color) ───────
+-- Faltaba en migraciones previas; causa "Error al guardar los cambios" al setear fondo en Configuración.
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_color text;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

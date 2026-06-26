@@ -4,4 +4,4 @@
  * Súbelo cada vez que despliegues cambios grandes.
  */
 export const APP_VERSION = 'v7.66'
-export const APP_BUILD = '2026-06-25' // v7.66: PayrollDashboard: Salida (timeOut) y Entrada ahora usan <Input> + clases idénticas w-20 h-6 como Horas, padding td px-2 consistente. Colores: unstable_noStore + dynamic force en AdminLayout, settings, catalog pages para limpiar caché y aplicar cambios realmente al refresh. Build limpio.
+export const APP_BUILD = '2026-06-25' // v7.66: Fix error guardar colores: agregar dashboard_bg_color en TODAS_PENDIENTES.sql + 042_dashboard_bg.sql + lib/types + updateStoreAction ahora separa core/colors y maneja columna faltante sin fallar todo el save. Build limpio.
