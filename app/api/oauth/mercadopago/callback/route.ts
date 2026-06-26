@@ -45,12 +45,18 @@ export async function GET(req: NextRequest) {
       return fail()
     }
 
+    const t = token.access_token
+    if (!t || (!t.startsWith('APP_USR-') && !t.startsWith('TEST-'))) {
+      console.error('[MP OAUTH] token con formato inválido', t)
+      return fail()
+    }
+
     const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
     if (!store) return fail()
 
     const { error: upsertErr } = await supabase.from('store_payment_config').upsert({
       store_id: store.id,
-      mercadopago_access_token: token.access_token,
+      mercadopago_access_token: t,
       updated_at: new Date().toISOString(),
     })
     if (upsertErr) {
