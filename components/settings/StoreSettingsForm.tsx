@@ -221,7 +221,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('panel_secondary', panelSecondary)
     formData.set('panel_button', panelButton)
     formData.set('bg_fit', bgFit)
-    formData.set('online_sales', String(onlineSales))
+    formData.set('online_sales', String(onlineSales && ['emprendedor', 'negocio', 'vip_plus'].includes(plan)))
     formData.set('dashboard_bg_url', dashboardBgUrl)
     formData.set('dashboard_bg_fit', dashboardBgFit)
     formData.set('dashboard_bg_color', dashboardBgColor)
@@ -346,26 +346,33 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         <p className="text-[11px] text-gray-400 mt-3">Google abre el inicio de sesión real de tu cuenta.</p>
       </div>
 
-      {/* ─── VENDER ONLINE ──── */}
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
-              <ShoppingBag size={17} className="text-white" />
-            </span>
-            <div>
-              <p className="font-semibold text-gray-900 text-[15px] leading-tight">Vender Online</p>
-              <p className="text-xs text-gray-400">Agrega un botón <strong>&ldquo;Compra Online&rdquo;</strong> en tu catálogo con formulario de dirección, teléfono y método de pago.</p>
+      {/* ─── VENDER ONLINE ──── (solo planes pagos) */}
+      {['emprendedor', 'negocio', 'vip_plus'].includes(plan) ? (
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+                <ShoppingBag size={17} className="text-white" />
+              </span>
+              <div>
+                <p className="font-semibold text-gray-900 text-[15px] leading-tight">Vender Online</p>
+                <p className="text-xs text-gray-400">Agrega un botón <strong>&ldquo;Compra Online&rdquo;</strong> en tu catálogo con formulario de dirección, teléfono y método de pago.</p>
+              </div>
             </div>
+            <button type="button" onClick={() => setOnlineSales(v => !v)} aria-pressed={onlineSales}
+              className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${onlineSales ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+              <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${onlineSales ? 'translate-x-5' : ''}`} />
+            </button>
           </div>
-          <button type="button" onClick={() => setOnlineSales(v => !v)} aria-pressed={onlineSales}
-            className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${onlineSales ? 'bg-indigo-600' : 'bg-gray-300'}`}>
-            <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${onlineSales ? 'translate-x-5' : ''}`} />
-          </button>
+          {/* Recepción de pedidos: integrada con el toggle de Vender Online */}
+          {onlineSales && <OrderReceptionSection embedded />}
         </div>
-        {/* Recepción de pedidos: integrada con el toggle de Vender Online */}
-        {onlineSales && <OrderReceptionSection embedded />}
-      </div>
+      ) : (
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 flex items-center gap-2">
+          <Lock size={16} className="text-gray-400" />
+          Vender Online disponible en plan pago.
+        </div>
+      )}
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">

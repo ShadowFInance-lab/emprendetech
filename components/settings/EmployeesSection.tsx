@@ -12,10 +12,10 @@ import PayrollDashboard from './PayrollDashboard'
 import TasksManager from './TasksManager'
 import TeamChatPanel from '@/components/team/TeamChatPanel'
 
-const FULL_ACCESS = ['free', 'vip_plus', 'emprendedor', 'negocio'] // Modo Gratis completo para free/vip_plus + planes pago
+const PAID_PLANS = ['emprendedor', 'negocio', 'vip_plus'] // Solo planes pagos
 
 export default function EmployeesSection({ plan }: { plan: string }) {
-  const isPaid = FULL_ACCESS.includes(plan)
+  const isPaid = PAID_PLANS.includes(plan)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isPending, startTransition] = useTransition()
   const [form, setForm] = useState({ name: '', password: '' })
@@ -90,8 +90,8 @@ export default function EmployeesSection({ plan }: { plan: string }) {
         <div className="flex flex-col items-center text-center gap-3 py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
           <span className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center"><Lock size={22} className="text-amber-600" /></span>
           <div>
-            <p className="font-semibold text-gray-800">Cuentas de empleado</p>
-            <p className="text-sm text-gray-500 mt-0.5">Disponible en los planes de pago (Emprendedor, Negocio o VIP Plus).</p>
+            <p className="font-semibold text-gray-800">Empleados</p>
+            <p className="text-sm text-gray-500 mt-0.5">Disponible en plan pago.</p>
           </div>
           <Link href="/subscription" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold shadow-md hover:opacity-90">
             <Crown size={15} /> Mejorar plan

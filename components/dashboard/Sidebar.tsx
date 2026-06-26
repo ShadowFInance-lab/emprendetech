@@ -50,6 +50,13 @@ export default function Sidebar({ store, profile }: SidebarProps) {
         ? NAV_ITEMS.filter(i => i.href !== '/subscription' && i.href !== '/settings')
         : NAV_ITEMS
 
+  // Restringir "Empleados" y "Pedidos Online" (Vender Online) a planes pagos
+  const paidPlans = ['emprendedor', 'negocio', 'vip_plus']
+  const isPaidPlan = paidPlans.includes(profile.plan)
+  const finalNavItems = isPaidPlan
+    ? navItems
+    : navItems.filter(i => i.href !== '/employees' && i.href !== '/orders')
+
   const planLabel: Record<string, string> = {
     free: 'Gratis',
     emprendedor: 'Emprendedor',
@@ -94,7 +101,7 @@ export default function Sidebar({ store, profile }: SidebarProps) {
 
       {/* Nav items */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(item => {
+        {finalNavItems.map(item => {
           const isActive = pathname === item.href ||
             (item.href !== '/dashboard' && pathname.startsWith(item.href))
           return (
