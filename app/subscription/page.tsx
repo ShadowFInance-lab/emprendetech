@@ -10,7 +10,7 @@ import UpgradeButton from '@/components/subscription/UpgradeButton'
 import type { Plan } from '@/lib/types'
 
 const PLAN_FEATURES: Record<Plan, string[]> = {
-  free: ['Todo ilimitado', 'Sin anuncios', 'Exportar PDF/Excel', 'Nómina completa', 'Catálogo + pagos', 'Modo Gratis total'],
+  free: ['100 productos', 'Catálogo público', 'POS básico', 'Con anuncios ligeros'],
   emprendedor: ['5,000 productos', 'Sin anuncios', 'Personaliza 3 tonos', 'Exportar PDF/Excel', 'Reportes completos'],
   negocio: ['Productos ilimitados', 'Todo de Emprendedor', 'Usuarios adicionales', 'Dominio propio', 'Respaldos'],
   vip_plus: ['Todo ilimitado', 'Modo Gratis (sin cobro)', '1,000 ventas/mes incluidas', 'Solo $0.50 por venta extra (con Mercado Pago)'],
@@ -194,9 +194,9 @@ export default async function SubscriptionPage({
         </CardContent>
       </Card>
 
-      {/* Planes — tarjetas premium horizontales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
-        {(Object.keys(PLAN_LIMITS) as Plan[]).map(planId => {
+      {/* Planes — tarjetas premium (solo planes pagos; Gratis normal sin tarjeta extra) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+        {(['emprendedor', 'negocio', 'vip_plus'] as Plan[]).map(planId => {
           const plan = PLAN_LIMITS[planId]
           const isCurrent = planId === currentPlan
           const style = PLAN_STYLE[planId]
@@ -235,7 +235,6 @@ export default async function SubscriptionPage({
                 <p className="text-4xl font-black mt-1.5 tracking-tight leading-[1.05] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]">{plan.price_label}</p>
                 <p className="text-xs font-medium mt-2 text-white/80">
                   {planId === 'vip_plus' ? 'Pago único · de por vida'
-                    : planId === 'free' ? 'Gratis para siempre'
                     : 'Facturación mensual'}
                 </p>
 
@@ -253,8 +252,6 @@ export default async function SubscriptionPage({
                 <div className="pt-6 mt-auto">
                   {isCurrent ? (
                     <div className="text-center text-sm font-semibold py-3 rounded-xl bg-white/20 text-white">✓ Tu plan actual</div>
-                  ) : planId === 'free' ? (
-                    <div className="text-center text-xs text-white/70 py-3">Tu punto de partida</div>
                   ) : (
                     <UpgradeButton plan={planId} label={`Elegir ${plan.label}`} accent="bg-white !text-gray-900 hover:bg-white/90 font-bold shadow-lg" />
                   )}
