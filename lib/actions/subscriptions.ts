@@ -37,7 +37,7 @@ export interface MeteredUsage {
 
 /**
  * Calcula el uso medido del mes en curso para el plan VIP Plus:
- * cuántas ventas lleva, cuántas están incluidas (1000), y el cobro extra.
+ * (solo ventas del mes; comisión $0.50 solo aplica a VIP Plus después de las primeras 1,000 ventas).
  */
 export async function getMeteredUsage(): Promise<MeteredUsage> {
   const included = 1000

@@ -124,6 +124,7 @@ export async function createSaleAction(input: CreateSaleInput): Promise<ActionRe
       total_cost: totalCost,
       profit,
       payment_method,
+      via_mercadopago: payment_method === 'mercadopago',
       status: 'completed',
       notes: notes?.trim() || null,
     })

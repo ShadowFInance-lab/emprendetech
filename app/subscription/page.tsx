@@ -157,8 +157,7 @@ export default async function SubscriptionPage({
               </p>
             )}
             <p className="text-[11px] text-gray-400 mt-2">
-              El cargo de {formatCurrency(usage.feePerSale)} por venta adicional solo aplica a ventas
-              cobradas con Mercado Pago directo desde la app.
+              El cargo de {formatCurrency(usage.feePerSale)} por venta adicional aplica después de las 1,000 ventas incluidas (solo VIP Plus).
             </p>
           </CardContent>
         </Card>
@@ -182,7 +181,7 @@ export default async function SubscriptionPage({
           {[
             <><strong>Pago único de $1,599 MXN</strong> (no es mensual).</>,
             <>Incluye las <strong>primeras 1,000 ventas por mes gratis</strong>.</>,
-            <>Si superas las 1,000 ventas en un mes, cada venta adicional cuesta solo <strong>$0.50 MXN</strong> (solo si usas Mercado Pago directo desde la app).</>,
+            <>Si superas las 1,000 ventas en un mes, cada venta adicional cuesta solo <strong>$0.50 MXN</strong>.</>,
             <>El contador <strong>se reinicia cada mes</strong>.</>,
             <>Solo aplica al plan <strong>VIP Plus</strong>.</>,
           ].map((txt, i) => (

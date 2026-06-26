@@ -302,7 +302,7 @@ export default async function DashboardPage() {
               {vipUsage.extraSales > 0 ? (
                 <p className="text-xs text-amber-700 mt-2">
                   {vipUsage.extraSales.toLocaleString()} ventas extra × {formatCurrency(vipUsage.feePerSale)} ={' '}
-                  <strong>{formatCurrency(vipUsage.amountDue)}</strong> este mes (solo ventas con Mercado Pago)
+                  <strong>{formatCurrency(vipUsage.amountDue)}</strong> este mes
                 </p>
               ) : (
                 <p className="text-xs text-green-600 mt-2">✓ Dentro de tus 1,000 ventas incluidas. Sin cargos extra.</p>
