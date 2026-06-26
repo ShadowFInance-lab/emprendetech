@@ -4,4 +4,4 @@
  * Súbelo cada vez que despliegues cambios grandes.
  */
 export const APP_VERSION = 'v7.71'
-export const APP_BUILD = '2026-06-26' // v7.71: Arreglar redirección botón Conectar MP - usar <button> con onClick window.location.href = '/api/oauth/mercadopago/start' para redirigir correctamente al OAuth. Commit v7.71 push.
+export const APP_BUILD = '2026-06-26' // v7.71: Arreglar botón Conectar MP (no redirige) - usar <button type="button" onClick={() => window.location.href = '/api/oauth/mercadopago/start'} con clases grandes; quitar submit interferencia. Commit v7.71 push.

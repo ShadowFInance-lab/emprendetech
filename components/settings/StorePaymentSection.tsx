@@ -58,7 +58,7 @@ export default function StorePaymentSection() {
       {ready && configured ? (
         <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
           <span className="text-sm text-green-700 flex items-center gap-2"><Check size={16} /> Cuenta de Mercado Pago conectada</span>
-          <button onClick={clear} disabled={isPending}
+          <button type="button" onClick={clear} disabled={isPending}
             className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-600">
             <Trash2 size={13} /> Desconectar
           </button>
@@ -66,9 +66,9 @@ export default function StorePaymentSection() {
       ) : (
         <div className="space-y-3">
           <button
-            onClick={() => { window.location.href = '/api/oauth/mercadopago/start' }}
-            disabled={isPending}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-600 px-6 py-3 text-base font-semibold text-white shadow hover:opacity-90 active:scale-[0.985] transition disabled:opacity-50"
+            type="button"
+            onClick={() => window.location.href = '/api/oauth/mercadopago/start'}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-600 px-6 py-3 text-base font-semibold text-white shadow hover:opacity-90 active:scale-[0.985] transition text-lg"
           >
             <Wallet size={18} /> Conectar mi cuenta de Mercado Pago
           </button>
