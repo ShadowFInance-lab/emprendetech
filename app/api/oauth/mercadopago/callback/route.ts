@@ -35,6 +35,10 @@ export async function GET(req: NextRequest) {
         redirect_uri: redirectUri,
       }),
     })
+    if (!tokenRes.ok) {
+      console.error('[MP OAUTH] token exchange failed', await tokenRes.text())
+      return fail()
+    }
     const token = await tokenRes.json()
     if (!token?.access_token) {
       console.error('[MP OAUTH] sin access_token', token)
