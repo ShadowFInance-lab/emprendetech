@@ -19,7 +19,6 @@ import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
 import ColorPickerField from './ColorPickerField'
 import OrderReceptionSection from './OrderReceptionSection'
-import StorePaymentSection from './StorePaymentSection'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -367,6 +366,17 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </div>
           {/* Recepción de pedidos: integrada con el toggle de Vender Online */}
           {onlineSales && <OrderReceptionSection embedded />}
+          {/* Métodos de pago simples (Mercado Pago pausado temporalmente) */}
+          {onlineSales && (
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">Métodos de pago</p>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700">💵 Contra entrega</span>
+                <span className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700">🏦 Transferencia / SPEI</span>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-2">Próximamente más métodos de pago.</p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 flex items-center gap-2">
@@ -539,11 +549,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </div>
             </CardContent>
           </Card>
-
-            {/* Métodos de pago visible para todos */}
-            <div className="col-span-2 mt-1">
-              <StorePaymentSection />
-            </div>
           </div>
       {/* ─── NOTIFICACIONES ─────────────────────────── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-3">

@@ -7,7 +7,7 @@ import { useCart } from './CartProvider'
 import { createOrderFromCartAction, type CheckoutInput } from '@/lib/actions/cart'
 import { formatCurrency } from '@/lib/utils/format'
 
-const PAYMENTS = ['Pago contra entrega', 'Transferencia']
+const PAYMENTS = ['Pago contra entrega', 'Transferencia / SPEI']
 
 export default function CartFab() {
   const cart = useCart()
@@ -143,6 +143,7 @@ export default function CartFab() {
                         style={f.payment_method === p ? { backgroundColor: color } : undefined}>{p}</button>
                     ))}
                   </div>
+                  <p className="text-[11px] text-gray-400">Próximamente más métodos de pago.</p>
                   <p className="text-[11px] text-gray-400">El negocio recibe tu pedido y te contacta para confirmar el pago y la entrega.</p>
                 </div>
                 <div className="border-t border-gray-100 p-4 shrink-0">
