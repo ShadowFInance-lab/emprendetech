@@ -601,4 +601,9 @@ ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_fit TEXT NOT NULL DEFAU
 -- Faltaba en migraciones previas; causa "Error al guardar los cambios" al setear fondo en Configuración.
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_color text;
 
+-- ─── 046: Llaves de Stripe de la tienda (pagos con Stripe) ──────────────────
+-- La Secret Key se usa SOLO server-side; nunca se devuelve al cliente.
+ALTER TABLE store_payment_config ADD COLUMN IF NOT EXISTS stripe_publishable_key TEXT;
+ALTER TABLE store_payment_config ADD COLUMN IF NOT EXISTS stripe_secret_key      TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

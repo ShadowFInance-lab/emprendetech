@@ -19,6 +19,7 @@ import ShareCatalog from './ShareCatalog'
 import NotificationSoundPicker from './NotificationSoundPicker'
 import ColorPickerField from './ColorPickerField'
 import OrderReceptionSection from './OrderReceptionSection'
+import StripePaymentSection from './StripePaymentSection'
 
 // 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
 const COLOR_PALETTES = [
@@ -384,6 +385,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           Vender Online disponible en plan pago.
         </div>
       )}
+
+      {/* ─── PAGOS CON STRIPE ──── */}
+      <StripePaymentSection />
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">
