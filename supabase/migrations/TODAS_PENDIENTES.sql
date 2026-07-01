@@ -606,4 +606,9 @@ ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_color text;
 ALTER TABLE store_payment_config ADD COLUMN IF NOT EXISTS stripe_publishable_key TEXT;
 ALTER TABLE store_payment_config ADD COLUMN IF NOT EXISTS stripe_secret_key      TEXT;
 
+-- ─── 047: Stripe Connect (OAuth) — cuenta conectada del vendedor ────────────
+-- account_id (acct_...) del comercio; se usa para destination charges con la
+-- clave de PLATAFORMA (STRIPE_SECRET_KEY en el entorno). Sin claves manuales.
+ALTER TABLE store_payment_config ADD COLUMN IF NOT EXISTS stripe_account_id TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

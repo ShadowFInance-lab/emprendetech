@@ -5,67 +5,34 @@ import { createClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
 /**
- * Pagos con Stripe de la TIENDA (para generar links de pago de las ventas).
- * La Secret Key vive server-side (store_payment_config) y NUNCA se devuelve al
- * cliente: getStripeConfigStatus solo expone si está configurada + la Publishable
- * Key (que es pública por diseño). La Secret solo se usa en estas server actions.
+ * Pagos con Stripe vía Stripe Connect (OAuth) — SIN claves manuales.
+ * El comercio conecta su cuenta con OAuth (/api/oauth/stripe/*) y guardamos su
+ * account_id (acct_...). Los cobros se hacen con la clave de PLATAFORMA
+ * (STRIPE_SECRET_KEY en el entorno) usando destination charges hacia ese account.
  */
 
 const isMissingCol = (e: { code?: string; message?: string } | null) =>
   !!e && (e.code === '42703' || e.code === 'PGRST204' || /column|schema cache|stripe_/i.test(e.message ?? ''))
 
-/** ¿Stripe configurado? Devuelve la Publishable Key (pública) pero NUNCA la Secret. */
-export async function getStripeConfigStatus(): Promise<{ configured: boolean; publishableKey: string | null }> {
+/** ¿Cuenta de Stripe conectada? Devuelve el account_id (no es secreto). */
+export async function getStripeConfigStatus(): Promise<{ connected: boolean; accountId: string | null }> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { configured: false, publishableKey: null }
+    if (!user) return { connected: false, accountId: null }
     const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
-    if (!store) return { configured: false, publishableKey: null }
+    if (!store) return { connected: false, accountId: null }
     const { data, error } = await supabase
-      .from('store_payment_config')
-      .select('stripe_publishable_key, stripe_secret_key')
-      .eq('store_id', store.id).maybeSingle()
-    if (error && isMissingCol(error)) return { configured: false, publishableKey: null }
-    return {
-      configured: !!data?.stripe_secret_key,
-      publishableKey: (data?.stripe_publishable_key as string) ?? null,
-    }
+      .from('store_payment_config').select('stripe_account_id').eq('store_id', store.id).maybeSingle()
+    if (error && isMissingCol(error)) return { connected: false, accountId: null }
+    const accountId = (data?.stripe_account_id as string) ?? null
+    return { connected: !!accountId, accountId }
   } catch {
-    return { configured: false, publishableKey: null }
+    return { connected: false, accountId: null }
   }
 }
 
-/** Guarda las llaves de Stripe del comercio (Publishable + Secret). */
-export async function saveStripeConfigAction(publishableKey: string, secretKey: string): Promise<ActionResult> {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'No autenticado' }
-
-    const pk = publishableKey.trim()
-    const sk = secretKey.trim()
-    if (!pk.startsWith('pk_')) return { success: false, error: 'La Publishable Key debe empezar con pk_test_ o pk_live_.' }
-    if (!(sk.startsWith('sk_') || sk.startsWith('rk_'))) return { success: false, error: 'La Secret Key debe empezar con sk_test_ o sk_live_.' }
-
-    const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
-    if (!store) return { success: false, error: 'Solo el dueño puede configurar los pagos' }
-
-    const { error } = await supabase.from('store_payment_config').upsert({
-      store_id: store.id,
-      stripe_publishable_key: pk,
-      stripe_secret_key: sk,
-      updated_at: new Date().toISOString(),
-    })
-    if (error) return { success: false, error: isMissingCol(error) ? 'Corre la migración 046 en Supabase (columnas de Stripe).' : 'No se pudo guardar' }
-    revalidatePath('/settings')
-    return { success: true }
-  } catch {
-    return { success: false, error: 'No se pudo guardar la configuración de Stripe' }
-  }
-}
-
-/** Desconecta Stripe (borra ambas llaves). */
+/** Desconecta la cuenta de Stripe (borra el account_id y llaves manuales legadas). */
 export async function clearStripeConfigAction(): Promise<ActionResult> {
   try {
     const supabase = await createClient()
@@ -74,7 +41,8 @@ export async function clearStripeConfigAction(): Promise<ActionResult> {
     const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
     if (!store) return { success: false, error: 'No autorizado' }
     const { error } = await supabase.from('store_payment_config')
-      .update({ stripe_publishable_key: null, stripe_secret_key: null }).eq('store_id', store.id)
+      .update({ stripe_account_id: null, stripe_publishable_key: null, stripe_secret_key: null })
+      .eq('store_id', store.id)
     if (error) return { success: false, error: 'No se pudo quitar' }
     revalidatePath('/settings')
     return { success: true }
@@ -84,9 +52,9 @@ export async function clearStripeConfigAction(): Promise<ActionResult> {
 }
 
 /**
- * Genera un link de pago de Stripe (Checkout Session) con la Secret Key del
- * comercio. Devuelve la URL para compartir con el cliente. La Secret nunca sale
- * del servidor.
+ * Genera un link de pago (Stripe Checkout Session) con destination charge: el
+ * cliente paga y el dinero va a la cuenta conectada del comercio. Usa la clave
+ * de PLATAFORMA (STRIPE_SECRET_KEY), que solo vive en el servidor.
  */
 export async function createStripePaymentLinkAction(
   input: { amount: number; concept: string; currency?: string }
@@ -101,14 +69,17 @@ export async function createStripePaymentLinkAction(
     const concept = (input.concept || 'Pago').trim().slice(0, 120)
     const currency = (input.currency || 'mxn').toLowerCase()
 
+    const secret = process.env.STRIPE_SECRET_KEY
+    if (!secret) return { success: false, error: 'Falta STRIPE_SECRET_KEY en el entorno (Vercel).' }
+
     const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
     if (!store) return { success: false, error: 'No autorizado' }
 
     const { data: cfg, error: cfgErr } = await supabase.from('store_payment_config')
-      .select('stripe_secret_key').eq('store_id', store.id).maybeSingle()
-    if (cfgErr && isMissingCol(cfgErr)) return { success: false, error: 'Configura y guarda tus llaves de Stripe primero.' }
-    const secret = cfg?.stripe_secret_key as string | undefined
-    if (!secret) return { success: false, error: 'Configura y guarda tus llaves de Stripe primero.' }
+      .select('stripe_account_id').eq('store_id', store.id).maybeSingle()
+    if (cfgErr && isMissingCol(cfgErr)) return { success: false, error: 'Conecta tu cuenta de Stripe primero.' }
+    const accountId = cfg?.stripe_account_id as string | undefined
+    if (!accountId) return { success: false, error: 'Conecta tu cuenta de Stripe primero.' }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
     const body = new URLSearchParams({
@@ -117,6 +88,8 @@ export async function createStripePaymentLinkAction(
       'line_items[0][price_data][product_data][name]': concept,
       'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
       'line_items[0][quantity]': '1',
+      // Destination charge: los fondos van a la cuenta conectada del comercio.
+      'payment_intent_data[transfer_data][destination]': accountId,
       success_url: `${appUrl}/settings?stripe=ok`,
       cancel_url: `${appUrl}/settings?stripe=cancel`,
     })
@@ -129,7 +102,7 @@ export async function createStripePaymentLinkAction(
     if (!res.ok) {
       const txt = await res.text()
       console.error('[stripe] checkout session failed', res.status, txt.slice(0, 300))
-      return { success: false, error: 'Stripe rechazó la solicitud. Revisa que la Secret Key sea válida.' }
+      return { success: false, error: 'Stripe rechazó la solicitud. Revisa STRIPE_SECRET_KEY y la cuenta conectada.' }
     }
     const session = await res.json()
     if (!session?.url) return { success: false, error: 'Stripe no devolvió un link de pago.' }
