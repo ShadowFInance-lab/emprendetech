@@ -84,6 +84,15 @@ export async function createStripePaymentLinkAction(
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
     const body = new URLSearchParams({
       mode: 'payment',
+      // Pago directo: el botón dice "Pagar" (sin pasos extra tipo "reservar").
+      submit_type: 'pay',
+      // Métodos de pago automáticos: al NO fijar `payment_method_types`, Stripe
+      // Checkout muestra dinámicamente todos los métodos habilitados en tu cuenta
+      // (tarjeta, OXXO, etc.). Es el equivalente de "automatic payment methods".
+      // Menos pasos de registro: no crea cuenta salvo que Stripe lo requiera y solo
+      // pide dirección si la tarjeta lo exige.
+      customer_creation: 'if_required',
+      billing_address_collection: 'auto',
       'line_items[0][price_data][currency]': currency,
       'line_items[0][price_data][product_data][name]': concept,
       'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
