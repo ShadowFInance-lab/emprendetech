@@ -57,7 +57,14 @@ export async function clearStripeConfigAction(): Promise<ActionResult> {
  * de PLATAFORMA (STRIPE_SECRET_KEY), que solo vive en el servidor.
  */
 export async function createStripePaymentLinkAction(
-  input: { amount: number; concept: string; currency?: string }
+  input: {
+    amount: number; concept: string; currency?: string
+    /** Datos de la venta para que el webhook la registre al completarse el pago (POS). */
+    sale?: {
+      items: { product_id: string; quantity: number; unit_price: number; unit_cost: number }[]
+      discount?: number; customerName?: string; customerPhone?: string
+    }
+  }
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
     const supabase = await createClient()
@@ -102,6 +109,19 @@ export async function createStripePaymentLinkAction(
       success_url: `${appUrl}/settings?stripe=ok`,
       cancel_url: `${appUrl}/settings?stripe=cancel`,
     })
+
+    // Metadata para que /api/stripe/webhook registre la venta cuando el pago se complete.
+    body.set('metadata[source]', 'pos')
+    body.set('metadata[store_id]', store.id)
+    if (input.sale) {
+      body.set('metadata[discount]', String(Math.max(0, input.sale.discount ?? 0)))
+      if (input.sale.customerName) body.set('metadata[customer_name]', input.sale.customerName.slice(0, 200))
+      if (input.sale.customerPhone) body.set('metadata[customer_phone]', input.sale.customerPhone.slice(0, 40))
+      // Items compactos [[product_id, qty, unit_price, unit_cost], ...] (límite 500 chars por valor).
+      const compact = input.sale.items.map(i => [i.product_id, i.quantity, i.unit_price, i.unit_cost])
+      const itemsJson = JSON.stringify(compact)
+      if (itemsJson.length <= 480) body.set('metadata[items]', itemsJson)
+    }
 
     const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',

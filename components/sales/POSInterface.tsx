@@ -76,11 +76,21 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   async function handleStripeCard() {
     if (items.length === 0) { toast.error('Agrega productos al carrito'); return }
     setStripeLoading(true)
-    const res = await createStripePaymentLinkAction({ amount: total, concept: 'Venta en tienda' })
+    const res = await createStripePaymentLinkAction({
+      amount: total,
+      concept: 'Venta en tienda',
+      // La venta la registra automáticamente el webhook cuando el pago se complete.
+      sale: {
+        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.sale_price, unit_cost: i.cost_price })),
+        discount: discountNum,
+        customerName: customerName || undefined,
+        customerPhone: customerPhone || undefined,
+      },
+    })
     setStripeLoading(false)
     if (res.success && res.url) {
       window.open(res.url, '_blank', 'noopener')
-      toast.success('Link de pago Stripe abierto. Cuando el cliente pague, pulsa "Cobrar" para registrar la venta.')
+      toast.success('Link de pago Stripe abierto. La venta se registrará sola cuando el cliente pague.')
     } else {
       toast.error(res.error ?? 'No se pudo generar el link de pago')
     }

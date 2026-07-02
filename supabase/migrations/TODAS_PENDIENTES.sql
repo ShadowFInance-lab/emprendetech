@@ -611,4 +611,10 @@ ALTER TABLE store_payment_config ADD COLUMN IF NOT EXISTS stripe_secret_key     
 -- clave de PLATAFORMA (STRIPE_SECRET_KEY en el entorno). Sin claves manuales.
 ALTER TABLE store_payment_config ADD COLUMN IF NOT EXISTS stripe_account_id TEXT;
 
+-- ─── 048: Referencia del Checkout de Stripe en ventas (webhook idempotente) ─
+-- El webhook /api/stripe/webhook registra la venta al completarse el pago; usa
+-- este id para no duplicar si Stripe reintenta la notificación.
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_sales_stripe_session ON sales(stripe_session_id);
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.
