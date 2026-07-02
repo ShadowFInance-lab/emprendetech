@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDateTime } from '@/lib/utils/format'
 import ExportSalesButtons from '@/components/sales/ExportSalesButtons'
+import StripeChargeLink from '@/components/sales/StripeChargeLink'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   completed: { label: 'Completada', color: 'bg-green-100 text-green-700' },
@@ -97,6 +98,9 @@ export default async function SalesPage() {
           </Link>
         </div>
       </div>
+
+      {/* Cobro rápido con Stripe (link de pago para terminal/tarjeta) */}
+      <StripeChargeLink />
 
       {/* Tabla de ventas */}
       {sales && sales.length > 0 ? (
