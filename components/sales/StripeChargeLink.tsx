@@ -41,7 +41,7 @@ export default function StripeChargeLink({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+    <div className="bg-white rounded-xl shadow-sm border border-indigo-200 ring-1 ring-indigo-100 p-4">
       <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-3">
         <CreditCard size={16} className="text-indigo-600" /> {title}
       </p>
