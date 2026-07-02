@@ -11,7 +11,10 @@ import { createStripePaymentLinkAction } from '@/lib/actions/stripe'
  * un link de pago (Checkout) y lo abre para cobrar con terminal o tarjeta.
  * Reutiliza la cuenta de Stripe conectada (Stripe Connect) del comercio.
  */
-export default function StripeChargeLink() {
+export default function StripeChargeLink({
+  title = 'Cobro rápido con Stripe',
+  buttonLabel = 'Generar link de pago Stripe',
+}: { title?: string; buttonLabel?: string } = {}) {
   const [amount, setAmount] = useState('')
   const [concept, setConcept] = useState('')
   const [url, setUrl] = useState('')
@@ -40,7 +43,7 @@ export default function StripeChargeLink() {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
       <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-3">
-        <CreditCard size={16} className="text-indigo-600" /> Cobro rápido con Stripe
+        <CreditCard size={16} className="text-indigo-600" /> {title}
       </p>
       <div className="flex flex-wrap items-end gap-2">
         <div>
@@ -53,7 +56,7 @@ export default function StripeChargeLink() {
         </div>
         <button type="button" onClick={generate} disabled={loading}
           className="h-10 px-4 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center gap-1.5 shadow transition">
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />} Generar link de pago Stripe
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />} {buttonLabel}
         </button>
       </div>
       {url && (
