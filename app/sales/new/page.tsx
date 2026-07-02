@@ -5,7 +5,6 @@ import { getMyRole } from '@/lib/actions/employees'
 import POSInterface from '@/components/sales/POSInterface'
 import EmployeeClock from '@/components/sales/EmployeeClock'
 import MyPayrollCard from '@/components/sales/MyPayrollCard'
-import StripeChargeLink from '@/components/sales/StripeChargeLink'
 
 export default async function NewSalePage({
   searchParams,
@@ -62,7 +61,6 @@ export default async function NewSalePage({
       </div>
       {isEmployee && <EmployeeClock />}
       {isEmployee && <MyPayrollCard />}
-      <StripeChargeLink title="Cobrar con Stripe" buttonLabel="Crear link" />
       <POSInterface presetCustomer={presetCustomer} />
     </div>
   )

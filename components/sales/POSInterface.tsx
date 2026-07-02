@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/lib/stores/cart'
 import { searchProductsForPOS, createSaleAction } from '@/lib/actions/sales'
 import { formatCurrency } from '@/lib/utils/format'
+import StripeChargeLink from './StripeChargeLink'
 
 type POSProduct = {
   id: string
@@ -127,6 +128,11 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               autoFocus
             />
           </div>
+        </div>
+
+        {/* Cobrar con Stripe — debajo del buscador (link de pago para terminal/tarjeta) */}
+        <div className="px-4 pt-3">
+          <StripeChargeLink title="Cobrar con Stripe" buttonLabel="Crear link" />
         </div>
 
         {/* Grid de productos */}
