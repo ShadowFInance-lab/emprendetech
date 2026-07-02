@@ -307,6 +307,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       <div className="grid grid-cols-1 gap-6">
       <div className="space-y-6 min-w-0">
 
+      {/* ─── COBROS CON STRIPE ──── (primera sección, arriba del todo) */}
+      <StripePaymentSection />
+
       {/* Redes sociales — fila de tarjetas ARRIBA (como la referencia) */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
         <div className="flex items-center gap-2.5 mb-3">
@@ -346,9 +349,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         ))}
         <p className="text-[11px] text-gray-400 mt-3">Google abre el inicio de sesión real de tu cuenta.</p>
       </div>
-
-      {/* ─── COBROS CON STRIPE ──── (arriba, junto a Redes) */}
-      <StripePaymentSection />
 
       {/* ─── VENDER ONLINE ──── (solo planes pagos) */}
       {['emprendedor', 'negocio', 'vip_plus'].includes(plan) ? (
