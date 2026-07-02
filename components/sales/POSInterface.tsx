@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/lib/stores/cart'
 import { searchProductsForPOS, createSaleAction } from '@/lib/actions/sales'
+import { createStripePaymentLinkAction } from '@/lib/actions/stripe'
 import { formatCurrency } from '@/lib/utils/format'
-import StripeChargeLink from './StripeChargeLink'
 
 type POSProduct = {
   id: string
@@ -53,6 +53,7 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [customerName, setCustomerName] = useState(presetCustomer?.name ?? '')
   const [customerPhone, setCustomerPhone] = useState(presetCustomer?.phone ?? '')
+  const [stripeLoading, setStripeLoading] = useState(false)
 
   // ─── Buscar productos (con debounce) ─────────────────────
   const search = useCallback(async (q: string) => {
@@ -70,6 +71,20 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   const sub = subtotal()
   const discountNum = Math.max(0, parseFloat(discount) || 0)
   const total = Math.max(0, sub - discountNum)
+
+  // Cobro con Stripe (método Tarjeta): genera un link de pago por el total del carrito y lo abre.
+  async function handleStripeCard() {
+    if (items.length === 0) { toast.error('Agrega productos al carrito'); return }
+    setStripeLoading(true)
+    const res = await createStripePaymentLinkAction({ amount: total, concept: 'Venta en tienda' })
+    setStripeLoading(false)
+    if (res.success && res.url) {
+      window.open(res.url, '_blank', 'noopener')
+      toast.success('Link de pago Stripe abierto. Cuando el cliente pague, pulsa "Cobrar" para registrar la venta.')
+    } else {
+      toast.error(res.error ?? 'No se pudo generar el link de pago')
+    }
+  }
 
   function handleCheckout() {
     if (items.length === 0) {
@@ -128,11 +143,6 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               autoFocus
             />
           </div>
-        </div>
-
-        {/* Cobrar con Stripe — debajo del buscador (link de pago para terminal/tarjeta) */}
-        <div className="px-4 pt-3">
-          <StripeChargeLink title="Cobrar con Stripe" buttonLabel="Crear link" />
         </div>
 
         {/* Grid de productos */}
@@ -365,7 +375,20 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               </div>
             </div>
 
-            {/* Botón cobrar grande */}
+            {/* Cobrar con Stripe — SOLO si el método elegido es Tarjeta */}
+            {paymentMethod === 'card' && (
+              <button
+                type="button"
+                onClick={handleStripeCard}
+                disabled={stripeLoading || isPending}
+                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl font-semibold text-white bg-[#635bff] hover:bg-[#5a52e6] transition-colors disabled:opacity-60"
+              >
+                {stripeLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard size={18} />}
+                Cobrar {formatCurrency(total)} con Stripe
+              </button>
+            )}
+
+            {/* Botón cobrar grande (registra la venta) */}
             <Button
               onClick={handleCheckout}
               disabled={isPending}
