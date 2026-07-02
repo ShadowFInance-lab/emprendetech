@@ -347,6 +347,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         <p className="text-[11px] text-gray-400 mt-3">Google abre el inicio de sesión real de tu cuenta.</p>
       </div>
 
+      {/* ─── COBROS CON STRIPE ──── (arriba, junto a Redes) */}
+      <StripePaymentSection />
+
       {/* ─── VENDER ONLINE ──── (solo planes pagos) */}
       {['emprendedor', 'negocio', 'vip_plus'].includes(plan) ? (
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
@@ -367,7 +370,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           </div>
           {/* Recepción de pedidos: integrada con el toggle de Vender Online */}
           {onlineSales && <OrderReceptionSection embedded />}
-          {/* Métodos de pago simples (Mercado Pago pausado temporalmente) */}
+          {/* Métodos de pago simples */}
           {onlineSales && (
             <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
               <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">Métodos de pago</p>
@@ -385,9 +388,6 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           Vender Online disponible en plan pago.
         </div>
       )}
-
-      {/* ─── PAGOS CON STRIPE ──── */}
-      <StripePaymentSection />
 
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">

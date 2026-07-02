@@ -78,7 +78,7 @@ export default function StripePaymentSection() {
           <CreditCard size={17} className="text-white" />
         </span>
         <div>
-          <p className="font-semibold text-gray-900 text-[15px] leading-tight">Pagos con Stripe</p>
+          <p className="font-semibold text-gray-900 text-[15px] leading-tight">Cobros con Stripe</p>
           <p className="text-xs text-gray-400">Conecta tu cuenta de Stripe para generar links de pago y cobrar tus ventas (el dinero va directo a tu cuenta).</p>
         </div>
       </div>

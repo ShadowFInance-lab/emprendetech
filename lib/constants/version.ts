@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.78'
-export const APP_BUILD = '2026-06-30' // v7.78: Ventas — "Cobro rápido con Stripe" (monto+concepto → link de pago que abre para cobrar con terminal/tarjeta). Quitada la sección de Mercado Pago del POS (labels históricos se conservan).
+export const APP_VERSION = 'v7.79'
+export const APP_BUILD = '2026-06-30' // v7.79: "Cobros con Stripe" movido arriba (junto a Redes) y renombrado. Mercado Pago eliminado definitivamente de la UI (POS + Configuración: borrado StorePaymentSection). Widget de link de pago en /sales.
