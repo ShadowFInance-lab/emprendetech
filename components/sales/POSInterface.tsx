@@ -375,31 +375,49 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               </div>
             </div>
 
-            {/* Cobrar con Stripe — SOLO si el método elegido es Tarjeta */}
-            {paymentMethod === 'card' && (
+            {/* ───────────────────────────────────────────────────────────────
+               COBRO CON "TARJETA" = STRIPE. Con método Tarjeta se muestra SOLO el
+               botón morado de Stripe (se oculta el botón verde de registrar venta).
+
+               Cómo usa el vendedor el link con su terminal:
+                 1) Pulsa "Cobrar con Stripe": se genera un link de Stripe Checkout
+                    por el TOTAL del carrito y se abre en una pestaña nueva.
+                 2) Para cobrar tiene 3 opciones con ese mismo link:
+                    a) Abrirlo en su propia terminal/tablet del negocio e ingresar
+                       ahí la tarjeta del cliente (presencial).
+                    b) Mostrar el link o su QR para que el cliente pague desde su
+                       celular con su tarjeta.
+                    c) Enviarlo por WhatsApp/correo para cobro a distancia.
+                 3) Stripe procesa el pago y el dinero llega a la cuenta conectada
+                    del negocio (destination charge). El cobro queda registrado en
+                    el dashboard de Stripe.
+               NOTA: con Tarjeta la venta se cobra vía Stripe; no se registra en el
+               historial del POS con el botón verde (ese es para Efectivo/Transf.).
+            ─────────────────────────────────────────────────────────────────── */}
+            {paymentMethod === 'card' ? (
               <button
                 type="button"
                 onClick={handleStripeCard}
-                disabled={stripeLoading || isPending}
-                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl font-semibold text-white bg-[#635bff] hover:bg-[#5a52e6] transition-colors disabled:opacity-60"
+                disabled={stripeLoading}
+                className="w-full flex items-center justify-center gap-2 h-14 rounded-xl text-lg font-bold text-white bg-[#635bff] hover:bg-[#5a52e6] shadow-lg shadow-[#635bff]/25 transition-colors disabled:opacity-60"
               >
-                {stripeLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard size={18} />}
+                {stripeLoading ? <Loader2 className="mr-1 h-5 w-5 animate-spin" /> : <CreditCard size={20} />}
                 Cobrar {formatCurrency(total)} con Stripe
               </button>
+            ) : (
+              /* Efectivo / Transferencia: registra la venta directamente en el POS */
+              <Button
+                onClick={handleCheckout}
+                disabled={isPending}
+                className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg font-bold rounded-xl shadow-lg shadow-green-600/20"
+              >
+                {isPending ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Procesando...</>
+                ) : (
+                  <><CheckCircle2 className="mr-2 h-6 w-6" /> Cobrar {formatCurrency(total)}</>
+                )}
+              </Button>
             )}
-
-            {/* Botón cobrar grande (registra la venta) */}
-            <Button
-              onClick={handleCheckout}
-              disabled={isPending}
-              className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg font-bold rounded-xl shadow-lg shadow-green-600/20"
-            >
-              {isPending ? (
-                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Procesando...</>
-              ) : (
-                <><CheckCircle2 className="mr-2 h-6 w-6" /> Cobrar {formatCurrency(total)}</>
-              )}
-            </Button>
           </div>
         )}
       </div>
