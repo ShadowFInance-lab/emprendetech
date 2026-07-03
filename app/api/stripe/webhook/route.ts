@@ -44,6 +44,10 @@ async function registerSaleFromSession(session: StripeSession) {
   const meta = session.metadata || {}
   const storeId = meta.store_id
   if (!storeId) { console.warn('[stripe webhook] sesión sin store_id, no se registra:', session.id); return }
+  // Solo auto-registra ventas de checkouts que traen los items del carrito.
+  // Los cobros libres (widget "Cobro rápido con Stripe") NO se auto-registran:
+  // el cajero registra la venta con el botón "Cobrar" del POS — así no se duplica.
+  if (!meta.items) { console.log('[stripe webhook] sesión sin items (cobro libre), no se registra venta:', session.id); return }
 
   const admin = createAdminClient()
 

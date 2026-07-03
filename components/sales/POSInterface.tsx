@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/lib/stores/cart'
 import { searchProductsForPOS, createSaleAction } from '@/lib/actions/sales'
-import { createStripePaymentLinkAction } from '@/lib/actions/stripe'
 import { formatCurrency } from '@/lib/utils/format'
 
 type POSProduct = {
@@ -53,7 +52,6 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [customerName, setCustomerName] = useState(presetCustomer?.name ?? '')
   const [customerPhone, setCustomerPhone] = useState(presetCustomer?.phone ?? '')
-  const [stripeLoading, setStripeLoading] = useState(false)
 
   // ─── Buscar productos (con debounce) ─────────────────────
   const search = useCallback(async (q: string) => {
@@ -71,30 +69,6 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   const sub = subtotal()
   const discountNum = Math.max(0, parseFloat(discount) || 0)
   const total = Math.max(0, sub - discountNum)
-
-  // Cobro con Stripe (método Tarjeta): genera un link de pago por el total del carrito y lo abre.
-  async function handleStripeCard() {
-    if (items.length === 0) { toast.error('Agrega productos al carrito'); return }
-    setStripeLoading(true)
-    const res = await createStripePaymentLinkAction({
-      amount: total,
-      concept: 'Venta en tienda',
-      // La venta la registra automáticamente el webhook cuando el pago se complete.
-      sale: {
-        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.sale_price, unit_cost: i.cost_price })),
-        discount: discountNum,
-        customerName: customerName || undefined,
-        customerPhone: customerPhone || undefined,
-      },
-    })
-    setStripeLoading(false)
-    if (res.success && res.url) {
-      window.open(res.url, '_blank', 'noopener')
-      toast.success('Link de pago Stripe abierto. La venta se registrará sola cuando el cliente pague.')
-    } else {
-      toast.error(res.error ?? 'No se pudo generar el link de pago')
-    }
-  }
 
   function handleCheckout() {
     if (items.length === 0) {
@@ -385,49 +359,21 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               </div>
             </div>
 
-            {/* ───────────────────────────────────────────────────────────────
-               COBRO CON "TARJETA" = STRIPE. Con método Tarjeta se muestra SOLO el
-               botón morado de Stripe (se oculta el botón verde de registrar venta).
-
-               Cómo usa el vendedor el link con su terminal:
-                 1) Pulsa "Cobrar con Stripe": se genera un link de Stripe Checkout
-                    por el TOTAL del carrito y se abre en una pestaña nueva.
-                 2) Para cobrar tiene 3 opciones con ese mismo link:
-                    a) Abrirlo en su propia terminal/tablet del negocio e ingresar
-                       ahí la tarjeta del cliente (presencial).
-                    b) Mostrar el link o su QR para que el cliente pague desde su
-                       celular con su tarjeta.
-                    c) Enviarlo por WhatsApp/correo para cobro a distancia.
-                 3) Stripe procesa el pago y el dinero llega a la cuenta conectada
-                    del negocio (destination charge). El cobro queda registrado en
-                    el dashboard de Stripe.
-               NOTA: con Tarjeta la venta se cobra vía Stripe; no se registra en el
-               historial del POS con el botón verde (ese es para Efectivo/Transf.).
-            ─────────────────────────────────────────────────────────────────── */}
-            {paymentMethod === 'card' ? (
-              <button
-                type="button"
-                onClick={handleStripeCard}
-                disabled={stripeLoading}
-                className="w-full flex items-center justify-center gap-2 h-14 rounded-xl text-lg font-bold text-white bg-[#635bff] hover:bg-[#5a52e6] shadow-lg shadow-[#635bff]/25 transition-colors disabled:opacity-60"
-              >
-                {stripeLoading ? <Loader2 className="mr-1 h-5 w-5 animate-spin" /> : <CreditCard size={20} />}
-                Cobrar {formatCurrency(total)} con Stripe
-              </button>
-            ) : (
-              /* Efectivo / Transferencia: registra la venta directamente en el POS */
-              <Button
-                onClick={handleCheckout}
-                disabled={isPending}
-                className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg font-bold rounded-xl shadow-lg shadow-green-600/20"
-              >
-                {isPending ? (
-                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Procesando...</>
-                ) : (
-                  <><CheckCircle2 className="mr-2 h-6 w-6" /> Cobrar {formatCurrency(total)}</>
-                )}
-              </Button>
-            )}
+            {/* Botón cobrar: registra la venta (Efectivo/Tarjeta/Transferencia).
+               Para cobrar con tarjeta vía Stripe: genera el link con el widget
+               "Cobro rápido con Stripe" (arriba de la página), cobra ahí y luego
+               registra aquí la venta con método Tarjeta. */}
+            <Button
+              onClick={handleCheckout}
+              disabled={isPending}
+              className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg font-bold rounded-xl shadow-lg shadow-green-600/20"
+            >
+              {isPending ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Procesando...</>
+              ) : (
+                <><CheckCircle2 className="mr-2 h-6 w-6" /> Cobrar {formatCurrency(total)}</>
+              )}
+            </Button>
           </div>
         )}
       </div>
