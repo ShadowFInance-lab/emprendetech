@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/lib/stores/cart'
 import { searchProductsForPOS, createSaleAction } from '@/lib/actions/sales'
+import { createStripePaymentLinkAction } from '@/lib/actions/stripe'
 import { formatCurrency } from '@/lib/utils/format'
 
 type POSProduct = {
@@ -52,6 +53,7 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [customerName, setCustomerName] = useState(presetCustomer?.name ?? '')
   const [customerPhone, setCustomerPhone] = useState(presetCustomer?.phone ?? '')
+  const [stripeLoading, setStripeLoading] = useState(false)
 
   // ─── Buscar productos (con debounce) ─────────────────────
   const search = useCallback(async (q: string) => {
@@ -69,6 +71,31 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   const sub = subtotal()
   const discountNum = Math.max(0, parseFloat(discount) || 0)
   const total = Math.max(0, sub - discountNum)
+
+  // Tarjeta = Stripe Checkout directo: genera el link por el TOTAL del carrito y
+  // lo abre al instante. El webhook (/api/stripe/webhook) registra la venta sola
+  // (con items → descuenta stock) cuando el pago se completa.
+  async function handleStripeCard() {
+    if (items.length === 0) { toast.error('Agrega productos al carrito'); return }
+    setStripeLoading(true)
+    const res = await createStripePaymentLinkAction({
+      amount: total,
+      concept: 'Venta en tienda',
+      sale: {
+        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.sale_price, unit_cost: i.cost_price })),
+        discount: discountNum,
+        customerName: customerName || undefined,
+        customerPhone: customerPhone || undefined,
+      },
+    })
+    setStripeLoading(false)
+    if (res.success && res.url) {
+      window.open(res.url, '_blank', 'noopener')
+      toast.success('Stripe Checkout abierto. La venta se registrará sola cuando el cliente pague.')
+    } else {
+      toast.error(res.error ?? 'No se pudo generar el pago con Stripe')
+    }
+  }
 
   function handleCheckout() {
     if (items.length === 0) {
@@ -359,21 +386,34 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
               </div>
             </div>
 
-            {/* Botón cobrar: registra la venta (Efectivo/Tarjeta/Transferencia).
-               Para cobrar con tarjeta vía Stripe: genera el link con el widget
-               "Cobro rápido con Stripe" (arriba de la página), cobra ahí y luego
-               registra aquí la venta con método Tarjeta. */}
-            <Button
-              onClick={handleCheckout}
-              disabled={isPending}
-              className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg font-bold rounded-xl shadow-lg shadow-green-600/20"
-            >
-              {isPending ? (
-                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Procesando...</>
-              ) : (
-                <><CheckCircle2 className="mr-2 h-6 w-6" /> Cobrar {formatCurrency(total)}</>
-              )}
-            </Button>
+            {/* Tarjeta = Stripe Checkout directo (único punto de Stripe en el POS,
+               mismo POS para jefe y empleados). El link se abre al pulsar; se puede
+               cobrar en la terminal/tablet del negocio, mostrar el QR al cliente o
+               enviarlo por WhatsApp. La venta la registra el webhook al pagarse.
+               Efectivo/Transferencia usan el botón verde (registro directo). */}
+            {paymentMethod === 'card' ? (
+              <button
+                type="button"
+                onClick={handleStripeCard}
+                disabled={stripeLoading}
+                className="w-full flex items-center justify-center gap-2 h-14 rounded-xl text-lg font-bold text-white bg-[#635bff] hover:bg-[#5a52e6] shadow-lg shadow-[#635bff]/25 transition-colors disabled:opacity-60"
+              >
+                {stripeLoading ? <Loader2 className="mr-1 h-5 w-5 animate-spin" /> : <CreditCard size={20} />}
+                Cobrar {formatCurrency(total)} con Stripe
+              </button>
+            ) : (
+              <Button
+                onClick={handleCheckout}
+                disabled={isPending}
+                className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg font-bold rounded-xl shadow-lg shadow-green-600/20"
+              >
+                {isPending ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Procesando...</>
+                ) : (
+                  <><CheckCircle2 className="mr-2 h-6 w-6" /> Cobrar {formatCurrency(total)}</>
+                )}
+              </Button>
+            )}
           </div>
         )}
       </div>

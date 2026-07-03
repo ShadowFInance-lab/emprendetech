@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.90'
-export const APP_BUILD = '2026-07-02' // v7.90: un solo generador Stripe en /sales/new — queda el widget "Cobro rápido con Stripe" arriba; quitado el botón morado del carrito (Tarjeta vuelve al Cobrar verde). Webhook solo auto-registra checkouts con items (sin duplicados).
+export const APP_VERSION = 'v7.91'
+export const APP_BUILD = '2026-07-02' // v7.91: limpieza Stripe — widget "Cobro rápido" ELIMINADO (archivo incluido); el único punto Stripe es el método Tarjeta del POS (Checkout directo por el total, venta auto-registrada por webhook). Mismo POS jefe/empleados. (Pediste "v7.90" pero ya existía; va como v7.91.)
