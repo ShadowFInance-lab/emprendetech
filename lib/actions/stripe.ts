@@ -93,11 +93,15 @@ export async function createStripePaymentLinkAction(
       mode: 'payment',
       // Pago directo: el botón dice "Pagar" (sin pasos extra tipo "reservar").
       submit_type: 'pay',
-      // Métodos de pago automáticos: al NO fijar `payment_method_types`, Stripe
-      // Checkout muestra dinámicamente todos los métodos habilitados en tu cuenta
-      // (tarjeta, OXXO, etc.). Es el equivalente de "automatic payment methods".
-      // Menos pasos de registro: no crea cuenta salvo que Stripe lo requiera y solo
-      // pide dirección si la tarjeta lo exige. NADA se guarda automáticamente:
+      // SOLO tarjeta: al fijar payment_method_types no aparece Link de Stripe
+      // (el prompt de "guarda tus datos" con teléfono+código que parece un
+      // registro) ni métodos con vale. Página mínima: correo, tarjeta y nombre
+      // del titular. (El correo no se puede quitar: Stripe lo exige para el recibo.)
+      'payment_method_types[0]': 'card',
+      // Checkout en español de inmediato para clientes de MX/LATAM.
+      locale: 'es-419',
+      // Sin registro: no crea cuenta salvo que Stripe lo requiera y solo pide
+      // dirección si la tarjeta lo exige. NADA se guarda automáticamente:
       // sin setup_future_usage, Stripe no almacena la tarjeta del cliente.
       customer_creation: 'if_required',
       billing_address_collection: 'auto',
