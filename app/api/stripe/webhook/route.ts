@@ -53,9 +53,17 @@ async function registerSaleFromSession(session: StripeSession) {
 
   const admin = createAdminClient()
 
-  // Idempotencia: si ya registramos esta sesión, salir. Tolerante si falta la columna.
+  // Idempotencia: si ya registramos esta sesión, salir (Stripe reintenta eventos).
   const dup = await admin.from('sales').select('id').eq('stripe_session_id', session.id).maybeSingle()
-  if (!dup.error && dup.data) { console.log('[stripe webhook] venta ya registrada para', session.id); return }
+  if (!dup.error) {
+    if (dup.data) { console.log('[stripe webhook] venta ya registrada para', session.id); return }
+  } else {
+    // Sin la columna stripe_session_id (migración 048 no corrida): respaldo por la
+    // nota de la venta, que incluye el id de la sesión — evita duplicados igual.
+    const byNote = await admin.from('sales').select('id')
+      .eq('store_id', storeId).ilike('notes', `%${session.id}%`).limit(1)
+    if (byNote.data && byNote.data.length > 0) { console.log('[stripe webhook] venta ya registrada (por nota) para', session.id); return }
+  }
 
   const amountTotal = (session.amount_total ?? 0) / 100
   const discount = Math.max(0, Number(meta.discount) || 0)
@@ -95,7 +103,9 @@ async function registerSaleFromSession(session: StripeSession) {
     store_id: storeId, customer_id: customerId, folio: 'TEMP',
     subtotal, discount_amt: discount, total, total_cost: totalCost, profit,
     payment_method: 'card', via_mercadopago: false, status: 'completed',
-    stripe_session_id: session.id, notes: 'Cobro con Stripe',
+    // La nota lleva el id de la sesión: trazabilidad en el historial y respaldo
+    // de idempotencia cuando falta la columna stripe_session_id.
+    stripe_session_id: session.id, notes: `Cobro con Stripe · ${session.id}`,
   }
   let ins = await admin.from('sales').insert(salePayload).select('id, folio').single()
   if (ins.error && /stripe_session_id|column|schema cache/i.test(ins.error.message || '')) {

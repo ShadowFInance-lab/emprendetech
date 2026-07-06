@@ -90,8 +90,8 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
     })
     setStripeLoading(false)
     if (res.success && res.url) {
+      // Sin notificación: el Checkout se abre y listo. La venta la registra el webhook.
       window.open(res.url, '_blank', 'noopener')
-      toast.success('Stripe Checkout abierto. La venta se registrará sola cuando el cliente pague.')
     } else {
       toast.error(res.error ?? 'No se pudo generar el pago con Stripe')
     }
