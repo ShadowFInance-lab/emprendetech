@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -13,7 +14,8 @@ export const runtime = 'nodejs'
  * - Idempotente por `session.id` (columna sales.stripe_session_id, migración 048).
  *
  * Configuración: Stripe Dashboard → Developers → Webhooks → endpoint
- *   https://TU_APP/api/stripe/webhook  (evento: checkout.session.completed).
+ *   https://TU_APP/api/stripe/webhook  (eventos: checkout.session.completed y
+ *   checkout.session.async_payment_succeeded para pagos diferidos tipo OXXO).
  * Copia el "Signing secret" (whsec_...) a STRIPE_WEBHOOK_SECRET en Vercel.
  */
 
@@ -112,6 +114,9 @@ async function registerSaleFromSession(session: StripeSession) {
     if (itemsErr) console.error('[stripe webhook] error insertando items (venta creada sin líneas):', itemsErr.message)
   }
 
+  // Refresca las páginas cacheadas para que la venta aparezca al instante.
+  revalidatePath('/sales'); revalidatePath('/dashboard'); revalidatePath('/inventory')
+
   console.log('[stripe webhook] ✅ venta registrada', ins.data.folio, 'sesión', session.id)
 }
 
@@ -133,7 +138,11 @@ export async function POST(req: NextRequest) {
   try { event = JSON.parse(payload) } catch { return NextResponse.json({ error: 'payload inválido' }, { status: 400 }) }
 
   try {
-    if (event.type === 'checkout.session.completed') {
+    // completed = pago inmediato (tarjeta). async_payment_succeeded = métodos
+    // diferidos (p. ej. OXXO): completed llega con payment_status 'unpaid' y el
+    // pago real se confirma después — sin este evento esas ventas no se
+    // registrarían. La idempotencia por session.id evita duplicados.
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       await registerSaleFromSession(event.data?.object as StripeSession)
     }
   } catch (err) {

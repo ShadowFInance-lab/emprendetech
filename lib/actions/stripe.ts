@@ -97,7 +97,8 @@ export async function createStripePaymentLinkAction(
       // Checkout muestra dinámicamente todos los métodos habilitados en tu cuenta
       // (tarjeta, OXXO, etc.). Es el equivalente de "automatic payment methods".
       // Menos pasos de registro: no crea cuenta salvo que Stripe lo requiera y solo
-      // pide dirección si la tarjeta lo exige.
+      // pide dirección si la tarjeta lo exige. NADA se guarda automáticamente:
+      // sin setup_future_usage, Stripe no almacena la tarjeta del cliente.
       customer_creation: 'if_required',
       billing_address_collection: 'auto',
       'line_items[0][price_data][currency]': currency,
