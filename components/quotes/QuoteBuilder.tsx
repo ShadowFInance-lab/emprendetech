@@ -48,7 +48,6 @@ const PAYMENT_METHODS = [
   { value: 'efectivo', label: 'Efectivo' },
   { value: 'transferencia', label: 'Transferencia' },
   { value: 'tarjeta', label: 'Tarjeta' },
-  { value: 'mercadopago', label: 'Mercado Pago' },
 ]
 
 function lineGross(i: QuoteItem) { return i.unit_price * i.quantity }

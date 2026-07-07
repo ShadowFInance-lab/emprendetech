@@ -83,11 +83,12 @@ export async function createStripePaymentLinkAction(
     if (!store) return { success: false, error: 'No autorizado' }
 
     // Comisión de la plataforma por venta, según el plan del negocio:
-    // gratis (y demás planes) = $0.20 MXN (20 centavos) · VIP Plus = $0.50 MXN.
-    // application_fee_amount va en la unidad mínima (centavos) y Stripe la
-    // deposita automáticamente en la cuenta de la PLATAFORMA.
+    // gratis (y demás planes) = 4% · VIP Plus = 2.5% del total.
+    // application_fee_amount va en centavos y Stripe la deposita
+    // automáticamente en la cuenta de la PLATAFORMA.
     const { data: prof } = await supabase.from('profiles').select('plan').eq('id', user.id).maybeSingle()
-    const feeCents = prof?.plan === 'vip_plus' ? 50 : 20
+    const feePct = prof?.plan === 'vip_plus' ? 0.025 : 0.04
+    const feeCents = Math.max(1, Math.round(amount * 100 * feePct))
 
     const { data: cfg, error: cfgErr } = await supabase.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', store.id).maybeSingle()
