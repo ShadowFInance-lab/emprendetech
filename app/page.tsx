@@ -52,7 +52,7 @@ export default function HomePage() {
               <Sparkles size={15} /> Ver planes y precios →
             </Link>
           </div>
-          <p className="text-slate-400 text-xs mt-6">Sin tarjeta para empezar · Datos protegidos · Pagos con Mercado Pago</p>
+          <p className="text-slate-400 text-xs mt-6">Sin tarjeta para empezar · Datos protegidos · Pagos seguros con Stripe</p>
         </div>
       </section>
 

@@ -38,7 +38,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
     'Todo ilimitado, pago único',
     '1,000 ventas/mes incluidas',
     'Solo $0.50 por venta extra',
-    '(con Mercado Pago directo)',
+    '(con Stripe directo)',
     'Cobro automático en la app',
   ],
 }

@@ -16,7 +16,7 @@ export interface ExportSaleRow {
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
-  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mercadopago: 'Mercado Pago', other: 'Otro',
+  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mercadopago: 'Pago online', other: 'Otro',
 }
 const STATUS_LABELS: Record<string, string> = {
   completed: 'Completada', cancelled: 'Cancelada', refunded: 'Reembolsada',

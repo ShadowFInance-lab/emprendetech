@@ -155,3 +155,63 @@ export async function createStripePaymentLinkAction(
     return { success: false, error: 'No se pudo generar el link de pago' }
   }
 }
+
+// ─── Checkout de PLANES (suscripción de la plataforma) ──────────────────────
+// El dinero va DIRECTO a la cuenta Stripe de la PLATAFORMA (sin transfer_data).
+// El webhook /api/stripe/webhook activa el plan al completarse el pago
+// (metadata.type = 'plan'). Reemplaza el flujo que antes hacía Mercado Pago.
+// Mantener precios en sync con PLAN_PRICES de lib/actions/subscriptions.ts.
+const PLAN_CHECKOUT: Record<string, { amount: number; title: string }> = {
+  emprendedor: { amount: 199, title: 'Mercanta Business — Plan Emprendedor (1 mes)' },
+  negocio: { amount: 399, title: 'Mercanta Business — Plan Negocio (1 mes)' },
+  vip_plus: { amount: 1599, title: 'Mercanta Business — VIP Plus (pago único)' },
+}
+
+export async function createPlanCheckoutAction(plan: string): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'No autenticado' }
+
+    const cfg = PLAN_CHECKOUT[plan]
+    if (!cfg) return { success: false, error: 'Plan no válido' }
+
+    const secret = process.env.STRIPE_SECRET_KEY
+    if (!secret) return { success: false, error: 'Pagos en configuración. Falta STRIPE_SECRET_KEY en el entorno.' }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
+    const body = new URLSearchParams({
+      mode: 'payment',
+      submit_type: 'pay',
+      'payment_method_types[0]': 'card',
+      locale: 'es-419',
+      customer_creation: 'if_required',
+      billing_address_collection: 'auto',
+      'line_items[0][price_data][currency]': 'mxn',
+      'line_items[0][price_data][product_data][name]': cfg.title,
+      'line_items[0][price_data][unit_amount]': String(cfg.amount * 100),
+      'line_items[0][quantity]': '1',
+      'metadata[type]': 'plan',
+      'metadata[user_id]': user.id,
+      'metadata[plan]': plan,
+      success_url: `${appUrl}/subscription?status=success`,
+      cancel_url: `${appUrl}/subscription?status=failure`,
+    })
+
+    const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    if (!res.ok) {
+      const txt = await res.text()
+      console.error('[stripe] plan checkout failed', res.status, txt.slice(0, 300))
+      return { success: false, error: 'Stripe rechazó la solicitud. Revisa STRIPE_SECRET_KEY.' }
+    }
+    const session = await res.json()
+    if (!session?.url) return { success: false, error: 'Stripe no devolvió el checkout.' }
+    return { success: true, url: session.url as string }
+  } catch {
+    return { success: false, error: 'No se pudo iniciar el pago del plan' }
+  }
+}

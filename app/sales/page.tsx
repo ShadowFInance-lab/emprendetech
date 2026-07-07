@@ -17,7 +17,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Efectivo',
   card: 'Tarjeta',
   transfer: 'Transferencia',
-  mercadopago: 'Mercado Pago',
+  mercadopago: 'Pago online',
   other: 'Otro',
 }
 

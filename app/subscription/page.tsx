@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { CreditCard, CheckCircle2, AlertCircle, Zap, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
-import { isMercadoPagoConfigured } from '@/lib/mercadopago/client'
 import { getMeteredUsage, confirmCheckoutReturn, activateFreeModeAction } from '@/lib/actions/subscriptions'
 import { formatCurrency } from '@/lib/utils/format'
 import UpgradeButton from '@/components/subscription/UpgradeButton'
@@ -13,7 +12,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
   free: ['100 productos', 'Catálogo público', 'POS básico', 'Con anuncios ligeros'],
   emprendedor: ['5,000 productos', 'Sin anuncios', 'Personaliza 3 tonos', 'Exportar PDF/Excel', 'Reportes completos'],
   negocio: ['Productos ilimitados', 'Todo de Emprendedor', 'Usuarios adicionales', 'Dominio propio', 'Respaldos'],
-  vip_plus: ['Todo ilimitado', 'Modo Gratis (sin cobro)', '1,000 ventas/mes incluidas', 'Solo $0.50 por venta extra (con Mercado Pago)'],
+  vip_plus: ['Todo ilimitado', 'Modo Gratis (sin cobro)', '1,000 ventas/mes incluidas', 'Solo $0.50 por venta extra (con Stripe)'],
 }
 
 const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
@@ -32,9 +31,9 @@ export default async function SubscriptionPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Al volver del checkout, verificar el pago con Mercado Pago y activar el
-  // plan inmediatamente (no dependemos solo del webhook, que puede fallar por
-  // configuración). Es idempotente y solo activa el plan del propio usuario.
+  // Verificación legada al volver de un checkout antiguo (los params payment_id/
+  // collection_id solo los manda el proveedor anterior). Los planes nuevos se pagan
+  // con Stripe y los activa el webhook. Idempotente; solo activa el plan propio.
   let justActivated: Plan | null = null
   if (searchParams.payment_id || searchParams.collection_id || searchParams.status === 'success' || searchParams.collection_status === 'approved') {
     const res = await confirmCheckoutReturn({
@@ -52,7 +51,8 @@ export default async function SubscriptionPage({
 
   const currentPlan = profile.plan as Plan
   const limits = PLAN_LIMITS[currentPlan]
-  const mpConfigured = isMercadoPagoConfigured()
+  // Los planes se pagan con Stripe (checkout de la plataforma).
+  const paymentsConfigured = !!process.env.STRIPE_SECRET_KEY
   const usage = await getMeteredUsage()
   const usagePct = Math.min(100, (usage.salesThisMonth / usage.included) * 100)
 
@@ -163,7 +163,7 @@ export default async function SubscriptionPage({
         </Card>
       )}
 
-      {!mpConfigured && (
+      {!paymentsConfigured && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
           ⚠️ Los pagos en línea están en configuración. Para cambiar de plan,
           contáctanos por WhatsApp.

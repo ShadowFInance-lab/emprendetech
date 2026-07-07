@@ -8,7 +8,7 @@ import { formatCurrency, formatDateTime } from '@/lib/utils/format'
 import CancelSaleButton from '@/components/sales/CancelSaleButton'
 
 const PAYMENT_LABELS: Record<string, string> = {
-  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mercadopago: 'Mercado Pago', other: 'Otro',
+  cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', mercadopago: 'Pago online', other: 'Otro',
 }
 
 export default async function SaleDetailPage({ params }: { params: { id: string } }) {

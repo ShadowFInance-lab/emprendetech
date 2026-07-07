@@ -13,7 +13,7 @@ const STATUS_LABEL: Record<string, string> = {
   rechazada: 'Rechazada', expirada: 'Vencida', convertida: 'Procesada',
 }
 const PAY_LABEL: Record<string, string> = {
-  efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago',
+  efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', mercadopago: 'Pago online',
 }
 
 type Item = PublicQuote['quote']['items'][number]

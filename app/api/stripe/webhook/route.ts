@@ -130,6 +130,58 @@ async function registerSaleFromSession(session: StripeSession) {
   console.log('[stripe webhook] ✅ venta registrada', ins.data.folio, 'sesión', session.id)
 }
 
+// ─── Activación de PLANES (metadata.type = 'plan') ──────────────────────────
+// Espejo del webhook de Mercado Pago: al pagarse el checkout del plan, activa
+// el plan del usuario (profiles) y registra subscription + payment.
+const VALID_PLANS = ['emprendedor', 'negocio', 'vip_plus']
+
+async function activatePlanFromSession(session: StripeSession) {
+  if (session.payment_status && session.payment_status !== 'paid') return
+  const meta = session.metadata || {}
+  const userId = meta.user_id
+  const plan = meta.plan
+  if (!userId || !plan || !VALID_PLANS.includes(plan)) {
+    console.warn('[stripe webhook] sesión de plan sin user_id/plan válidos:', session.id)
+    return
+  }
+
+  const admin = createAdminClient()
+
+  // Idempotencia: una subscription por sesión de checkout.
+  const { data: existing } = await admin.from('subscriptions')
+    .select('id').eq('provider_sub_id', session.id).maybeSingle()
+  if (existing) { console.log('[stripe webhook] plan ya activado para sesión', session.id); return }
+
+  const now = new Date()
+  const periodEnd = new Date(now)
+  if (plan === 'vip_plus') periodEnd.setFullYear(periodEnd.getFullYear() + 100)
+  else periodEnd.setMonth(periodEnd.getMonth() + 1)
+
+  const { error: updErr } = await admin.from('profiles').update({
+    plan,
+    plan_status: 'active',
+    plan_expires_at: plan === 'vip_plus' ? null : periodEnd.toISOString(),
+  }).eq('id', userId)
+  if (updErr) { console.error('[stripe webhook] error activando plan:', updErr.message); return }
+
+  const { data: sub, error: subErr } = await admin.from('subscriptions').insert({
+    profile_id: userId, plan, status: 'active', provider: 'stripe',
+    provider_sub_id: session.id,
+    current_period_start: now.toISOString(), current_period_end: periodEnd.toISOString(),
+  }).select('id').single()
+  if (subErr) console.error('[stripe webhook] error creando subscription (no crítico):', subErr.message)
+  else if (sub) {
+    const { error: payErr } = await admin.from('payments').insert({
+      subscription_id: sub.id, amount: (session.amount_total ?? 0) / 100,
+      currency: 'MXN', status: 'succeeded', provider_txn_id: session.id,
+    })
+    if (payErr) console.error('[stripe webhook] error registrando payment (no crítico):', payErr.message)
+  }
+
+  revalidatePath('/subscription'); revalidatePath('/dashboard')
+  console.log('[stripe webhook] ✅ plan', plan, 'activado para', userId)
+}
+
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET
   if (!secret) {
@@ -149,11 +201,13 @@ export async function POST(req: NextRequest) {
 
   try {
     // completed = pago inmediato (tarjeta). async_payment_succeeded = métodos
-    // diferidos (p. ej. OXXO): completed llega con payment_status 'unpaid' y el
-    // pago real se confirma después — sin este evento esas ventas no se
-    // registrarían. La idempotencia por session.id evita duplicados.
+    // diferidos: completed llega con payment_status 'unpaid' y el pago real se
+    // confirma después. La idempotencia por session.id evita duplicados.
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-      await registerSaleFromSession(event.data?.object as StripeSession)
+      const session = event.data?.object as StripeSession
+      // metadata.type='plan' → suscripción de la plataforma; si no, venta del POS.
+      if (session?.metadata?.type === 'plan') await activatePlanFromSession(session)
+      else await registerSaleFromSession(session)
     }
   } catch (err) {
     console.error('[stripe webhook] error procesando evento:', err)
