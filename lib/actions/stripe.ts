@@ -82,6 +82,13 @@ export async function createStripePaymentLinkAction(
     const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
     if (!store) return { success: false, error: 'No autorizado' }
 
+    // Comisión de la plataforma por venta, según el plan del negocio:
+    // gratis (y demás planes) = $0.20 MXN (20 centavos) · VIP Plus = $0.50 MXN.
+    // application_fee_amount va en la unidad mínima (centavos) y Stripe la
+    // deposita automáticamente en la cuenta de la PLATAFORMA.
+    const { data: prof } = await supabase.from('profiles').select('plan').eq('id', user.id).maybeSingle()
+    const feeCents = prof?.plan === 'vip_plus' ? 50 : 20
+
     const { data: cfg, error: cfgErr } = await supabase.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', store.id).maybeSingle()
     if (cfgErr && isMissingCol(cfgErr)) return { success: false, error: 'Conecta tu cuenta de Stripe primero.' }
@@ -109,8 +116,10 @@ export async function createStripePaymentLinkAction(
       'line_items[0][price_data][product_data][name]': concept,
       'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
       'line_items[0][quantity]': '1',
-      // Destination charge: los fondos van a la cuenta conectada del comercio.
+      // Destination charge: los fondos van a la cuenta conectada del comercio,
+      // menos la comisión de la plataforma (application_fee_amount → tu cuenta).
       'payment_intent_data[transfer_data][destination]': accountId,
+      'payment_intent_data[application_fee_amount]': String(feeCents),
       success_url: `${appUrl}/settings?stripe=ok`,
       cancel_url: `${appUrl}/settings?stripe=cancel`,
     })
