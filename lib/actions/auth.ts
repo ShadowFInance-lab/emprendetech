@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 // ─── Schemas de validación ───────────────────────────────────
@@ -39,7 +39,7 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
 
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpData, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -53,6 +53,27 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
       return { success: false, error: 'Este email ya está registrado' }
     }
     return { success: false, error: error.message }
+  }
+
+  // Prueba gratis: 5 días de plan Emprendedor para cada cuenta nueva.
+  // Al vencer, ensurePlanCurrentAction() la baja a Gratis (tarifa normal).
+  // Se usa service-role porque el correo puede no estar confirmado aún.
+  const newUserId = signUpData?.user?.id
+  if (newUserId) {
+    try {
+      const admin = createAdminClient()
+      const ends = new Date(Date.now() + 5 * 86400000).toISOString()
+      let r = await admin.from('profiles')
+        .update({ plan: 'emprendedor', plan_status: 'trialing', plan_expires_at: ends })
+        .eq('id', newUserId)
+      // Si plan_status tiene un CHECK que no admite 'trialing', reintenta con 'active'.
+      if (r.error) {
+        r = await admin.from('profiles')
+          .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
+          .eq('id', newUserId)
+      }
+      if (r.error) console.error('[registro] no se pudo activar la prueba gratis:', r.error.message)
+    } catch (e) { console.error('[registro] prueba gratis:', e) }
   }
 
   return { success: true, data: { email: parsed.data.email } }

@@ -13,6 +13,34 @@ const PLAN_PRICES: Record<string, { amount: number; title: string; recurring: bo
   vip_plus: { amount: 1599, title: 'Mercanta Business — VIP Plus (pago único)', recurring: false },
 }
 
+/**
+ * Baja a Gratis los planes mensuales vencidos: fin de la prueba gratis de
+ * 5 días o mes pagado no renovado. Se llama al cargar dashboard/ventas/
+ * suscripción. Solo aplica a emprendedor/negocio con fecha de vencimiento;
+ * vip_plus es de por vida (plan_expires_at null) y no se toca.
+ */
+export async function ensurePlanCurrentAction(): Promise<void> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: p } = await supabase.from('profiles')
+      .select('plan, plan_expires_at').eq('id', user.id).maybeSingle()
+    if (!p) return
+    const plan = p.plan as string
+    if (plan !== 'emprendedor' && plan !== 'negocio') return
+    if (!p.plan_expires_at) return
+    if (new Date(p.plan_expires_at as string).getTime() >= Date.now()) return
+    let r = await supabase.from('profiles')
+      .update({ plan: 'free', plan_status: 'expired', plan_expires_at: null }).eq('id', user.id)
+    // Si plan_status tiene un CHECK que no admite 'expired', reintenta sin él.
+    if (r.error) {
+      r = await supabase.from('profiles').update({ plan: 'free', plan_expires_at: null }).eq('id', user.id)
+    }
+    if (!r.error) revalidatePath('/subscription')
+  } catch { /* mejor no bloquear la página por esto */ }
+}
+
 // ========================================================
 // TARJETAS DE PRUEBA MERCADO PAGO (SANDBOX - MXN)
 // ========================================================

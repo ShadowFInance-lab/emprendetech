@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDateTime } from '@/lib/utils/format'
 import ExportSalesButtons from '@/components/sales/ExportSalesButtons'
+import { ensurePlanCurrentAction } from '@/lib/actions/subscriptions'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   completed: { label: 'Completada', color: 'bg-green-100 text-green-700' },
@@ -25,6 +26,9 @@ export default async function SalesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Baja a Gratis los planes vencidos (fin de la prueba de 5 días o mes no renovado).
+  await ensurePlanCurrentAction()
 
   // Tienda efectiva: propia (dueño) o la del jefe (empleado)
   let { data: store } = await supabase

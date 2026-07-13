@@ -9,12 +9,15 @@ import SalesChart from '@/components/dashboard/SalesChart'
 import DailySalesExport from '@/components/dashboard/DailySalesExport'
 import type { ExportSale } from '@/lib/utils/salesExport'
 import { getSalesChartData } from '@/lib/actions/dashboard'
-import { getMeteredUsage } from '@/lib/actions/subscriptions'
+import { getMeteredUsage, ensurePlanCurrentAction } from '@/lib/actions/subscriptions'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Baja a Gratis los planes vencidos (fin de la prueba de 5 días o mes no renovado).
+  await ensurePlanCurrentAction()
 
   const { data: store } = await supabase
     .from('stores')

@@ -83,12 +83,15 @@ export async function createStripePaymentLinkAction(
     if (!store) return { success: false, error: 'No autorizado' }
 
     // Comisión de la plataforma por venta, según el plan del negocio:
-    // gratis (y demás planes) = 4% · VIP Plus = 2.5% del total.
+    // Gratis = 3% · Emprendedor y Negocio = 0% · VIP Plus = 2% del total.
     // application_fee_amount va en centavos y Stripe la deposita
     // automáticamente en la cuenta de la PLATAFORMA.
     const { data: prof } = await supabase.from('profiles').select('plan').eq('id', user.id).maybeSingle()
-    const feePct = prof?.plan === 'vip_plus' ? 0.025 : 0.04
-    const feeCents = Math.max(1, Math.round(amount * 100 * feePct))
+    const plan = (prof?.plan as string) ?? 'free'
+    const feePct = plan === 'vip_plus' ? 0.02
+      : (plan === 'emprendedor' || plan === 'negocio' || plan === 'lifetime') ? 0
+      : 0.03
+    const feeCents = Math.round(amount * 100 * feePct)
 
     const { data: cfg, error: cfgErr } = await supabase.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', store.id).maybeSingle()
@@ -120,10 +123,11 @@ export async function createStripePaymentLinkAction(
       // Destination charge: los fondos van a la cuenta conectada del comercio,
       // menos la comisión de la plataforma (application_fee_amount → tu cuenta).
       'payment_intent_data[transfer_data][destination]': accountId,
-      'payment_intent_data[application_fee_amount]': String(feeCents),
       success_url: `${appUrl}/settings?stripe=ok`,
       cancel_url: `${appUrl}/settings?stripe=cancel`,
     })
+    // La comisión se agrega solo si aplica (Stripe rechaza 0 en application_fee_amount).
+    if (feeCents > 0) body.set('payment_intent_data[application_fee_amount]', String(feeCents))
 
     // Metadata para que /api/stripe/webhook registre la venta cuando el pago se complete.
     body.set('metadata[source]', 'pos')

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { CreditCard, CheckCircle2, AlertCircle, Zap, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
-import { getMeteredUsage, confirmCheckoutReturn, activateFreeModeAction } from '@/lib/actions/subscriptions'
+import { getMeteredUsage, confirmCheckoutReturn, activateFreeModeAction, ensurePlanCurrentAction } from '@/lib/actions/subscriptions'
 import { formatCurrency } from '@/lib/utils/format'
 import UpgradeButton from '@/components/subscription/UpgradeButton'
 import type { Plan } from '@/lib/types'
@@ -30,6 +30,9 @@ export default async function SubscriptionPage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Baja a Gratis los planes vencidos (fin de la prueba de 5 días o mes no renovado).
+  await ensurePlanCurrentAction()
 
   // Verificación legada al volver de un checkout antiguo (los params payment_id/
   // collection_id solo los manda el proveedor anterior). Los planes nuevos se pagan
@@ -100,7 +103,7 @@ export default async function SubscriptionPage({
               <p className="text-blue-200 mt-1">{limits.price_label}</p>
               {profile.plan_expires_at && (
                 <p className="text-blue-300 text-xs mt-2">
-                  Renueva: {new Date(profile.plan_expires_at).toLocaleDateString('es-MX')}
+                  {profile.plan_status === 'trialing' ? '🎁 Prueba gratis — termina' : 'Renueva'}: {new Date(profile.plan_expires_at).toLocaleDateString('es-MX')}
                 </p>
               )}
             </div>
