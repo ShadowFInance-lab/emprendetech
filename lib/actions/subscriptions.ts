@@ -36,14 +36,15 @@ export async function ensurePlanCurrentAction(): Promise<void> {
     if (!p) return
     const plan = p.plan as string
 
-    // RESPALDO del trial ("forzar"): si el perfil es recién creado (<15 min) y
-    // sigue en 'free', el otorgamiento del registro falló (p. ej. sin
-    // SUPABASE_SERVICE_ROLE_KEY) — se auto-otorga aquí con la sesión del propio
-    // usuario. Los empleados quedan fuera; cuentas viejas nunca aplican.
+    // RESPALDO del trial ("forzar"): si el perfil es recién creado (<24 h) y
+    // sigue en 'free', el otorgamiento del registro/trigger falló (p. ej. sin
+    // SUPABASE_SERVICE_ROLE_KEY o migración 043 no aplicada) — se auto-otorga
+    // aquí con la sesión del propio usuario. Empleados fuera; cuentas viejas no.
     // plan_status CHECK: active|expired|cancelled|trial (NO 'trialing').
+    const NEW_ACCOUNT_MS = 24 * 60 * 60 * 1000
     if (
       plan === 'free' && !p.plan_expires_at && p.role !== 'employee' &&
-      p.created_at && Date.now() - new Date(p.created_at).getTime() < 15 * 60000
+      p.created_at && Date.now() - new Date(p.created_at).getTime() < NEW_ACCOUNT_MS
     ) {
       const ends = new Date(Date.now() + 5 * 86400000).toISOString()
       let g = await supabase.from('profiles')

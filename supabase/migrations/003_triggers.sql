@@ -8,10 +8,16 @@ RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name)
+  -- Toda cuenta nueva: 5 días de plan Emprendedor (prueba gratis).
+  INSERT INTO public.profiles (
+    id, full_name, plan, plan_status, plan_expires_at
+  )
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email)
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    'emprendedor',
+    'trial',
+    now() + INTERVAL '5 days'
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;

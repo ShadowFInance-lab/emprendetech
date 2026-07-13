@@ -48,6 +48,7 @@ export default async function SubscriptionPage({
     if (res.activated && res.plan) justActivated = res.plan
   }
 
+  // Tras ensurePlanCurrent: perfil ya puede tener el trial de 5 días activado.
   const { data: profile } = await supabase
     .from('profiles').select('*').eq('id', user.id).single()
   if (!profile) redirect('/login')
@@ -58,6 +59,20 @@ export default async function SubscriptionPage({
   const paymentsConfigured = !!process.env.STRIPE_SECRET_KEY
   const usage = await getMeteredUsage()
   const usagePct = Math.min(100, (usage.salesThisMonth / usage.included) * 100)
+
+  const trialDaysLeft = profile.plan_expires_at
+    ? Math.max(0, Math.ceil((new Date(profile.plan_expires_at).getTime() - Date.now()) / 86400000))
+    : 0
+  // CHECK 'trial' (+ 'trialing' legacy). También si el fallback usó status 'active'
+  // pero el vencimiento es ≤5 días y la cuenta es nueva (<6 días) → es la prueba.
+  const statusIsTrial = (['trial', 'trialing'] as string[]).includes(String(profile.plan_status))
+  const looksLikeTrialFallback =
+    currentPlan === 'emprendedor' &&
+    !!profile.plan_expires_at &&
+    trialDaysLeft <= 5 &&
+    !!profile.created_at &&
+    Date.now() - new Date(profile.created_at).getTime() < 6 * 86400000
+  const showTrialCountdown = statusIsTrial || looksLikeTrialFallback
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -101,13 +116,18 @@ export default async function SubscriptionPage({
               <p className="text-blue-200 text-sm font-medium">Plan actual</p>
               <h2 className="text-3xl font-bold mt-1">{limits.label}</h2>
               <p className="text-blue-200 mt-1">{limits.price_label}</p>
-              {profile.plan_expires_at && (
+              {showTrialCountdown && profile.plan_expires_at && (
+                <p className="text-amber-200 text-sm font-semibold mt-2 bg-white/10 inline-block px-3 py-1 rounded-full">
+                  {trialDaysLeft <= 0
+                    ? '🎁 Prueba gratis — termina hoy'
+                    : trialDaysLeft === 1
+                      ? '🎁 Prueba gratis — termina en 1 día'
+                      : `🎁 Prueba gratis — termina en ${trialDaysLeft} días`}
+                </p>
+              )}
+              {!showTrialCountdown && profile.plan_expires_at && (
                 <p className="text-blue-300 text-xs mt-2">
-                  {/* CHECK de BD: 'trial'. 'trialing' solo por compat con datos viejos. */}
-                  {(['trial', 'trialing'] as string[]).includes(String(profile.plan_status))
-                    ? '🎁 Prueba gratis (5 días) — termina'
-                    : 'Renueva'}
-                  : {new Date(profile.plan_expires_at).toLocaleDateString('es-MX')}
+                  Renueva: {new Date(profile.plan_expires_at).toLocaleDateString('es-MX')}
                 </p>
               )}
             </div>

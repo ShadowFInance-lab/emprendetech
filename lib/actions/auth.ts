@@ -65,12 +65,19 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
   return { success: true, data: { email: parsed.data.email } }
 }
 
+/** Ventana para considerar "cuenta nueva" (email confirm / OAuth puede tardar). */
+const NEW_ACCOUNT_MS = 24 * 60 * 60 * 1000
+const TRIAL_DAYS = 5
+
 /**
  * Otorga la prueba gratis (5 días de plan Emprendedor) a un perfil RECIÉN creado.
  * La usan el registro por correo Y el callback de OAuth (Google), para que
  * TODO usuario nuevo reciba el trial sin importar cómo se registre.
- * Guardas: solo perfiles en plan 'free', sin vencimiento previo y creados hace
- * menos de 15 minutos — los logins repetidos de Google nunca re-otorgan.
+ *
+ * Preferible: el trigger handle_new_user (migración 043) ya inserta el trial.
+ * Esta función es respaldo si el trigger viejo solo creó plan free, o si el
+ * perfil aún no existía. Guardas: plan free, sin vencimiento, cuenta < 24 h.
+ * Si ya es emprendedor en trial/active con fecha, no toca nada.
  * Usa service-role (el correo puede no estar confirmado). Best-effort: jamás
  * bloquea el registro. Al vencer, ensurePlanCurrentAction() baja a Gratis.
  *
@@ -79,37 +86,108 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
  */
 export async function grantTrialIfNewProfile(userId: string): Promise<void> {
   try {
-    const admin = createAdminClient()
+    // Clientes: service-role (si hay key real) + sesión del usuario (RLS own).
+    // signUp/OAuth suelen devolver sesión; el update de trial no depende del admin.
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const hasServiceRole = !!key && !key.includes('YOUR_') && key.length >= 20
+    const sessionDb = await createClient()
+    const clients = hasServiceRole
+      ? [createAdminClient(), sessionDb]
+      : [sessionDb]
+
+    type Prof = {
+      plan?: string
+      plan_status?: string | null
+      plan_expires_at?: string | null
+      created_at?: string
+    }
     let recentOk = true
-    let p: { plan?: string; plan_expires_at?: string | null; created_at?: string } | null = null
+    let p: Prof | null = null
+    let db = clients[0]
 
     // Reintento breve: el trigger handle_new_user puede retrasar el INSERT del perfil.
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const sel = await admin.from('profiles')
-        .select('plan, plan_expires_at, created_at').eq('id', userId).maybeSingle()
-      if (sel.error) {
-        // Sin columna created_at: valida solo plan/vencimiento.
-        const r2 = await admin.from('profiles').select('plan, plan_expires_at').eq('id', userId).maybeSingle()
-        p = r2.data
-        break
+    for (let attempt = 0; attempt < 5; attempt++) {
+      for (const c of clients) {
+        const sel = await c.from('profiles')
+          .select('plan, plan_status, plan_expires_at, created_at').eq('id', userId).maybeSingle()
+        if (!sel.error && sel.data) {
+          p = sel.data
+          db = c
+          break
+        }
+        if (sel.error) {
+          const r2 = await c.from('profiles').select('plan, plan_expires_at').eq('id', userId).maybeSingle()
+          if (r2.data) {
+            p = r2.data
+            db = c
+            break
+          }
+        }
       }
-      p = sel.data
       if (p) break
-      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)))
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
     }
 
-    if (p?.created_at) recentOk = Date.now() - new Date(p.created_at).getTime() < 15 * 60000
-    if (!p || p.plan !== 'free' || p.plan_expires_at || !recentOk) return
+    const ends = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString()
 
-    const ends = new Date(Date.now() + 5 * 86400000).toISOString()
+    // Ya tiene trial/plan de pago con vencimiento: no re-otorgar.
+    if (p && p.plan && p.plan !== 'free' && p.plan_expires_at) return
+    // Trial activo sin depender del string de status (compat).
+    if (p && p.plan === 'emprendedor' && p.plan_expires_at) return
+
+    if (p?.created_at) {
+      recentOk = Date.now() - new Date(p.created_at).getTime() < NEW_ACCOUNT_MS
+    }
+
+    // Perfil inexistente: crear con trial (solo service-role).
+    if (!p) {
+      if (!hasServiceRole) {
+        console.error('[trial] perfil ausente y sin service-role')
+        return
+      }
+      const admin = createAdminClient()
+      const ins = await admin.from('profiles').insert({
+        id: userId,
+        plan: 'emprendedor',
+        plan_status: 'trial',
+        plan_expires_at: ends,
+      })
+      if (ins.error) {
+        const ins2 = await admin.from('profiles').insert({
+          id: userId,
+          plan: 'emprendedor',
+          plan_status: 'active',
+          plan_expires_at: ends,
+        })
+        if (ins2.error) console.error('[trial] no se pudo crear perfil con trial:', ins2.error.message)
+      }
+      return
+    }
+
+    if (p.plan !== 'free' || p.plan_expires_at || !recentOk) return
+
     // CHECK real de la BD: 'trial' (no 'trialing').
-    let r = await admin.from('profiles')
+    let r = await db.from('profiles')
       .update({ plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends })
       .eq('id', userId).eq('plan', 'free')
     if (r.error) {
-      r = await admin.from('profiles')
+      r = await db.from('profiles')
         .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
         .eq('id', userId).eq('plan', 'free')
+    }
+    // Si el primer cliente falló, reintenta con el otro (sesión).
+    if (r.error && clients.length > 1) {
+      for (const c of clients) {
+        if (c === db) continue
+        r = await c.from('profiles')
+          .update({ plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends })
+          .eq('id', userId).eq('plan', 'free')
+        if (!r.error) break
+        r = await c.from('profiles')
+          .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
+          .eq('id', userId).eq('plan', 'free')
+        if (!r.error) break
+      }
     }
     if (r.error) console.error('[trial] no se pudo activar la prueba gratis:', r.error.message)
   } catch (e) { console.error('[trial] prueba gratis:', e) }
