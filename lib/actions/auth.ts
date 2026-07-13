@@ -66,24 +66,20 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
 }
 
 const TRIAL_DAYS = 5
-/** Sin trial_used_at (mig 050 pendiente): solo cuentas < 48 h y plan free. */
-const LEGACY_NEW_ACCOUNT_MS = 48 * 60 * 60 * 1000
 
 /**
- * Otorga la prueba gratis (5 días Emprendedor) SOLO UNA VEZ por cuenta.
+ * v7.108 — Forzar trial 5 días Emprendedor para cuentas nuevas o que
+ * NUNCA han tenido trial. Una sola vez por cuenta.
  *
- * Cuenta elegible = nunca usó trial ni tuvo plan de pago Emprendedor:
- *   - trial_used_at IS NULL (migración 050), y
- *   - plan free / perfil ausente, y
- *   - no es empleado.
+ * Elegible:
+ *   - plan free (o perfil ausente),
+ *   - sin plan_expires_at activo,
+ *   - no empleado,
+ *   - trial_used_at IS NULL (si existe la columna),
+ *   - plan_status NO es expired/cancelled (ya usaron o cancelaron).
  *
- * Si trial_used_at ya está set, o el plan no es free, o ya venció un trial
- * (plan_status expired/cancelled), NO se re-otorga.
- *
- * Preferible: trigger handle_new_user (mig 050) inserta trial + trial_used_at.
- * Esta función es respaldo (register / Google / login). Best-effort.
- * Al vencer: ensurePlanCurrentAction() baja a Gratis (conserva trial_used_at).
- *
+ * Sin límite de edad de cuenta: si nunca tuvo trial, se otorga ya.
+ * Al vencer: ensurePlanCurrentAction() → Gratis y no se re-otorga.
  * plan_status CHECK: active|expired|cancelled|trial (NO 'trialing').
  */
 export async function grantTrialIfNewProfile(userId: string): Promise<void> {
@@ -144,23 +140,14 @@ export async function grantTrialIfNewProfile(userId: string): Promise<void> {
     const ends = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString()
     const usedAt = new Date().toISOString()
 
-    // Ya usó trial / no elegible.
-    if (p?.trial_used_at) return
-    // Ya tiene (o tuvo) plan de pago / trial activo.
+    // Ya tiene trial / plan de pago activo → no tocar.
     if (p?.plan && p.plan !== 'free') return
-    if (p?.plan_expires_at) return
-    // Ya pasó por un trial o canceló (histórico sin columna).
-    if (p?.plan_status && ['expired', 'cancelled', 'trial', 'trialing'].includes(String(p.plan_status))) return
+    if (p?.plan_expires_at && new Date(p.plan_expires_at).getTime() > Date.now()) return
     if (p?.role === 'employee') return
 
-    // Legacy sin trial_used_at: solo cuentas muy recientes free/active.
-    if (!hasTrialUsedCol || p?.trial_used_at === undefined) {
-      if (p?.created_at) {
-        const age = Date.now() - new Date(p.created_at).getTime()
-        if (age > LEGACY_NEW_ACCOUNT_MS) return
-      }
-      if (p?.plan_status && p.plan_status !== 'active' && p.plan_status !== 'trial') return
-    }
+    // Ya usó trial (marca durable o status de historial).
+    if (hasTrialUsedCol && p?.trial_used_at) return
+    if (p?.plan_status && ['expired', 'cancelled'].includes(String(p.plan_status))) return
 
     const trialPayload = hasTrialUsedCol
       ? { plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends, trial_used_at: usedAt }
@@ -185,7 +172,7 @@ export async function grantTrialIfNewProfile(userId: string): Promise<void> {
 
     if (p.plan !== 'free') return
 
-    // Solo free + sin marca de trial (evita re-grant).
+    // Free + nunca usó trial → forzar 5 días Emprendedor.
     let q = db.from('profiles').update(trialPayload).eq('id', userId).eq('plan', 'free')
     if (hasTrialUsedCol) q = q.is('trial_used_at', null)
     let r = await q
@@ -194,6 +181,12 @@ export async function grantTrialIfNewProfile(userId: string): Promise<void> {
       if (hasTrialUsedCol) q2 = q2.is('trial_used_at', null)
       r = await q2
     }
+    // Sin columna / filtro falló: reintento solo por plan free (legacy).
+    if (r.error) {
+      r = await db.from('profiles').update({
+        plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends,
+      }).eq('id', userId).eq('plan', 'free')
+    }
     if (r.error && clients.length > 1) {
       for (const c of clients) {
         if (c === db) continue
@@ -201,9 +194,9 @@ export async function grantTrialIfNewProfile(userId: string): Promise<void> {
         if (hasTrialUsedCol) qx = qx.is('trial_used_at', null)
         r = await qx
         if (!r.error) break
-        let qy = c.from('profiles').update(fallbackPayload).eq('id', userId).eq('plan', 'free')
-        if (hasTrialUsedCol) qy = qy.is('trial_used_at', null)
-        r = await qy
+        r = await c.from('profiles').update({
+          plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends,
+        }).eq('id', userId).eq('plan', 'free')
         if (!r.error) break
       }
     }

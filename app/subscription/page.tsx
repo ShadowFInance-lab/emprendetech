@@ -63,20 +63,22 @@ export default async function SubscriptionPage({
   const trialDaysLeft = profile.plan_expires_at
     ? Math.max(0, Math.ceil((new Date(profile.plan_expires_at).getTime() - Date.now()) / 86400000))
     : 0
-  // Prueba gratis activa: status trial/trialing, o Emprendedor con vencimiento
-  // corto y trial_used_at (una sola vez por cuenta; no re-muestra en planes pagados).
+  // Prueba gratis activa: Emprendedor con vencimiento ≤5 días o status trial.
   const statusIsTrial = (['trial', 'trialing'] as string[]).includes(String(profile.plan_status))
   const looksLikeTrialFallback =
     currentPlan === 'emprendedor' &&
     !!profile.plan_expires_at &&
-    trialDaysLeft <= 5 &&
-    (!!profile.trial_used_at ||
-      (!!profile.created_at &&
-        Date.now() - new Date(profile.created_at).getTime() < 6 * 86400000))
+    trialDaysLeft <= 5
   const showTrialCountdown =
     currentPlan === 'emprendedor' &&
     !!profile.plan_expires_at &&
     (statusIsTrial || looksLikeTrialFallback)
+  const trialLabel =
+    trialDaysLeft <= 0
+      ? 'Prueba gratis — termina hoy'
+      : trialDaysLeft === 1
+        ? 'Prueba gratis — termina en 1 día'
+        : `Prueba gratis — termina en ${trialDaysLeft} días`
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -84,6 +86,31 @@ export default async function SubscriptionPage({
         <h1 className="text-2xl font-bold text-gray-900">Suscripción</h1>
         <p className="text-gray-500 text-sm mt-1">Plan actual y opciones de mejora</p>
       </div>
+
+      {/* Banner grande de Prueba gratis */}
+      {showTrialCountdown && (
+        <div
+          className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 p-4 sm:p-5 shadow-sm"
+          data-testid="trial-banner"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-700">
+                Prueba gratis
+              </p>
+              <p className="text-lg sm:text-xl font-black text-amber-900 mt-0.5">
+                {trialLabel}
+              </p>
+              <p className="text-sm text-amber-800/80 mt-1">
+                Estás en plan Emprendedor sin costo. Al terminar pasas a Gratis automáticamente.
+              </p>
+            </div>
+            <span className="inline-flex items-center justify-center self-start sm:self-center rounded-full bg-amber-500 text-white text-sm font-bold px-4 py-2 shadow">
+              {trialDaysLeft <= 0 ? 'Último día' : `${trialDaysLeft} día${trialDaysLeft === 1 ? '' : 's'}`}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Mensaje de estado de pago */}
       {(searchParams.status === 'success' || justActivated) && (
@@ -120,16 +147,12 @@ export default async function SubscriptionPage({
               <p className="text-blue-200 text-sm font-medium">Plan actual</p>
               <h2 className="text-3xl font-bold mt-1">{limits.label}</h2>
               <p className="text-blue-200 mt-1">{limits.price_label}</p>
-              {showTrialCountdown && profile.plan_expires_at && (
+              {showTrialCountdown && (
                 <p
                   className="text-amber-100 text-sm font-bold mt-3 bg-amber-500/25 border border-amber-300/40 inline-block px-3.5 py-1.5 rounded-full shadow-sm"
                   data-testid="trial-countdown"
                 >
-                  {trialDaysLeft <= 0
-                    ? '🎁 Prueba gratis — termina hoy'
-                    : trialDaysLeft === 1
-                      ? '🎁 Prueba gratis — termina en 1 día'
-                      : `🎁 Prueba gratis — termina en ${trialDaysLeft} días`}
+                  🎁 {trialLabel}
                 </p>
               )}
               {!showTrialCountdown && profile.plan_expires_at && (

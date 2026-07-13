@@ -6,6 +6,7 @@ import { getMercadoPagoClient, getMercadoPagoClientFor, isMercadoPagoConfigured,
 import { Payment } from 'mercadopago'
 import type { Plan } from '@/lib/types'
 import type { ActionResult } from './auth'
+import { grantTrialIfNewProfile } from './auth'
 
 const PLAN_PRICES: Record<string, { amount: number; title: string; recurring: boolean }> = {
   emprendedor: { amount: 199, title: 'Mercanta Business — Plan Emprendedor (mensual)', recurring: true },
@@ -14,17 +15,17 @@ const PLAN_PRICES: Record<string, { amount: number; title: string; recurring: bo
 }
 
 /**
- * 1) Otorga trial 5d Emprendedor SOLO si la cuenta nunca lo usó
- *    (trial_used_at IS NULL + plan free). Una sola vez por cuenta.
- * 2) Baja a Gratis los planes mensuales vencidos (fin de trial o mes no
- *    renovado). Conserva trial_used_at para no re-regalar la prueba.
- * vip_plus (plan_expires_at null) no se toca.
+ * v7.108 — Forzar trial 5d si la cuenta es nueva o nunca lo usó;
+ * bajar a Gratis al vencer. Una sola vez (trial_used_at / status expired).
  */
 export async function ensurePlanCurrentAction(): Promise<void> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+
+    // Forzar grant vía helper compartido (register/login/OAuth/páginas).
+    await grantTrialIfNewProfile(user.id)
 
     type P = {
       plan?: string
@@ -53,42 +54,30 @@ export async function ensurePlanCurrentAction(): Promise<void> {
     if (!p) return
     const plan = p.plan as string
 
-    // RESPALDO trial una sola vez: free, nunca usó trial, no empleado.
-    // Con mig 050: trial_used_at IS NULL. Sin columna: solo free reciente < 48 h
-    // y plan_status no expired/cancelled.
-    const LEGACY_MS = 48 * 60 * 60 * 1000
-    const neverUsedTrial = hasTrialUsedCol
-      ? p.trial_used_at == null
-      : !p.plan_status || !['expired', 'cancelled', 'trial', 'trialing'].includes(String(p.plan_status))
-    const legacyRecentOk = !hasTrialUsedCol
-      && !!p.created_at
-      && Date.now() - new Date(p.created_at).getTime() < LEGACY_MS
-    const eligibleOnce =
+    // Si el helper no pudo (p. ej. RLS) y sigue free elegible, forzar aquí.
+    const neverUsed =
+      (hasTrialUsedCol ? p.trial_used_at == null : true) &&
+      (!p.plan_status || !['expired', 'cancelled'].includes(String(p.plan_status)))
+    if (
       plan === 'free' &&
       !p.plan_expires_at &&
       p.role !== 'employee' &&
-      neverUsedTrial &&
-      (hasTrialUsedCol || legacyRecentOk)
-
-    if (eligibleOnce) {
+      neverUsed
+    ) {
       const ends = new Date(Date.now() + 5 * 86400000).toISOString()
       const usedAt = new Date().toISOString()
       const payload = hasTrialUsedCol
         ? { plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends, trial_used_at: usedAt }
         : { plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends }
-      let g = supabase.from('profiles').update(payload).eq('id', user.id).eq('plan', 'free')
-      if (hasTrialUsedCol) g = g.is('trial_used_at', null)
-      let res = await g
+      let res = await supabase.from('profiles').update(payload).eq('id', user.id).eq('plan', 'free')
       if (res.error) {
-        const fb = hasTrialUsedCol
-          ? { plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends, trial_used_at: usedAt }
-          : { plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends }
-        let g2 = supabase.from('profiles').update(fb).eq('id', user.id).eq('plan', 'free')
-        if (hasTrialUsedCol) g2 = g2.is('trial_used_at', null)
-        res = await g2
+        res = await supabase.from('profiles').update({
+          plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends,
+        }).eq('id', user.id).eq('plan', 'free')
       }
       if (!res.error) {
         revalidatePath('/subscription')
+        revalidatePath('/dashboard')
         return
       }
     }
@@ -97,13 +86,12 @@ export async function ensurePlanCurrentAction(): Promise<void> {
     if (!p.plan_expires_at) return
     if (new Date(p.plan_expires_at as string).getTime() >= Date.now()) return
 
-    // Vencido → Gratis. NO borra trial_used_at (si la columna existe).
+    // Vencido → Gratis. Conserva / fija trial_used_at (no re-trial).
     const expirePayload = hasTrialUsedCol
       ? {
           plan: 'free',
           plan_status: 'expired',
           plan_expires_at: null,
-          // si ya estaba en trial sin marca, la fijamos al bajar
           trial_used_at: p.trial_used_at ?? new Date().toISOString(),
         }
       : { plan: 'free', plan_status: 'expired', plan_expires_at: null }
