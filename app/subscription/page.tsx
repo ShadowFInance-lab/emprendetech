@@ -117,7 +117,10 @@ export default async function SubscriptionPage({
               <h2 className="text-3xl font-bold mt-1">{limits.label}</h2>
               <p className="text-blue-200 mt-1">{limits.price_label}</p>
               {showTrialCountdown && profile.plan_expires_at && (
-                <p className="text-amber-200 text-sm font-semibold mt-2 bg-white/10 inline-block px-3 py-1 rounded-full">
+                <p
+                  className="text-amber-100 text-sm font-bold mt-3 bg-amber-500/25 border border-amber-300/40 inline-block px-3.5 py-1.5 rounded-full shadow-sm"
+                  data-testid="trial-countdown"
+                >
                   {trialDaysLeft <= 0
                     ? '🎁 Prueba gratis — termina hoy'
                     : trialDaysLeft === 1

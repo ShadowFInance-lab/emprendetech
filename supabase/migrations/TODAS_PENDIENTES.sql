@@ -617,4 +617,38 @@ ALTER TABLE store_payment_config ADD COLUMN IF NOT EXISTS stripe_account_id TEXT
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS stripe_session_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_sales_stripe_session ON sales(stripe_session_id);
 
+-- ─── 049: Trial 5 días Emprendedor al crear cuenta (handle_new_user) ───────
+-- Toda cuenta nueva nace con plan='emprendedor', plan_status='trial',
+-- plan_expires_at = now() + 5 days. CHECK de plan_status admite 'trial'
+-- (no 'trialing'). La app también otorga el trial en register/OAuth/login/
+-- ensurePlanCurrent si el trigger aún no estaba actualizado.
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (
+    id,
+    full_name,
+    plan,
+    plan_status,
+    plan_expires_at
+  )
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    'emprendedor',
+    'trial',
+    now() + INTERVAL '5 days'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

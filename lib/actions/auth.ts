@@ -207,7 +207,7 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
 
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   })
@@ -215,6 +215,10 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
   if (error) {
     return { success: false, error: 'Email o contraseña incorrectos' }
   }
+
+  // Respaldo: cuentas nuevas que quedaron en free (trigger viejo / sin service-role).
+  const uid = signInData?.user?.id
+  if (uid) await grantTrialIfNewProfile(uid)
 
   revalidatePath('/', 'layout')
   redirect('/dashboard')
