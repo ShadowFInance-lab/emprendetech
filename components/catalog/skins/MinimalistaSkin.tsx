@@ -184,7 +184,7 @@ export default function MinimalistaSkin({
 
         {/* Grid de productos — ultra limpio */}
         {products.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-7 gap-y-12">
             {products.map(product => {
               const primaryImage = product.product_images?.find(i => i.is_primary) ?? product.product_images?.[0]
               const productUrl = `/catalog/${store.slug}/product/${product.slug}`
@@ -201,7 +201,7 @@ export default function MinimalistaSkin({
                       <img
                         src={primaryImage.url}
                         alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-200">
@@ -242,7 +242,7 @@ export default function MinimalistaSkin({
                           <span className="text-gray-400 line-through ml-2 text-xs">{formatCurrency(product.compare_at_price, product.currency || store.currency)}</span>
                         </>
                       ) : (
-                        <span className="text-gray-500">{formatCurrency(product.sale_price, product.currency || store.currency)}</span>
+                        <span className="text-gray-600">{formatCurrency(product.sale_price, product.currency || store.currency)}</span>
                       )}
                     </p>
                   )}

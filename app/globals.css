@@ -156,3 +156,25 @@ font[style] { background: transparent !important; box-shadow: none !important; }
 .mb-theme .text-blue-600 { color: var(--brand) !important; }
 .mb-theme .border-blue-200 { border-color: color-mix(in srgb, var(--brand) 25%, #e5e7eb) !important; }
 .mb-theme .hover\:bg-blue-50:hover { background-color: color-mix(in srgb, var(--brand) 6%, white) !important; }
+
+/* ─── Pulido visual global (v7.100): tipografía, scrollbars, inputs ───────── */
+/* Texto más nítido en toda la app */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+/* Selección de texto con acento de marca */
+::selection { background: #6366f1; color: #fff; }
+/* Scrollbars delgados y discretos (look de app moderna) */
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+/* Inputs numéricos sin flechitas (POS, nómina, descuentos se ven limpios) */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+/* Las imágenes no se arrastran: se siente app, no página */
+img { -webkit-user-drag: none; user-select: none; }
