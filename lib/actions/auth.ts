@@ -58,19 +58,23 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
   // Prueba gratis: 5 días de plan Emprendedor para cada cuenta nueva.
   // Al vencer, ensurePlanCurrentAction() la baja a Gratis (tarifa normal).
   // Se usa service-role porque el correo puede no estar confirmado aún.
+  // Anti-abuso: si el correo YA existía, Supabase regresa un usuario SIN
+  // identities (anti-enumeración) — en ese caso NO se regala trial. Además,
+  // solo se otorga a perfiles vírgenes (plan 'free'), nunca re-otorga.
   const newUserId = signUpData?.user?.id
-  if (newUserId) {
+  const isNewUser = (signUpData?.user?.identities?.length ?? 0) > 0
+  if (newUserId && isNewUser) {
     try {
       const admin = createAdminClient()
       const ends = new Date(Date.now() + 5 * 86400000).toISOString()
       let r = await admin.from('profiles')
         .update({ plan: 'emprendedor', plan_status: 'trialing', plan_expires_at: ends })
-        .eq('id', newUserId)
+        .eq('id', newUserId).eq('plan', 'free')
       // Si plan_status tiene un CHECK que no admite 'trialing', reintenta con 'active'.
       if (r.error) {
         r = await admin.from('profiles')
           .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
-          .eq('id', newUserId)
+          .eq('id', newUserId).eq('plan', 'free')
       }
       if (r.error) console.error('[registro] no se pudo activar la prueba gratis:', r.error.message)
     } catch (e) { console.error('[registro] prueba gratis:', e) }

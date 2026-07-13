@@ -80,6 +80,10 @@ export default function RegisterForm() {
         <CardDescription className="text-center">
           Comienza a vender en línea hoy mismo
         </CardDescription>
+        {/* Gancho de la prueba gratis (se activa sola al registrarse) */}
+        <div className="mx-auto mt-1 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
+          🎁 Incluye 5 días gratis del plan Emprendedor
+        </div>
       </CardHeader>
 
       <CardContent>
