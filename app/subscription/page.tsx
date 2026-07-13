@@ -103,7 +103,11 @@ export default async function SubscriptionPage({
               <p className="text-blue-200 mt-1">{limits.price_label}</p>
               {profile.plan_expires_at && (
                 <p className="text-blue-300 text-xs mt-2">
-                  {profile.plan_status === 'trialing' ? '🎁 Prueba gratis — termina' : 'Renueva'}: {new Date(profile.plan_expires_at).toLocaleDateString('es-MX')}
+                  {/* CHECK de BD: 'trial'. 'trialing' solo por compat con datos viejos. */}
+                  {(['trial', 'trialing'] as string[]).includes(String(profile.plan_status))
+                    ? '🎁 Prueba gratis (5 días) — termina'
+                    : 'Renueva'}
+                  : {new Date(profile.plan_expires_at).toLocaleDateString('es-MX')}
                 </p>
               )}
             </div>

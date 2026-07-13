@@ -24,10 +24,39 @@ export async function ensurePlanCurrentAction(): Promise<void> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data: p } = await supabase.from('profiles')
-      .select('plan, plan_expires_at').eq('id', user.id).maybeSingle()
+    // Lectura resiliente: si created_at/role no existieran, cae al select mínimo
+    // (y solo se omite el respaldo del trial, nunca el vencimiento).
+    let p: { plan?: string; plan_expires_at?: string | null; created_at?: string | null; role?: string | null } | null = null
+    const sel = await supabase.from('profiles')
+      .select('plan, plan_expires_at, created_at, role').eq('id', user.id).maybeSingle()
+    if (sel.error) {
+      const r2 = await supabase.from('profiles').select('plan, plan_expires_at').eq('id', user.id).maybeSingle()
+      p = r2.data
+    } else p = sel.data
     if (!p) return
     const plan = p.plan as string
+
+    // RESPALDO del trial ("forzar"): si el perfil es recién creado (<15 min) y
+    // sigue en 'free', el otorgamiento del registro falló (p. ej. sin
+    // SUPABASE_SERVICE_ROLE_KEY) — se auto-otorga aquí con la sesión del propio
+    // usuario. Los empleados quedan fuera; cuentas viejas nunca aplican.
+    // plan_status CHECK: active|expired|cancelled|trial (NO 'trialing').
+    if (
+      plan === 'free' && !p.plan_expires_at && p.role !== 'employee' &&
+      p.created_at && Date.now() - new Date(p.created_at).getTime() < 15 * 60000
+    ) {
+      const ends = new Date(Date.now() + 5 * 86400000).toISOString()
+      let g = await supabase.from('profiles')
+        .update({ plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends })
+        .eq('id', user.id).eq('plan', 'free')
+      if (g.error) {
+        g = await supabase.from('profiles')
+          .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
+          .eq('id', user.id).eq('plan', 'free')
+      }
+      if (!g.error) revalidatePath('/subscription')
+      return
+    }
     if (plan !== 'emprendedor' && plan !== 'negocio') return
     if (!p.plan_expires_at) return
     if (new Date(p.plan_expires_at as string).getTime() >= Date.now()) return

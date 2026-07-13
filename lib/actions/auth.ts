@@ -73,29 +73,39 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
  * menos de 15 minutos — los logins repetidos de Google nunca re-otorgan.
  * Usa service-role (el correo puede no estar confirmado). Best-effort: jamás
  * bloquea el registro. Al vencer, ensurePlanCurrentAction() baja a Gratis.
+ *
+ * plan_status: el CHECK de profiles admite active|expired|cancelled|trial
+ * (NO 'trialing'). Si 'trial' fallara en un entorno viejo, reintenta 'active'.
  */
 export async function grantTrialIfNewProfile(userId: string): Promise<void> {
   try {
     const admin = createAdminClient()
     let recentOk = true
     let p: { plan?: string; plan_expires_at?: string | null; created_at?: string } | null = null
-    const sel = await admin.from('profiles')
-      .select('plan, plan_expires_at, created_at').eq('id', userId).maybeSingle()
-    if (sel.error) {
-      // Sin columna created_at: valida solo plan/vencimiento.
-      const r2 = await admin.from('profiles').select('plan, plan_expires_at').eq('id', userId).maybeSingle()
-      p = r2.data
-    } else {
+
+    // Reintento breve: el trigger handle_new_user puede retrasar el INSERT del perfil.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const sel = await admin.from('profiles')
+        .select('plan, plan_expires_at, created_at').eq('id', userId).maybeSingle()
+      if (sel.error) {
+        // Sin columna created_at: valida solo plan/vencimiento.
+        const r2 = await admin.from('profiles').select('plan, plan_expires_at').eq('id', userId).maybeSingle()
+        p = r2.data
+        break
+      }
       p = sel.data
-      if (p?.created_at) recentOk = Date.now() - new Date(p.created_at).getTime() < 15 * 60000
+      if (p) break
+      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)))
     }
+
+    if (p?.created_at) recentOk = Date.now() - new Date(p.created_at).getTime() < 15 * 60000
     if (!p || p.plan !== 'free' || p.plan_expires_at || !recentOk) return
 
     const ends = new Date(Date.now() + 5 * 86400000).toISOString()
+    // CHECK real de la BD: 'trial' (no 'trialing').
     let r = await admin.from('profiles')
-      .update({ plan: 'emprendedor', plan_status: 'trialing', plan_expires_at: ends })
+      .update({ plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends })
       .eq('id', userId).eq('plan', 'free')
-    // Si plan_status tiene un CHECK que no admite 'trialing', reintenta con 'active'.
     if (r.error) {
       r = await admin.from('profiles')
         .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
