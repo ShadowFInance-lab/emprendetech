@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { grantTrialIfNewProfile } from '@/lib/actions/auth'
 
 /**
  * Callback de OAuth (Google / Facebook).
@@ -18,6 +19,10 @@ export async function GET(request: Request) {
       // ¿Completó onboarding? Si no, mandarlo a crear su tienda.
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        // Registro con Google: otorga la prueba gratis de 5 días si el perfil
+        // es nuevo (mismas guardas que el registro por correo; los logins
+        // repetidos no re-otorgan).
+        await grantTrialIfNewProfile(user.id)
         const { data: profile } = await supabase
           .from('profiles').select('onboarding_done').eq('id', user.id).single()
         const dest = profile?.onboarding_done ? next : '/onboarding'

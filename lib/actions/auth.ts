@@ -56,31 +56,53 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
   }
 
   // Prueba gratis: 5 días de plan Emprendedor para cada cuenta nueva.
-  // Al vencer, ensurePlanCurrentAction() la baja a Gratis (tarifa normal).
-  // Se usa service-role porque el correo puede no estar confirmado aún.
   // Anti-abuso: si el correo YA existía, Supabase regresa un usuario SIN
-  // identities (anti-enumeración) — en ese caso NO se regala trial. Además,
-  // solo se otorga a perfiles vírgenes (plan 'free'), nunca re-otorga.
+  // identities (anti-enumeración) — en ese caso NO se regala trial.
   const newUserId = signUpData?.user?.id
   const isNewUser = (signUpData?.user?.identities?.length ?? 0) > 0
-  if (newUserId && isNewUser) {
-    try {
-      const admin = createAdminClient()
-      const ends = new Date(Date.now() + 5 * 86400000).toISOString()
-      let r = await admin.from('profiles')
-        .update({ plan: 'emprendedor', plan_status: 'trialing', plan_expires_at: ends })
-        .eq('id', newUserId).eq('plan', 'free')
-      // Si plan_status tiene un CHECK que no admite 'trialing', reintenta con 'active'.
-      if (r.error) {
-        r = await admin.from('profiles')
-          .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
-          .eq('id', newUserId).eq('plan', 'free')
-      }
-      if (r.error) console.error('[registro] no se pudo activar la prueba gratis:', r.error.message)
-    } catch (e) { console.error('[registro] prueba gratis:', e) }
-  }
+  if (newUserId && isNewUser) await grantTrialIfNewProfile(newUserId)
 
   return { success: true, data: { email: parsed.data.email } }
+}
+
+/**
+ * Otorga la prueba gratis (5 días de plan Emprendedor) a un perfil RECIÉN creado.
+ * La usan el registro por correo Y el callback de OAuth (Google), para que
+ * TODO usuario nuevo reciba el trial sin importar cómo se registre.
+ * Guardas: solo perfiles en plan 'free', sin vencimiento previo y creados hace
+ * menos de 15 minutos — los logins repetidos de Google nunca re-otorgan.
+ * Usa service-role (el correo puede no estar confirmado). Best-effort: jamás
+ * bloquea el registro. Al vencer, ensurePlanCurrentAction() baja a Gratis.
+ */
+export async function grantTrialIfNewProfile(userId: string): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    let recentOk = true
+    let p: { plan?: string; plan_expires_at?: string | null; created_at?: string } | null = null
+    const sel = await admin.from('profiles')
+      .select('plan, plan_expires_at, created_at').eq('id', userId).maybeSingle()
+    if (sel.error) {
+      // Sin columna created_at: valida solo plan/vencimiento.
+      const r2 = await admin.from('profiles').select('plan, plan_expires_at').eq('id', userId).maybeSingle()
+      p = r2.data
+    } else {
+      p = sel.data
+      if (p?.created_at) recentOk = Date.now() - new Date(p.created_at).getTime() < 15 * 60000
+    }
+    if (!p || p.plan !== 'free' || p.plan_expires_at || !recentOk) return
+
+    const ends = new Date(Date.now() + 5 * 86400000).toISOString()
+    let r = await admin.from('profiles')
+      .update({ plan: 'emprendedor', plan_status: 'trialing', plan_expires_at: ends })
+      .eq('id', userId).eq('plan', 'free')
+    // Si plan_status tiene un CHECK que no admite 'trialing', reintenta con 'active'.
+    if (r.error) {
+      r = await admin.from('profiles')
+        .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
+        .eq('id', userId).eq('plan', 'free')
+    }
+    if (r.error) console.error('[trial] no se pudo activar la prueba gratis:', r.error.message)
+  } catch (e) { console.error('[trial] prueba gratis:', e) }
 }
 
 // ─── LOGIN ───────────────────────────────────────────────────
