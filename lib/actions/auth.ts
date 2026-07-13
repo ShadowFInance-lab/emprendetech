@@ -65,29 +65,29 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
   return { success: true, data: { email: parsed.data.email } }
 }
 
-/** Ventana para considerar "cuenta nueva" (email confirm / OAuth puede tardar). */
-const NEW_ACCOUNT_MS = 24 * 60 * 60 * 1000
 const TRIAL_DAYS = 5
+/** Sin trial_used_at (mig 050 pendiente): solo cuentas < 48 h y plan free. */
+const LEGACY_NEW_ACCOUNT_MS = 48 * 60 * 60 * 1000
 
 /**
- * Otorga la prueba gratis (5 días de plan Emprendedor) a un perfil RECIÉN creado.
- * La usan el registro por correo Y el callback de OAuth (Google), para que
- * TODO usuario nuevo reciba el trial sin importar cómo se registre.
+ * Otorga la prueba gratis (5 días Emprendedor) SOLO UNA VEZ por cuenta.
  *
- * Preferible: el trigger handle_new_user (migración 043) ya inserta el trial.
- * Esta función es respaldo si el trigger viejo solo creó plan free, o si el
- * perfil aún no existía. Guardas: plan free, sin vencimiento, cuenta < 24 h.
- * Si ya es emprendedor en trial/active con fecha, no toca nada.
- * Usa service-role (el correo puede no estar confirmado). Best-effort: jamás
- * bloquea el registro. Al vencer, ensurePlanCurrentAction() baja a Gratis.
+ * Cuenta elegible = nunca usó trial ni tuvo plan de pago Emprendedor:
+ *   - trial_used_at IS NULL (migración 050), y
+ *   - plan free / perfil ausente, y
+ *   - no es empleado.
  *
- * plan_status: el CHECK de profiles admite active|expired|cancelled|trial
- * (NO 'trialing'). Si 'trial' fallara en un entorno viejo, reintenta 'active'.
+ * Si trial_used_at ya está set, o el plan no es free, o ya venció un trial
+ * (plan_status expired/cancelled), NO se re-otorga.
+ *
+ * Preferible: trigger handle_new_user (mig 050) inserta trial + trial_used_at.
+ * Esta función es respaldo (register / Google / login). Best-effort.
+ * Al vencer: ensurePlanCurrentAction() baja a Gratis (conserva trial_used_at).
+ *
+ * plan_status CHECK: active|expired|cancelled|trial (NO 'trialing').
  */
 export async function grantTrialIfNewProfile(userId: string): Promise<void> {
   try {
-    // Clientes: service-role (si hay key real) + sesión del usuario (RLS own).
-    // signUp/OAuth suelen devolver sesión; el update de trial no depende del admin.
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     const hasServiceRole = !!key && !key.includes('YOUR_') && key.length >= 20
     const sessionDb = await createClient()
@@ -99,26 +99,39 @@ export async function grantTrialIfNewProfile(userId: string): Promise<void> {
       plan?: string
       plan_status?: string | null
       plan_expires_at?: string | null
+      trial_used_at?: string | null
+      role?: string | null
       created_at?: string
     }
-    let recentOk = true
     let p: Prof | null = null
     let db = clients[0]
+    let hasTrialUsedCol = true
 
-    // Reintento breve: el trigger handle_new_user puede retrasar el INSERT del perfil.
     for (let attempt = 0; attempt < 5; attempt++) {
       for (const c of clients) {
         const sel = await c.from('profiles')
-          .select('plan, plan_status, plan_expires_at, created_at').eq('id', userId).maybeSingle()
+          .select('plan, plan_status, plan_expires_at, trial_used_at, role, created_at')
+          .eq('id', userId).maybeSingle()
         if (!sel.error && sel.data) {
           p = sel.data
           db = c
           break
         }
         if (sel.error) {
-          const r2 = await c.from('profiles').select('plan, plan_expires_at').eq('id', userId).maybeSingle()
-          if (r2.data) {
+          hasTrialUsedCol = false
+          const r2 = await c.from('profiles')
+            .select('plan, plan_status, plan_expires_at, role, created_at')
+            .eq('id', userId).maybeSingle()
+          if (!r2.error && r2.data) {
             p = r2.data
+            db = c
+            break
+          }
+          const r3 = await c.from('profiles')
+            .select('plan, plan_status, plan_expires_at, created_at')
+            .eq('id', userId).maybeSingle()
+          if (r3.data) {
+            p = r3.data
             db = c
             break
           }
@@ -129,63 +142,68 @@ export async function grantTrialIfNewProfile(userId: string): Promise<void> {
     }
 
     const ends = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString()
+    const usedAt = new Date().toISOString()
 
-    // Ya tiene trial/plan de pago con vencimiento: no re-otorgar.
-    if (p && p.plan && p.plan !== 'free' && p.plan_expires_at) return
-    // Trial activo sin depender del string de status (compat).
-    if (p && p.plan === 'emprendedor' && p.plan_expires_at) return
+    // Ya usó trial / no elegible.
+    if (p?.trial_used_at) return
+    // Ya tiene (o tuvo) plan de pago / trial activo.
+    if (p?.plan && p.plan !== 'free') return
+    if (p?.plan_expires_at) return
+    // Ya pasó por un trial o canceló (histórico sin columna).
+    if (p?.plan_status && ['expired', 'cancelled', 'trial', 'trialing'].includes(String(p.plan_status))) return
+    if (p?.role === 'employee') return
 
-    if (p?.created_at) {
-      recentOk = Date.now() - new Date(p.created_at).getTime() < NEW_ACCOUNT_MS
+    // Legacy sin trial_used_at: solo cuentas muy recientes free/active.
+    if (!hasTrialUsedCol || p?.trial_used_at === undefined) {
+      if (p?.created_at) {
+        const age = Date.now() - new Date(p.created_at).getTime()
+        if (age > LEGACY_NEW_ACCOUNT_MS) return
+      }
+      if (p?.plan_status && p.plan_status !== 'active' && p.plan_status !== 'trial') return
     }
 
-    // Perfil inexistente: crear con trial (solo service-role).
+    const trialPayload = hasTrialUsedCol
+      ? { plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends, trial_used_at: usedAt }
+      : { plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends }
+    const fallbackPayload = hasTrialUsedCol
+      ? { plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends, trial_used_at: usedAt }
+      : { plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends }
+
     if (!p) {
       if (!hasServiceRole) {
         console.error('[trial] perfil ausente y sin service-role')
         return
       }
       const admin = createAdminClient()
-      const ins = await admin.from('profiles').insert({
-        id: userId,
-        plan: 'emprendedor',
-        plan_status: 'trial',
-        plan_expires_at: ends,
-      })
+      let ins = await admin.from('profiles').insert({ id: userId, ...trialPayload })
       if (ins.error) {
-        const ins2 = await admin.from('profiles').insert({
-          id: userId,
-          plan: 'emprendedor',
-          plan_status: 'active',
-          plan_expires_at: ends,
-        })
-        if (ins2.error) console.error('[trial] no se pudo crear perfil con trial:', ins2.error.message)
+        ins = await admin.from('profiles').insert({ id: userId, ...fallbackPayload })
+        if (ins.error) console.error('[trial] no se pudo crear perfil con trial:', ins.error.message)
       }
       return
     }
 
-    if (p.plan !== 'free' || p.plan_expires_at || !recentOk) return
+    if (p.plan !== 'free') return
 
-    // CHECK real de la BD: 'trial' (no 'trialing').
-    let r = await db.from('profiles')
-      .update({ plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends })
-      .eq('id', userId).eq('plan', 'free')
+    // Solo free + sin marca de trial (evita re-grant).
+    let q = db.from('profiles').update(trialPayload).eq('id', userId).eq('plan', 'free')
+    if (hasTrialUsedCol) q = q.is('trial_used_at', null)
+    let r = await q
     if (r.error) {
-      r = await db.from('profiles')
-        .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
-        .eq('id', userId).eq('plan', 'free')
+      let q2 = db.from('profiles').update(fallbackPayload).eq('id', userId).eq('plan', 'free')
+      if (hasTrialUsedCol) q2 = q2.is('trial_used_at', null)
+      r = await q2
     }
-    // Si el primer cliente falló, reintenta con el otro (sesión).
     if (r.error && clients.length > 1) {
       for (const c of clients) {
         if (c === db) continue
-        r = await c.from('profiles')
-          .update({ plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends })
-          .eq('id', userId).eq('plan', 'free')
+        let qx = c.from('profiles').update(trialPayload).eq('id', userId).eq('plan', 'free')
+        if (hasTrialUsedCol) qx = qx.is('trial_used_at', null)
+        r = await qx
         if (!r.error) break
-        r = await c.from('profiles')
-          .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
-          .eq('id', userId).eq('plan', 'free')
+        let qy = c.from('profiles').update(fallbackPayload).eq('id', userId).eq('plan', 'free')
+        if (hasTrialUsedCol) qy = qy.is('trial_used_at', null)
+        r = await qy
         if (!r.error) break
       }
     }

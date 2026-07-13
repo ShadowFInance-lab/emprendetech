@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   plan_status     TEXT NOT NULL DEFAULT 'active'
                   CHECK (plan_status IN ('active','expired','cancelled','trial')),
   plan_expires_at TIMESTAMPTZ,
+  trial_used_at   TIMESTAMPTZ, -- prueba gratis 5d solo una vez por cuenta
   onboarding_done BOOLEAN NOT NULL DEFAULT false,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()

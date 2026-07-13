@@ -1,14 +1,20 @@
 -- ============================================================
--- EmprendeIA SaaS — Migration 049: Trial 5 días al registrarse
+-- EmprendeIA SaaS — Migration 050: Trial 5 días UNA sola vez
 -- ============================================================
--- Toda cuenta nueva nace con plan Emprendedor en prueba (5 días).
--- Se aplica en el trigger handle_new_user (SECURITY DEFINER).
--- plan_status CHECK: active|expired|cancelled|trial (NO 'trialing').
--- Respaldos en app: registerAction / OAuth / login / ensurePlanCurrent.
--- (La 043_trial_on_signup.sql es la misma lógica; este archivo alinea
---  el número con TODAS_PENDIENTES 049, donde 043 ya era variantes.)
+-- trial_used_at: si no es NULL, esa cuenta ya usó (o no es elegible
+-- para) la prueba gratis. Nunca se re-otorga el trial.
+-- Cuentas existentes se marcan para no regalarles trial de sorpresa.
 -- ============================================================
 
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS trial_used_at TIMESTAMPTZ;
+
+-- Cuentas ya existentes: no son "nuevas" → no reciben trial futuro.
+UPDATE public.profiles
+SET trial_used_at = COALESCE(created_at, now())
+WHERE trial_used_at IS NULL;
+
+-- Trigger: solo cuentas realmente nuevas (INSERT) reciben trial + marca.
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public

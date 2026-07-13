@@ -18,10 +18,12 @@ CREATE TABLE IF NOT EXISTS profiles (
   plan            TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free','emprendedor','negocio','lifetime')),
   plan_status     TEXT NOT NULL DEFAULT 'active' CHECK (plan_status IN ('active','expired','cancelled','trial')),
   plan_expires_at TIMESTAMPTZ,
+  trial_used_at   TIMESTAMPTZ, -- una sola prueba gratis de 5 días por cuenta
   onboarding_done BOOLEAN NOT NULL DEFAULT false,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS trial_used_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS stores (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -281,14 +283,15 @@ CREATE POLICY "payments_owner" ON payments FOR ALL
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  -- Toda cuenta nueva: 5 días de plan Emprendedor (prueba gratis).
-  INSERT INTO public.profiles (id, full_name, plan, plan_status, plan_expires_at)
+  -- Toda cuenta nueva: 5 días Emprendedor (prueba una sola vez).
+  INSERT INTO public.profiles (id, full_name, plan, plan_status, plan_expires_at, trial_used_at)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
     'emprendedor',
     'trial',
-    now() + INTERVAL '5 days'
+    now() + INTERVAL '5 days',
+    now()
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;

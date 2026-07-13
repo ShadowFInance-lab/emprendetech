@@ -16,6 +16,8 @@ export interface Profile {
   plan: Plan
   plan_status: PlanStatus
   plan_expires_at: string | null
+  /** Si no es null, esta cuenta ya usó (o no es elegible para) la prueba de 5 días. */
+  trial_used_at?: string | null
   onboarding_done: boolean
   role?: 'owner' | 'employee' | 'supervisor' | 'gerente'
   boss_id?: string | null

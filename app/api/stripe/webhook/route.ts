@@ -157,11 +157,20 @@ async function activatePlanFromSession(session: StripeSession) {
   if (plan === 'vip_plus') periodEnd.setFullYear(periodEnd.getFullYear() + 100)
   else periodEnd.setMonth(periodEnd.getMonth() + 1)
 
-  const { error: updErr } = await admin.from('profiles').update({
+  const expiresAt = plan === 'vip_plus' ? null : periodEnd.toISOString()
+  let { error: updErr } = await admin.from('profiles').update({
     plan,
     plan_status: 'active',
-    plan_expires_at: plan === 'vip_plus' ? null : periodEnd.toISOString(),
+    plan_expires_at: expiresAt,
+    trial_used_at: new Date().toISOString(),
   }).eq('id', userId)
+  if (updErr) {
+    ;({ error: updErr } = await admin.from('profiles').update({
+      plan,
+      plan_status: 'active',
+      plan_expires_at: expiresAt,
+    }).eq('id', userId))
+  }
   if (updErr) { console.error('[stripe webhook] error activando plan:', updErr.message); return }
 
   const { data: sub, error: subErr } = await admin.from('subscriptions').insert({

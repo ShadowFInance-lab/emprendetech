@@ -46,15 +46,25 @@ async function activateFromPayment(paymentId: string) {
   else periodEnd.setMonth(periodEnd.getMonth() + 1)
 
   // ─── Actualizar PERFIL (lo crítico) y CAPTURAR el error ───────────────────
-  const { data: updated, error: updErr } = await supabase
+  // trial_used_at: pago = ya no elegible para prueba gratis de 5 días.
+  const expiresAt = plan === 'vip_plus' ? null : periodEnd.toISOString()
+  let { data: updated, error: updErr } = await supabase
     .from('profiles')
     .update({
       plan,
       plan_status: 'active',
-      plan_expires_at: plan === 'vip_plus' ? null : periodEnd.toISOString(),
+      plan_expires_at: expiresAt,
+      trial_used_at: new Date().toISOString(),
     })
     .eq('id', userId)
     .select('id, plan, plan_status')
+  if (updErr) {
+    ;({ data: updated, error: updErr } = await supabase
+      .from('profiles')
+      .update({ plan, plan_status: 'active', plan_expires_at: expiresAt })
+      .eq('id', userId)
+      .select('id, plan, plan_status'))
+  }
 
   if (updErr) {
     console.error('[WEBHOOK DEBUG] ❌ ERROR actualizando profile:', updErr.code, updErr.message)

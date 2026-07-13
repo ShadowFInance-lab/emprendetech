@@ -63,16 +63,20 @@ export default async function SubscriptionPage({
   const trialDaysLeft = profile.plan_expires_at
     ? Math.max(0, Math.ceil((new Date(profile.plan_expires_at).getTime() - Date.now()) / 86400000))
     : 0
-  // CHECK 'trial' (+ 'trialing' legacy). También si el fallback usó status 'active'
-  // pero el vencimiento es ≤5 días y la cuenta es nueva (<6 días) → es la prueba.
+  // Prueba gratis activa: status trial/trialing, o Emprendedor con vencimiento
+  // corto y trial_used_at (una sola vez por cuenta; no re-muestra en planes pagados).
   const statusIsTrial = (['trial', 'trialing'] as string[]).includes(String(profile.plan_status))
   const looksLikeTrialFallback =
     currentPlan === 'emprendedor' &&
     !!profile.plan_expires_at &&
     trialDaysLeft <= 5 &&
-    !!profile.created_at &&
-    Date.now() - new Date(profile.created_at).getTime() < 6 * 86400000
-  const showTrialCountdown = statusIsTrial || looksLikeTrialFallback
+    (!!profile.trial_used_at ||
+      (!!profile.created_at &&
+        Date.now() - new Date(profile.created_at).getTime() < 6 * 86400000))
+  const showTrialCountdown =
+    currentPlan === 'emprendedor' &&
+    !!profile.plan_expires_at &&
+    (statusIsTrial || looksLikeTrialFallback)
 
   return (
     <div className="space-y-6 max-w-6xl">

@@ -14,56 +14,105 @@ const PLAN_PRICES: Record<string, { amount: number; title: string; recurring: bo
 }
 
 /**
- * Baja a Gratis los planes mensuales vencidos: fin de la prueba gratis de
- * 5 días o mes pagado no renovado. Se llama al cargar dashboard/ventas/
- * suscripción. Solo aplica a emprendedor/negocio con fecha de vencimiento;
- * vip_plus es de por vida (plan_expires_at null) y no se toca.
+ * 1) Otorga trial 5d Emprendedor SOLO si la cuenta nunca lo usó
+ *    (trial_used_at IS NULL + plan free). Una sola vez por cuenta.
+ * 2) Baja a Gratis los planes mensuales vencidos (fin de trial o mes no
+ *    renovado). Conserva trial_used_at para no re-regalar la prueba.
+ * vip_plus (plan_expires_at null) no se toca.
  */
 export async function ensurePlanCurrentAction(): Promise<void> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    // Lectura resiliente: si created_at/role no existieran, cae al select mínimo
-    // (y solo se omite el respaldo del trial, nunca el vencimiento).
-    let p: { plan?: string; plan_expires_at?: string | null; created_at?: string | null; role?: string | null } | null = null
+
+    type P = {
+      plan?: string
+      plan_status?: string | null
+      plan_expires_at?: string | null
+      trial_used_at?: string | null
+      created_at?: string | null
+      role?: string | null
+    }
+    let p: P | null = null
+    let hasTrialUsedCol = true
     const sel = await supabase.from('profiles')
-      .select('plan, plan_expires_at, created_at, role').eq('id', user.id).maybeSingle()
+      .select('plan, plan_status, plan_expires_at, trial_used_at, created_at, role')
+      .eq('id', user.id).maybeSingle()
     if (sel.error) {
-      const r2 = await supabase.from('profiles').select('plan, plan_expires_at').eq('id', user.id).maybeSingle()
-      p = r2.data
+      hasTrialUsedCol = false
+      const r2 = await supabase.from('profiles')
+        .select('plan, plan_status, plan_expires_at, created_at, role')
+        .eq('id', user.id).maybeSingle()
+      if (r2.error) {
+        const r3 = await supabase.from('profiles')
+          .select('plan, plan_expires_at').eq('id', user.id).maybeSingle()
+        p = r3.data
+      } else p = r2.data
     } else p = sel.data
     if (!p) return
     const plan = p.plan as string
 
-    // RESPALDO del trial ("forzar"): si el perfil es recién creado (<24 h) y
-    // sigue en 'free', el otorgamiento del registro/trigger falló (p. ej. sin
-    // SUPABASE_SERVICE_ROLE_KEY o migración 043 no aplicada) — se auto-otorga
-    // aquí con la sesión del propio usuario. Empleados fuera; cuentas viejas no.
-    // plan_status CHECK: active|expired|cancelled|trial (NO 'trialing').
-    const NEW_ACCOUNT_MS = 24 * 60 * 60 * 1000
-    if (
-      plan === 'free' && !p.plan_expires_at && p.role !== 'employee' &&
-      p.created_at && Date.now() - new Date(p.created_at).getTime() < NEW_ACCOUNT_MS
-    ) {
+    // RESPALDO trial una sola vez: free, nunca usó trial, no empleado.
+    // Con mig 050: trial_used_at IS NULL. Sin columna: solo free reciente < 48 h
+    // y plan_status no expired/cancelled.
+    const LEGACY_MS = 48 * 60 * 60 * 1000
+    const neverUsedTrial = hasTrialUsedCol
+      ? p.trial_used_at == null
+      : !p.plan_status || !['expired', 'cancelled', 'trial', 'trialing'].includes(String(p.plan_status))
+    const legacyRecentOk = !hasTrialUsedCol
+      && !!p.created_at
+      && Date.now() - new Date(p.created_at).getTime() < LEGACY_MS
+    const eligibleOnce =
+      plan === 'free' &&
+      !p.plan_expires_at &&
+      p.role !== 'employee' &&
+      neverUsedTrial &&
+      (hasTrialUsedCol || legacyRecentOk)
+
+    if (eligibleOnce) {
       const ends = new Date(Date.now() + 5 * 86400000).toISOString()
-      let g = await supabase.from('profiles')
-        .update({ plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends })
-        .eq('id', user.id).eq('plan', 'free')
-      if (g.error) {
-        g = await supabase.from('profiles')
-          .update({ plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends })
-          .eq('id', user.id).eq('plan', 'free')
+      const usedAt = new Date().toISOString()
+      const payload = hasTrialUsedCol
+        ? { plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends, trial_used_at: usedAt }
+        : { plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends }
+      let g = supabase.from('profiles').update(payload).eq('id', user.id).eq('plan', 'free')
+      if (hasTrialUsedCol) g = g.is('trial_used_at', null)
+      let res = await g
+      if (res.error) {
+        const fb = hasTrialUsedCol
+          ? { plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends, trial_used_at: usedAt }
+          : { plan: 'emprendedor', plan_status: 'active', plan_expires_at: ends }
+        let g2 = supabase.from('profiles').update(fb).eq('id', user.id).eq('plan', 'free')
+        if (hasTrialUsedCol) g2 = g2.is('trial_used_at', null)
+        res = await g2
       }
-      if (!g.error) revalidatePath('/subscription')
-      return
+      if (!res.error) {
+        revalidatePath('/subscription')
+        return
+      }
     }
+
     if (plan !== 'emprendedor' && plan !== 'negocio') return
     if (!p.plan_expires_at) return
     if (new Date(p.plan_expires_at as string).getTime() >= Date.now()) return
-    let r = await supabase.from('profiles')
-      .update({ plan: 'free', plan_status: 'expired', plan_expires_at: null }).eq('id', user.id)
-    // Si plan_status tiene un CHECK que no admite 'expired', reintenta sin él.
+
+    // Vencido → Gratis. NO borra trial_used_at (si la columna existe).
+    const expirePayload = hasTrialUsedCol
+      ? {
+          plan: 'free',
+          plan_status: 'expired',
+          plan_expires_at: null,
+          // si ya estaba en trial sin marca, la fijamos al bajar
+          trial_used_at: p.trial_used_at ?? new Date().toISOString(),
+        }
+      : { plan: 'free', plan_status: 'expired', plan_expires_at: null }
+    let r = await supabase.from('profiles').update(expirePayload).eq('id', user.id)
+    if (r.error) {
+      r = await supabase.from('profiles')
+        .update({ plan: 'free', plan_status: 'expired', plan_expires_at: null })
+        .eq('id', user.id)
+    }
     if (r.error) {
       r = await supabase.from('profiles').update({ plan: 'free', plan_expires_at: null }).eq('id', user.id)
     }
@@ -244,16 +293,27 @@ export async function activatePlanForUser(userId: string, plan: Plan, providerSu
     periodEnd.setMonth(periodEnd.getMonth() + 1) // mensual
   }
 
-  // Actualizar perfil (idempotente) — capturamos el error para diagnosticar
-  const { data: updated, error: updErr } = await admin
+  // Actualizar perfil (idempotente). trial_used_at: al pagar, la cuenta ya no
+  // es elegible para la prueba gratis de 5 días (una sola vez por cuenta).
+  const expiresAt = plan === 'vip_plus' ? null : periodEnd.toISOString()
+  let { data: updated, error: updErr } = await admin
     .from('profiles')
     .update({
       plan,
       plan_status: 'active',
-      plan_expires_at: plan === 'vip_plus' ? null : periodEnd.toISOString(),
+      plan_expires_at: expiresAt,
+      trial_used_at: new Date().toISOString(),
     })
     .eq('id', userId)
     .select('id, plan, plan_status')
+  if (updErr) {
+    // Columna trial_used_at aún no existe (mig 050 pendiente)
+    ;({ data: updated, error: updErr } = await admin
+      .from('profiles')
+      .update({ plan, plan_status: 'active', plan_expires_at: expiresAt })
+      .eq('id', userId)
+      .select('id, plan, plan_status'))
+  }
   if (updErr) {
     console.error('[WEBHOOK DEBUG] activatePlanForUser ❌ error actualizando profile:', updErr.code, updErr.message)
     console.error('[WEBHOOK DEBUG] (si es check constraint, corre 019_fix_plan_check.sql)')
@@ -335,12 +395,20 @@ export async function activateFreeModeAction(_formData: FormData): Promise<void>
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  // Activar Modo Gratis simple: cambiar a "free" con acceso completo (para VIP Plus)
-  const { error } = await supabase.from('profiles').update({
+  // VIP → free: NO es cuenta nueva; marcar trial_used_at para no regalar prueba.
+  let { error } = await supabase.from('profiles').update({
     plan: 'free',
     plan_status: 'active',
     plan_expires_at: null,
+    trial_used_at: new Date().toISOString(),
   }).eq('id', user.id)
+  if (error) {
+    ;({ error } = await supabase.from('profiles').update({
+      plan: 'free',
+      plan_status: 'active',
+      plan_expires_at: null,
+    }).eq('id', user.id))
+  }
 
   if (error) {
     console.error('activateFreeModeAction error:', error)

@@ -18,14 +18,16 @@ BEGIN
     full_name,
     plan,
     plan_status,
-    plan_expires_at
+    plan_expires_at,
+    trial_used_at
   )
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
     'emprendedor',
     'trial',
-    now() + INTERVAL '5 days'
+    now() + INTERVAL '5 days',
+    now()
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
