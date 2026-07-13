@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { FileSpreadsheet, FileText, Loader2, CalendarDays } from 'lucide-react'
+import Link from 'next/link'
+import { FileSpreadsheet, FileText, Loader2, CalendarDays, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDateTime } from '@/lib/utils/format'
 
@@ -28,7 +29,7 @@ interface Props {
   isPaid?: boolean
 }
 
-export default function ExportSalesButtons({ sales, storeName }: Props) {
+export default function ExportSalesButtons({ sales, storeName, isPaid = true }: Props) {
   const [loading, setLoading] = useState<'excel' | 'pdf' | null>(null)
 
   // Solo las ventas del día actual (hora local del usuario).
@@ -84,6 +85,18 @@ export default function ExportSalesButtons({ sales, storeName }: Props) {
   }
 
   if (sales.length === 0) return null
+
+  // Plan Gratis: exportar bloqueado — el candado lleva a mejorar el plan.
+  if (!isPaid) {
+    return (
+      <Link href="/subscription"
+        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-all"
+        title="La descarga de reportes Excel/PDF está disponible en planes de pago">
+        <Lock size={13} /> Exportar (plan de pago)
+      </Link>
+    )
+  }
+
   const none = today.length === 0
 
   return (

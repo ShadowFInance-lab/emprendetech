@@ -110,8 +110,9 @@ export default async function DashboardPage() {
   const currentPlan = (profilePlan?.plan ?? 'free') as string
   const vipUsage = currentPlan === 'vip_plus' ? await getMeteredUsage() : null
   const vipPct = vipUsage ? Math.min(100, (vipUsage.salesThisMonth / vipUsage.included) * 100) : 0
-  // Modo Gratis completo: free y vip_plus (y otros) dan acceso total sin cobro
-  const isPaid = true // Modo Gratis completo: free/vip_plus + planes pagos dan acceso total sin cobro
+  // Reportes Excel/PDF solo en planes pagos; el plan Gratis ve el candado y el banner.
+  const paidPlans = ['emprendedor', 'negocio', 'vip_plus']
+  const isPaid = paidPlans.includes(currentPlan)
 
   // ─── Ventas detalladas (para exportar PDF/Excel por rango) ──
   // Una sola query desde la fecha más temprana (semana o inicio de mes),
