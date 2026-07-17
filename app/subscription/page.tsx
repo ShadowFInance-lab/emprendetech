@@ -9,10 +9,10 @@ import UpgradeButton from '@/components/subscription/UpgradeButton'
 import type { Plan } from '@/lib/types'
 
 const PLAN_FEATURES: Record<Plan, string[]> = {
-  free: ['100 productos', 'Catálogo público', 'POS básico', 'Con anuncios ligeros'],
-  emprendedor: ['5,000 productos', 'Sin anuncios', 'Personaliza 3 tonos', 'Exportar PDF/Excel', 'Reportes completos'],
-  negocio: ['Productos ilimitados', 'Todo de Emprendedor', 'Usuarios adicionales', 'Dominio propio', 'Respaldos'],
-  vip_plus: ['Todo ilimitado', 'Modo Gratis (sin cobro)', '1,000 ventas/mes incluidas', 'Solo $0.50 por venta extra (con Stripe)'],
+  free: ['100 productos', 'Catálogo público', 'POS básico', 'Con anuncios ligeros', '3% comisión por venta'],
+  emprendedor: ['5,000 productos', 'Sin anuncios', 'Personaliza 3 tonos', 'Exportar PDF/Excel', 'Reportes completos', '0% comisión por venta'],
+  negocio: ['Productos ilimitados', 'Todo de Emprendedor', 'Usuarios adicionales', 'Dominio propio', 'Respaldos', '0% comisión por venta'],
+  vip_plus: ['Todo ilimitado', 'Modo Gratis (sin cobro)', '1,000 ventas/mes incluidas', '2% comisión por venta (con Stripe)'],
 }
 
 const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
@@ -240,6 +240,7 @@ export default async function SubscriptionPage({
             <>Incluye las <strong>primeras 1,000 ventas por mes gratis</strong>.</>,
             <>Si superas las 1,000 ventas en un mes, cada venta adicional cuesta solo <strong>$0.50 MXN</strong>.</>,
             <>El contador <strong>se reinicia cada mes</strong>.</>,
+            <>Comisión por venta con tarjeta (Stripe): <strong>solo 2%</strong> — el plan Gratis paga <strong>3%</strong>; Emprendedor y Negocio <strong>0%</strong>.</>,
             <>Solo aplica al plan <strong>VIP Plus</strong>.</>,
           ].map((txt, i) => (
             <div key={i} className="flex items-start gap-2">

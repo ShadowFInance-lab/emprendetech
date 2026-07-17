@@ -17,6 +17,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
     'Punto de venta básico',
     'Dashboard de ventas',
     'Botón WhatsApp',
+    '3% comisión por venta',
   ],
   emprendedor: [
     '5,000 productos',
@@ -25,6 +26,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
     'Exportar PDF y Excel',
     'Reportes completos',
     'Soporte prioritario',
+    '0% comisión por venta',
   ],
   negocio: [
     'Productos ilimitados',
@@ -33,12 +35,12 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
     'Dominio personalizado',
     'Respaldos automáticos',
     'Soporte por chat',
+    '0% comisión por venta',
   ],
   vip_plus: [
     'Todo ilimitado, pago único',
     '1,000 ventas/mes incluidas',
-    'Solo $0.50 por venta extra',
-    '(con Stripe directo)',
+    '2% comisión por venta (con Stripe)',
     'Cobro automático en la app',
   ],
 }
