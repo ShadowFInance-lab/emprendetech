@@ -11,7 +11,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
   free: ['100 productos', 'Catálogo público', 'POS básico', 'Con anuncios ligeros', '3% comisión por venta'],
   emprendedor: ['5,000 productos', 'Sin anuncios', 'Personaliza 3 tonos', 'Exportar PDF/Excel', 'Reportes completos', '0% comisión por venta'],
   negocio: ['Productos ilimitados', 'Todo de Emprendedor', 'Usuarios adicionales', 'Dominio propio', 'Respaldos', '0% comisión por venta'],
-  vip_plus: ['Todo ilimitado', 'Pago único — sin mensualidades', 'Ventas ilimitadas sin cargos extra', '2% comisión por venta (con Stripe)'],
+  vip_plus: ['Todo ilimitado', 'Pago único — sin mensualidades', '1,000 ventas/mes SIN comisión', 'Después solo 2% con tarjeta (Stripe)'],
 }
 
 const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
@@ -197,9 +197,9 @@ export default async function SubscriptionPage({
         <CardContent className="space-y-2.5 text-sm text-gray-700">
           {[
             <><strong>Pago único de $1,599 MXN</strong> — de por vida, sin mensualidades.</>,
-            <>Ventas <strong>ilimitadas</strong>: sin contadores ni cargos por venta extra.</>,
-            <>Única comisión: <strong>2% por venta con tarjeta</strong> (la procesa Stripe). Ventas en efectivo o transferencia: <strong>0%</strong>.</>,
-            <>Comparativa: plan Gratis paga <strong>3%</strong> por venta · Emprendedor y Negocio <strong>0%</strong> (con mensualidad).</>,
+            <>Tus <strong>primeras 1,000 ventas de cada mes</strong> van <strong>sin comisión</strong>.</>,
+            <>De la venta 1,001 en adelante: solo <strong>2% por venta con tarjeta</strong> (la procesa Stripe). Efectivo y transferencia: <strong>siempre 0%</strong>.</>,
+            <>Comparativa: plan Gratis paga <strong>3%</strong> por venta con tarjeta · Emprendedor y Negocio <strong>0%</strong> (con mensualidad).</>,
           ].map((txt, i) => (
             <div key={i} className="flex items-start gap-2">
               <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
@@ -281,8 +281,9 @@ export default async function SubscriptionPage({
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-500 space-y-1.5">
         <p className="font-semibold text-gray-600">Términos de cobros y pagos</p>
         <p>
-          Mercanta Business solo cobra la comisión por venta indicada en cada plan
-          (Gratis 3% · Emprendedor y Negocio 0% · VIP Plus 2%). Sin cargos ocultos.
+          Mercanta Business solo cobra la comisión por venta con tarjeta indicada en cada plan
+          (Gratis 3% · Emprendedor y Negocio 0% · VIP Plus 2%, con sus primeras 1,000 ventas
+          del mes sin comisión). Sin cargos ocultos.
         </p>
         <p>
           Los pagos con tarjeta los procesa <strong>Stripe</strong>, un proveedor externo e

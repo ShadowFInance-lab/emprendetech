@@ -25,8 +25,8 @@ export default async function OrdersPage() {
             <Inbox size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-tight">Pedidos Online</h1>
-            <p className="text-gray-500 text-sm">Pedidos de «Compra Online» de tu catálogo. Cambia el estado para darles seguimiento.</p>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-tight">Ventas Online</h1>
+            <p className="text-gray-500 text-sm">Ventas de «Compra Online» de tu catálogo. Cambia el estado para darles seguimiento.</p>
           </div>
         </div>
         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-8 text-center">
@@ -43,8 +43,8 @@ export default async function OrdersPage() {
           <Inbox size={22} className="text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-tight">Pedidos Online</h1>
-          <p className="text-gray-500 text-sm">Pedidos de «Compra Online» de tu catálogo. Cambia el estado para darles seguimiento.</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-tight">Ventas Online</h1>
+          <p className="text-gray-500 text-sm">Ventas de «Compra Online» de tu catálogo. Cambia el estado para darles seguimiento.</p>
         </div>
       </div>
       <OrdersPanel />

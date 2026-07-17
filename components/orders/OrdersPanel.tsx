@@ -57,7 +57,7 @@ export default function OrdersPanel() {
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-indigo-500" /></div>
 
   const cards = [
-    { label: 'Pedidos', value: String(stats.total), icon: ShoppingBag, c: 'from-indigo-500 to-violet-600' },
+    { label: 'Ventas online', value: String(stats.total), icon: ShoppingBag, c: 'from-indigo-500 to-violet-600' },
     { label: 'Hoy', value: String(stats.hoy), icon: CalendarDays, c: 'from-cyan-500 to-sky-600' },
     { label: 'Pendientes', value: String(stats.pendientes), icon: Clock, c: 'from-amber-500 to-orange-600' },
     { label: 'Ingresos', value: formatCurrency(stats.ingresos), icon: DollarSign, c: 'from-emerald-500 to-green-600' },

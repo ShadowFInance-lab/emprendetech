@@ -39,8 +39,8 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
   ],
   vip_plus: [
     'Todo ilimitado, pago único',
-    'Ventas ilimitadas sin cargos extra',
-    '2% comisión por venta (con Stripe)',
+    '1,000 ventas/mes sin comisión',
+    'Después solo 2% con tarjeta (Stripe)',
     'Cobro automático en la app',
   ],
 }
@@ -132,8 +132,9 @@ export default function PricingPage() {
         <div className="max-w-3xl mx-auto mt-12 rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-500 space-y-1.5">
           <p className="font-semibold text-gray-600">Términos de cobros y pagos</p>
           <p>
-            Mercanta Business solo cobra la comisión por venta indicada en cada plan
-            (Gratis 3% · Emprendedor y Negocio 0% · VIP Plus 2%). Sin cargos ocultos.
+            Mercanta Business solo cobra la comisión por venta con tarjeta indicada en cada plan
+            (Gratis 3% · Emprendedor y Negocio 0% · VIP Plus 2%, con sus primeras 1,000 ventas
+            del mes sin comisión). Sin cargos ocultos.
           </p>
           <p>
             Los pagos con tarjeta los procesa <strong>Stripe</strong>, un proveedor externo e

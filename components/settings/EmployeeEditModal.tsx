@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4 } from 'lucide-react'
+import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4, MessageCircle, Send } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, getEmployeeLoginAction, setEmployeePasswordAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { getEmployeeWeekAction, setEmployeeDayAction, setEmployeeDayTimesAction, type AttendanceRow, type DayState } from '@/lib/actions/attendance'
+import { bossSendMessageAction, getThreadAction, type TeamMessage } from '@/lib/actions/team'
 import { useBossGate } from './BossGate'
 
 const EMPTY: EmployeeMeta = { phone: '', insurance_no: '', emergency_phone: '', branch: '', salary: null, rfc: '', position: '', hire_date: '', photo_url: '' }
@@ -17,6 +18,15 @@ function weekDates(): string[] {
   const mon = new Date(now); mon.setDate(now.getDate() - dow)
   return Array.from({ length: 7 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return toISO(d) })
 }
+
+// Pestañas del modal (ventanas separadas, como "Ver Nómina")
+const TABS = [
+  { id: 'perfil', label: 'Datos y Perfil', icon: UserRound },
+  { id: 'horario', label: 'Horarios y Asistencia', icon: CalendarClock },
+  { id: 'acceso', label: 'Acceso y Contraseña', icon: KeyRound },
+  { id: 'chat', label: 'Chat', icon: MessageCircle },
+] as const
+type TabId = typeof TABS[number]['id']
 
 interface Props {
   employeeId: string
@@ -41,6 +51,10 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
   const [email, setEmail] = useState<string | null>(null)
   const [newPw, setNewPw] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [tab, setTab] = useState<TabId>('perfil')
+  const [thread, setThread] = useState<TeamMessage[]>([])
+  const [chatLoading, setChatLoading] = useState(false)
+  const [chatText, setChatText] = useState('')
 
   async function loadWeek() { setWeek(await getEmployeeWeekAction(employeeId)) }
 
@@ -76,6 +90,16 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     setTOut(r?.check_out ? r.check_out.slice(11, 16) : '')
   }, [daySel, week])
 
+  // Chat: carga el hilo al abrir la pestaña y lo refresca cada 15 s.
+  useEffect(() => {
+    if (tab !== 'chat') return
+    let alive = true
+    const load = async () => { const t = await getThreadAction(employeeId); if (alive) { setThread(t); setChatLoading(false) } }
+    setChatLoading(true); load()
+    const i = setInterval(load, 15000)
+    return () => { alive = false; clearInterval(i) }
+  }, [tab, employeeId])
+
   const weekMap = new Map(week.map(r => [r.work_date, r]))
   const stateOf = (date: string): DayState => {
     const r = weekMap.get(date)
@@ -109,6 +133,15 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     startTransition(async () => {
       const r = await setEmployeePasswordAction(employeeId, newPw)
       if (r.success) { toast.success('Contraseña actualizada. Compártela con el empleado.'); setNewPw('') }
+      else toast.error(r.error ?? 'Error')
+    })
+  }
+  function sendChat() {
+    const m = chatText.trim()
+    if (!m) return
+    startTransition(async () => {
+      const r = await bossSendMessageAction(employeeId, m)
+      if (r.success) { setChatText(''); setThread(await getThreadAction(employeeId)) }
       else toast.error(r.error ?? 'Error')
     })
   }
@@ -147,10 +180,21 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
           <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
         </div>
 
+        {/* Pestañas: ventanas separadas por tema */}
+        <div className="flex border-b border-gray-100 bg-gray-50/70 px-2">
+          {TABS.map(t => (
+            <button key={t.id} type="button" onClick={() => setTab(t.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${tab === t.id ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+              <t.icon size={14} /> <span className="hidden sm:inline">{t.label}</span>
+            </button>
+          ))}
+        </div>
+
         {!loaded ? (
           <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>
         ) : (
-          <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+            {tab === 'perfil' && (<>
             {/* Datos + perfil */}
             <div>
               <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><UserRound size={13} /> Datos y perfil</p>
@@ -188,7 +232,12 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
                 </div>
               </div>
             </div>
+            <button onClick={save} disabled={isPending} className="w-full h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
+              {isPending ? <Loader2 size={16} className="animate-spin" /> : <><Save size={15} /> Guardar cambios</>}
+            </button>
+            </>)}
 
+            {tab === 'acceso' && (<>
             {/* Acceso del empleado: correo + restablecer contraseña */}
             <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
               <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><KeyRound size={13} /> Acceso del empleado</p>
@@ -231,7 +280,10 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5">Supervisor: POS + panel de Empleados. Gerente: casi todo el panel (sin Configuración ni Suscripción).</p>
             </div>
+            <button onClick={remove} disabled={isPending} className="w-full inline-flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-red-600"><Trash2 size={13} /> Quitar acceso</button>
+            </>)}
 
+            {tab === 'horario' && (<>
             {/* Asistencia de la Semana — bloque EXACTO idéntico (como en Juan David para Staff y Employee) */}
             <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/60 p-4">
               <p className="text-[11px] font-bold text-violet-700 uppercase tracking-wide flex items-center gap-1.5 mb-3"><CalendarClock size={13} /> Asistencia de la Semana</p>
@@ -276,11 +328,34 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
               </div>
               <p className="text-[10px] text-gray-400 mt-1.5">Toca el campo para abrir el selector de hora. Al guardar la entrada, el día se marca 🟢 Presente arriba.</p>
             </div>
+            </>)}
 
-            <button onClick={save} disabled={isPending} className="w-full h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
-              {isPending ? <Loader2 size={16} className="animate-spin" /> : <><Save size={15} /> Guardar cambios</>}
-            </button>
-            <button onClick={remove} disabled={isPending} className="w-full inline-flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-red-600"><Trash2 size={13} /> Quitar acceso</button>
+            {tab === 'chat' && (
+              <div className="rounded-2xl border border-gray-100 overflow-hidden">
+                <div className="max-h-72 min-h-[220px] overflow-y-auto p-3 space-y-2.5 flex flex-col bg-gray-50/40">
+                  {chatLoading && thread.length === 0 ? (
+                    <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-indigo-500" /></div>
+                  ) : thread.length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-10">Sin mensajes con {employeeName}. Escribe el primero.</p>
+                  ) : thread.map(m => {
+                    const mine = m.from_role === 'boss'
+                    return (
+                      <div key={m.id} className={`flex flex-col max-w-[85%] ${mine ? 'self-end items-end' : 'self-start items-start'}`}>
+                        <div className={`text-sm px-3 py-1.5 rounded-2xl ${mine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-700 rounded-bl-sm'}`}>{m.message}</div>
+                        <span className="text-[9px] text-gray-300 mt-0.5 px-1">{new Date(m.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="flex gap-2 p-3 border-t border-gray-100 bg-white">
+                  <input value={chatText} onChange={e => setChatText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendChat() }}
+                    placeholder={`Mensaje a ${employeeName}…`} className="flex-1 h-10 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  <button onClick={sendChat} disabled={isPending} className="inline-flex items-center justify-center w-11 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                    {isPending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
