@@ -3,8 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { CreditCard, CheckCircle2, AlertCircle, Zap, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
-import { getMeteredUsage, confirmCheckoutReturn, activateFreeModeAction, ensurePlanCurrentAction } from '@/lib/actions/subscriptions'
-import { formatCurrency } from '@/lib/utils/format'
+import { confirmCheckoutReturn, activateFreeModeAction, ensurePlanCurrentAction } from '@/lib/actions/subscriptions'
 import UpgradeButton from '@/components/subscription/UpgradeButton'
 import type { Plan } from '@/lib/types'
 
@@ -12,7 +11,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
   free: ['100 productos', 'Catálogo público', 'POS básico', 'Con anuncios ligeros', '3% comisión por venta'],
   emprendedor: ['5,000 productos', 'Sin anuncios', 'Personaliza 3 tonos', 'Exportar PDF/Excel', 'Reportes completos', '0% comisión por venta'],
   negocio: ['Productos ilimitados', 'Todo de Emprendedor', 'Usuarios adicionales', 'Dominio propio', 'Respaldos', '0% comisión por venta'],
-  vip_plus: ['Todo ilimitado', 'Modo Gratis (sin cobro)', '1,000 ventas/mes incluidas', '2% comisión por venta (con Stripe)'],
+  vip_plus: ['Todo ilimitado', 'Pago único — sin mensualidades', 'Ventas ilimitadas sin cargos extra', '2% comisión por venta (con Stripe)'],
 }
 
 const PLAN_STYLE: Record<Plan, { bar: string; icon: string }> = {
@@ -57,8 +56,6 @@ export default async function SubscriptionPage({
   const limits = PLAN_LIMITS[currentPlan]
   // Los planes se pagan con Stripe (checkout de la plataforma).
   const paymentsConfigured = !!process.env.STRIPE_SECRET_KEY
-  const usage = await getMeteredUsage()
-  const usagePct = Math.min(100, (usage.salesThisMonth / usage.included) * 100)
 
   const trialDaysLeft = profile.plan_expires_at
     ? Math.max(0, Math.ceil((new Date(profile.plan_expires_at).getTime() - Date.now()) / 86400000))
@@ -183,43 +180,6 @@ export default async function SubscriptionPage({
         </div>
       )}
 
-      {/* Contador de ventas medidas (VIP Plus) */}
-      {currentPlan === 'vip_plus' && (
-        <Card className="border-0 shadow-sm">
-          <CardContent className="pt-5 pb-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-semibold text-gray-900 flex items-center gap-2">
-                <Zap size={16} className="text-amber-500" /> Ventas de este mes
-              </p>
-              <span className="text-sm text-gray-500">
-                {usage.salesThisMonth.toLocaleString()} / {usage.included.toLocaleString()} incluidas
-              </span>
-            </div>
-            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${usage.extraSales > 0 ? 'bg-amber-500' : 'bg-green-500'}`}
-                style={{ width: `${usagePct}%` }}
-              />
-            </div>
-            {usage.extraSales > 0 ? (
-              <div className="mt-3 flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2">
-                <span className="text-sm text-amber-700">
-                  {usage.extraSales.toLocaleString()} ventas extra × {formatCurrency(usage.feePerSale)}
-                </span>
-                <span className="font-bold text-amber-700">{formatCurrency(usage.amountDue)}</span>
-              </div>
-            ) : (
-              <p className="text-xs text-green-600 mt-2">
-                ✓ Dentro de tus 1,000 ventas incluidas. Sin cargos extra este mes.
-              </p>
-            )}
-            <p className="text-[11px] text-gray-400 mt-2">
-              El cargo de {formatCurrency(usage.feePerSale)} por venta adicional aplica después de las 1,000 ventas incluidas (solo VIP Plus).
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {!paymentsConfigured && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
           ⚠️ Los pagos en línea están en configuración. Para cambiar de plan,
@@ -236,12 +196,10 @@ export default async function SubscriptionPage({
         </CardHeader>
         <CardContent className="space-y-2.5 text-sm text-gray-700">
           {[
-            <><strong>Pago único de $1,599 MXN</strong> (no es mensual).</>,
-            <>Incluye las <strong>primeras 1,000 ventas por mes gratis</strong>.</>,
-            <>Si superas las 1,000 ventas en un mes, cada venta adicional cuesta solo <strong>$0.50 MXN</strong>.</>,
-            <>El contador <strong>se reinicia cada mes</strong>.</>,
-            <>Comisión por venta con tarjeta (Stripe): <strong>solo 2%</strong> — el plan Gratis paga <strong>3%</strong>; Emprendedor y Negocio <strong>0%</strong>.</>,
-            <>Solo aplica al plan <strong>VIP Plus</strong>.</>,
+            <><strong>Pago único de $1,599 MXN</strong> — de por vida, sin mensualidades.</>,
+            <>Ventas <strong>ilimitadas</strong>: sin contadores ni cargos por venta extra.</>,
+            <>Única comisión: <strong>2% por venta con tarjeta</strong> (la procesa Stripe). Ventas en efectivo o transferencia: <strong>0%</strong>.</>,
+            <>Comparativa: plan Gratis paga <strong>3%</strong> por venta · Emprendedor y Negocio <strong>0%</strong> (con mensualidad).</>,
           ].map((txt, i) => (
             <div key={i} className="flex items-start gap-2">
               <CheckCircle2 size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
@@ -317,6 +275,20 @@ export default async function SubscriptionPage({
             </div>
           )
         })}
+      </div>
+
+      {/* Términos de cobros y pagos */}
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-500 space-y-1.5">
+        <p className="font-semibold text-gray-600">Términos de cobros y pagos</p>
+        <p>
+          Mercanta Business solo cobra la comisión por venta indicada en cada plan
+          (Gratis 3% · Emprendedor y Negocio 0% · VIP Plus 2%). Sin cargos ocultos.
+        </p>
+        <p>
+          Los pagos con tarjeta los procesa <strong>Stripe</strong>, un proveedor externo e
+          independiente. Mercanta no almacena datos de tarjetas ni es responsable del
+          procesamiento de pagos, contracargos o disputas, que se rigen por los términos de Stripe.
+        </p>
       </div>
     </div>
   )

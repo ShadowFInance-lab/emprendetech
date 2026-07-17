@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.109'
-export const APP_BUILD = '2026-07-13' // v7.109: comisiones claras en la UI — Gratis 3% · Emprendedor/Negocio 0% · VIP Plus 2% en las tarjetas de /subscription y /pricing + bullet en el explicador VIP. Trial (una vez) y banner "termina en X días" ya verificados (v7.107/108).
+export const APP_VERSION = 'v7.110'
+export const APP_BUILD = '2026-07-13' // v7.110: modal empleado pro (sin "Descuento del periodo", horario con pickers grandes, fila "Contraseña actual" cifrada + 👁 en la nueva); VIP Plus sin $0.50 ni contador de 1,000 ventas (solo 2% comisión); términos de cobros/Stripe en /subscription y /pricing.

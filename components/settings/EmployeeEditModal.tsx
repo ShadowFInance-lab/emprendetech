@@ -2,10 +2,9 @@
 
 import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff } from 'lucide-react'
+import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, getEmployeeLoginAction, setEmployeePasswordAction, type EmployeeMeta } from '@/lib/actions/employees'
-import { savePayrollDiscountAction } from '@/lib/actions/payroll'
 import { getEmployeeWeekAction, setEmployeeDayAction, setEmployeeDayTimesAction, type AttendanceRow, type DayState } from '@/lib/actions/attendance'
 import { useBossGate } from './BossGate'
 
@@ -28,10 +27,9 @@ interface Props {
   onSaved: () => void
 }
 
-export default function EmployeeEditModal({ employeeId, employeeName, periodStart, initialDiscount, onClose, onSaved }: Props) {
+export default function EmployeeEditModal({ employeeId, employeeName, onClose, onSaved }: Props) {
   const [meta, setMeta] = useState<EmployeeMeta>(EMPTY)
   const [name, setName] = useState(employeeName)
-  const [discount, setDiscount] = useState(String(initialDiscount || 0))
   const [week, setWeek] = useState<AttendanceRow[]>([])
   const [loaded, setLoaded] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -91,7 +89,6 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
     startTransition(async () => {
       const ops: Promise<{ success: boolean; error?: string }>[] = [
         saveEmployeeMetaAction(employeeId, meta),
-        savePayrollDiscountAction(employeeId, periodStart, parseFloat(discount) || 0),
       ]
       if (name.trim() && name.trim() !== employeeName) ops.push(setEmployeeNameAction(employeeId, name))
       const res = await Promise.all(ops)
@@ -181,10 +178,6 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Sueldo base</label>
                   <Input type="number" min="0" value={meta.salary ?? ''} onChange={e => setMeta(m => ({ ...m, salary: e.target.value ? parseFloat(e.target.value) : null }))} className="h-9 text-sm" placeholder="0.00" />
                 </div>
-                <div>
-                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Descuento del periodo</label>
-                  <Input type="number" min="0" value={discount} onChange={e => setDiscount(e.target.value)} className="h-9 text-sm" placeholder="0.00" />
-                </div>
               </div>
             </div>
 
@@ -200,16 +193,23 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
                   </div>
                 </div>
                 <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Contraseña actual</label>
+                  <div className="flex items-center justify-between gap-2 h-9 px-3 rounded-lg border border-gray-200 bg-gray-100/70 text-sm text-gray-500 select-none">
+                    <span className="tracking-[0.3em]">••••••••</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] text-gray-400"><Lock size={11} /> cifrada — no puede mostrarse</span>
+                  </div>
+                </div>
+                <div>
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Nueva contraseña</label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Input type={showPw ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Mín. 6 caracteres" className="h-9 text-sm pr-9" />
-                      <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">{showPw ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+                      <button type="button" onClick={() => setShowPw(v => !v)} title={showPw ? 'Ocultar' : 'Mostrar'} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">{showPw ? <EyeOff size={15} /> : <Eye size={15} />}</button>
                     </div>
                     <button type="button" onClick={savePassword} disabled={isPending || newPw.length < 6} className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">Guardar</button>
                   </div>
                 </div>
-                <p className="text-[10px] text-gray-400">La contraseña actual no se puede ver (está cifrada). Aquí puedes ponerle una nueva y dársela al empleado.</p>
+                <p className="text-[10px] text-gray-400">Por seguridad la contraseña se guarda cifrada y no puede mostrarse. Si el empleado la olvidó, escribe una nueva (con el 👁 la ves mientras la escribes) y compártesela.</p>
               </div>
             </div>
 
@@ -246,16 +246,27 @@ export default function EmployeeEditModal({ employeeId, employeeName, periodStar
               <p className="text-[10px] text-violet-600/70 mb-2">🟢 Presente · 🔴 Falta · 🔵 Justificada · clic para cambiar</p>
             </div>
 
-            <div className="flex items-end gap-2 -mt-1">
-              <div className="flex-1">
-                <label className="text-[10px] text-gray-400">Día seleccionado</label>
-                <select value={daySel} onChange={e => setDaySel(e.target.value)} className="w-full h-8 text-xs border border-gray-200 rounded-lg px-1 bg-white">
-                  {days.map((d, i) => <option key={d} value={d}>{WD[i]} {d.slice(5)}</option>)}
-                </select>
+            {/* Horario del día: selects grandes y claros (time pickers nativos) */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+              <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><Clock4 size={13} /> Horario del día</p>
+              <div className="grid grid-cols-2 sm:grid-cols-[1fr_auto_auto_auto] gap-2 items-end">
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Día</label>
+                  <select value={daySel} onChange={e => setDaySel(e.target.value)} className="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 bg-white">
+                    {days.map((d, i) => <option key={d} value={d}>{WD[i]} {d.slice(5)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Entrada</label>
+                  <Input type="time" value={tIn} onChange={e => setTIn(e.target.value)} className="h-10 text-sm w-full sm:w-32 cursor-pointer" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Salida</label>
+                  <Input type="time" value={tOut} onChange={e => setTOut(e.target.value)} className="h-10 text-sm w-full sm:w-32 cursor-pointer" />
+                </div>
+                <button onClick={saveTimes} disabled={isPending} className="h-10 px-4 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 col-span-2 sm:col-span-1">Guardar horario</button>
               </div>
-              <div><label className="text-[10px] text-gray-400">Entrada</label><Input type="time" value={tIn} onChange={e => setTIn(e.target.value)} className="h-8 text-xs w-28" /></div>
-              <div><label className="text-[10px] text-gray-400">Salida</label><Input type="time" value={tOut} onChange={e => setTOut(e.target.value)} className="h-8 text-xs w-28" /></div>
-              <button onClick={saveTimes} disabled={isPending} className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50">Guardar horario</button>
+              <p className="text-[10px] text-gray-400 mt-1.5">Toca el campo para abrir el selector de hora. Al guardar la entrada, el día se marca 🟢 Presente arriba.</p>
             </div>
 
             <button onClick={save} disabled={isPending} className="w-full h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
