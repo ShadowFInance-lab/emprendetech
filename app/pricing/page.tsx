@@ -140,6 +140,10 @@ export default function PricingPage() {
             independiente. Mercanta no almacena datos de tarjetas ni es responsable del
             procesamiento de pagos, contracargos o disputas, que se rigen por los términos de Stripe.
           </p>
+          <p>
+            El usuario es responsable de sus transacciones, de la entrega de sus productos y de su
+            cumplimiento fiscal ante las autoridades correspondientes.
+          </p>
         </div>
 
         {/* Back */}

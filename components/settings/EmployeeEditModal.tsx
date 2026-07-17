@@ -68,6 +68,14 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     getEmployeeLoginAction(employeeId).then(r => setEmail(r.email))
   }, [employeeId])
 
+  // Al elegir un día, precarga sus horas guardadas — así cada día es editable
+  // viendo lo que ya tiene, no escribiendo a ciegas.
+  useEffect(() => {
+    const r = week.find(w => w.work_date === daySel)
+    setTIn(r?.check_in ? r.check_in.slice(11, 16) : '')
+    setTOut(r?.check_out ? r.check_out.slice(11, 16) : '')
+  }, [daySel, week])
+
   const weekMap = new Map(week.map(r => [r.work_date, r]))
   const stateOf = (date: string): DayState => {
     const r = weekMap.get(date)

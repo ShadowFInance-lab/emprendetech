@@ -722,4 +722,28 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
+-- ─── 052: Reseñas de productos (estrellas + comentarios moderados) ──────────
+-- Los compradores (sin cuenta) califican 1-5 y comentan; el filtro de palabras
+-- vulgares se aplica en el servidor (lib/actions/reviews.ts) antes de insertar.
+CREATE TABLE IF NOT EXISTS product_reviews (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id    UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  store_id      UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  reviewer_name TEXT NOT NULL,
+  rating        INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment       TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_reviews_product ON product_reviews(product_id);
+ALTER TABLE product_reviews ENABLE ROW LEVEL SECURITY;
+-- Lectura pública (catálogo) e inserción pública (compradores anónimos).
+DROP POLICY IF EXISTS "reviews_read" ON product_reviews;
+CREATE POLICY "reviews_read" ON product_reviews FOR SELECT USING (true);
+DROP POLICY IF EXISTS "reviews_insert" ON product_reviews;
+CREATE POLICY "reviews_insert" ON product_reviews FOR INSERT WITH CHECK (true);
+-- El dueño de la tienda puede borrar reseñas de sus productos.
+DROP POLICY IF EXISTS "reviews_owner_delete" ON product_reviews;
+CREATE POLICY "reviews_owner_delete" ON product_reviews FOR DELETE
+  USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

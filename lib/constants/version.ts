@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.110'
-export const APP_BUILD = '2026-07-13' // v7.110: modal empleado pro (sin "Descuento del periodo", horario con pickers grandes, fila "Contraseña actual" cifrada + 👁 en la nueva); VIP Plus sin $0.50 ni contador de 1,000 ventas (solo 2% comisión); términos de cobros/Stripe en /subscription y /pricing.
+export const APP_VERSION = 'v7.111'
+export const APP_BUILD = '2026-07-13' // v7.111: reseñas de productos (estrellas 1-5 + comentarios con filtro anti-vulgaridades server-side, migración 052); modal staff solo Sueldo base + sección "Empleado de registro" moderna; horario precarga horas por día; términos con responsabilidad fiscal.

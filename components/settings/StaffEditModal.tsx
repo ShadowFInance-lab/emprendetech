@@ -153,22 +153,28 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
                 </div>
               </div>
               {num('salary', 'Sueldo base', '0.01')}
-              {num('discount', 'Descuento', '0.01')}
-              {num('bonus', 'Bonos', '0.01')}
             </div>
           </div>
 
-          {/* Registro (sin login) — equivalente al bloque "Rol / permisos" del de login */}
-          <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
-            <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-1"><ClipboardList size={13} /> Empleado de registro</p>
-            <p className="text-[10px] text-gray-400">No inicia sesión en el POS. Su asistencia se captura manualmente.</p>
-            <div className="grid grid-cols-2 gap-3 mt-2">
+          {/* Empleado de registro — tarjeta clara y moderna */}
+          <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-gray-50 p-4">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center shrink-0"><ClipboardList size={15} className="text-white" /></span>
+              <div>
+                <p className="text-sm font-bold text-gray-800 leading-tight">Empleado de registro</p>
+                <p className="text-[11px] text-gray-400">Sin acceso al POS — su asistencia y nómina se capturan aquí.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               {num('days_worked', 'Días trabajados')}
               {num('absences', 'Faltas')}
             </div>
-            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mt-2">
-              <input type="checkbox" checked={s.paid} onChange={e => set('paid', e.target.checked)} className="w-4 h-4 rounded accent-emerald-600" />
-              Marcar como <span className="font-medium">pagado</span> este periodo
+            <label className="mt-3 flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2.5 cursor-pointer select-none">
+              <span className="text-sm text-gray-700">Pagado este periodo</span>
+              <span className={`relative inline-flex w-10 h-6 rounded-full transition-colors ${s.paid ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                <input type="checkbox" checked={s.paid} onChange={e => set('paid', e.target.checked)} className="sr-only" />
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${s.paid ? 'translate-x-4' : ''}`} />
+              </span>
             </label>
           </div>
 

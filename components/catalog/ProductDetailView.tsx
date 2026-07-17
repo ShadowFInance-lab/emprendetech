@@ -7,6 +7,7 @@ import { InstagramIcon, FacebookIcon } from '@/components/catalog/SocialIcons'
 import { formatCurrency } from '@/lib/utils/format'
 import { buildStoreWhatsAppLink, buildProductWhatsAppLink } from '@/lib/utils/whatsapp'
 import AddToCartButtons from '@/components/catalog/cart/AddToCartButtons'
+import ProductReviews from '@/components/catalog/ProductReviews'
 import type { Store, Product } from '@/lib/types'
 
 interface Props {
@@ -271,6 +272,14 @@ export default function ProductDetailView({ store, product, related }: Props) {
             )}
           </div>
         </div>
+
+        {/* ─── Opiniones: estrellas + comentarios moderados ───────────────────────── */}
+        <ProductReviews
+          productId={product.id}
+          storeId={store.id}
+          primary={primary}
+          isMinimalista={isMinimalista}
+        />
 
         {/* ─── Más productos recomendados / Seguir viendo ─────────────────────────── */}
         {related.length > 0 && (
