@@ -130,20 +130,28 @@ export default function PricingPage() {
 
         {/* Términos de cobros y pagos */}
         <div className="max-w-3xl mx-auto mt-12 rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-500 space-y-1.5">
-          <p className="font-semibold text-gray-600">Términos de cobros y pagos</p>
+          <p className="font-semibold text-gray-600">Términos y Condiciones — Mercanta Business</p>
           <p>
-            Mercanta Business solo cobra la comisión por venta con tarjeta indicada en cada plan
-            (Gratis 3% · Emprendedor y Negocio 0% · VIP Plus 2%, con sus primeras 1,000 ventas
-            del mes sin comisión). Sin cargos ocultos.
+            <strong>1. Comisiones.</strong> Mercanta Business únicamente cobra la comisión por venta
+            con tarjeta indicada en cada plan (Gratis 3% · Emprendedor y Negocio 0% · VIP Plus 2%,
+            con sus primeras 1,000 ventas del mes sin comisión). No existen cargos ocultos.
           </p>
           <p>
-            Los pagos con tarjeta los procesa <strong>Stripe</strong>, un proveedor externo e
-            independiente. Mercanta no almacena datos de tarjetas ni es responsable del
-            procesamiento de pagos, contracargos o disputas, que se rigen por los términos de Stripe.
+            <strong>2. Pagos.</strong> Los pagos con tarjeta son procesados por <strong>Stripe</strong>,
+            proveedor externo e independiente. Mercanta no almacena datos de tarjetas y no es
+            responsable del procesamiento de pagos, contracargos, reembolsos ni disputas, los cuales
+            se rigen por los términos de Stripe.
           </p>
           <p>
-            El usuario es responsable de sus transacciones, de la entrega de sus productos y de su
-            cumplimiento fiscal ante las autoridades correspondientes.
+            <strong>3. Responsabilidad del usuario.</strong> Cada negocio es responsable de sus
+            transacciones, de la calidad y entrega de sus productos, y de su cumplimiento fiscal y
+            legal ante las autoridades correspondientes. Mercanta es una herramienta de gestión y no
+            participa en la relación comercial entre el negocio y sus clientes.
+          </p>
+          <p>
+            <strong>4. Protección de datos.</strong> Los datos personales se tratan conforme a la
+            legislación aplicable en materia de protección de datos (LFPDPPP en México) y se usan
+            únicamente para operar la plataforma.
           </p>
         </div>
 

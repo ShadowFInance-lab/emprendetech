@@ -18,6 +18,14 @@ const STATUS_STYLE: Record<OrderStatus, string> = {
 }
 // Línea de vida del pedido (sin "cancelado", que es estado terminal aparte)
 const FLOW: OrderStatus[] = ['pendiente', 'confirmado', 'pagado', 'preparando', 'enviado', 'entregado']
+// Acción rápida: etiqueta del botón que avanza al siguiente estado
+const NEXT_ACTION: Partial<Record<OrderStatus, string>> = {
+  pendiente: 'Confirmar', confirmado: 'Pagado', pagado: 'Preparar', preparando: 'Enviado', enviado: 'Entregado',
+}
+const nextOf = (s: OrderStatus): OrderStatus | null => {
+  const i = FLOW.indexOf(s)
+  return i >= 0 && i < FLOW.length - 1 ? FLOW[i + 1] : null
+}
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const fmtDate = (s: string) => new Date(s).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 const isToday = (s: string) => new Date(s).toDateString() === new Date().toDateString()
@@ -108,6 +116,7 @@ export default function OrdersPanel() {
                 <th className="px-4 py-2.5 font-semibold">Pago</th>
                 <th className="px-4 py-2.5 font-semibold text-right">Total</th>
                 <th className="px-4 py-2.5 font-semibold whitespace-nowrap">Fecha</th>
+                <th className="px-4 py-2.5 font-semibold">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -119,6 +128,18 @@ export default function OrdersPanel() {
                   <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{o.payment_method || '—'}</td>
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900 whitespace-nowrap">{o.total != null ? formatCurrency(o.total) : '—'}</td>
                   <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{fmtDate(o.created_at)}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                    {o.status === 'cancelado' ? (
+                      <span className="text-xs text-gray-300">—</span>
+                    ) : nextOf(o.status) ? (
+                      <button type="button" disabled={isPending} onClick={() => setStatus(o.id, nextOf(o.status)!)}
+                        className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                        → {NEXT_ACTION[o.status]}
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600"><Check size={12} /> Completo</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -204,9 +225,21 @@ export default function OrdersPanel() {
               </div>
             </div>
 
-            {/* Cambiar estado */}
-            <div className="border-t border-gray-100 p-4 shrink-0">
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">Cambiar estado</label>
+            {/* Acciones rápidas + cambiar estado */}
+            <div className="border-t border-gray-100 p-4 shrink-0 space-y-2">
+              {selected.status !== 'cancelado' && nextOf(selected.status) && (
+                <button type="button" disabled={isPending} onClick={() => setStatus(selected.id, nextOf(selected.status)!)}
+                  className="w-full h-10 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-50">
+                  → Avanzar a {cap(nextOf(selected.status)!)}
+                </button>
+              )}
+              {selected.status !== 'cancelado' && selected.status !== 'entregado' && (
+                <button type="button" disabled={isPending} onClick={() => setStatus(selected.id, 'cancelado')}
+                  className="w-full h-9 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 disabled:opacity-50">
+                  Cancelar pedido
+                </button>
+              )}
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">O elige un estado</label>
               <select value={selected.status} onChange={e => setStatus(selected.id, e.target.value as OrderStatus)} disabled={isPending}
                 className="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
                 {ORDER_STATUSES.map(st => <option key={st} value={st}>{cap(st)}</option>)}

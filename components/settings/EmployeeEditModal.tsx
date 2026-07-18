@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4, MessageCircle, Send } from 'lucide-react'
+import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4, Wallet } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, getEmployeeLoginAction, setEmployeePasswordAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { getEmployeeWeekAction, setEmployeeDayAction, setEmployeeDayTimesAction, type AttendanceRow, type DayState } from '@/lib/actions/attendance'
-import { bossSendMessageAction, getThreadAction, type TeamMessage } from '@/lib/actions/team'
+import { formatCurrency } from '@/lib/utils/format'
 import { useBossGate } from './BossGate'
 
 const EMPTY: EmployeeMeta = { phone: '', insurance_no: '', emergency_phone: '', branch: '', salary: null, rfc: '', position: '', hire_date: '', photo_url: '' }
@@ -19,12 +19,12 @@ function weekDates(): string[] {
   return Array.from({ length: 7 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return toISO(d) })
 }
 
-// Pestañas del modal (ventanas separadas, como "Ver Nómina")
+// Pestañas del modal (ventanas separadas por tema)
 const TABS = [
   { id: 'perfil', label: 'Datos y Perfil', icon: UserRound },
   { id: 'horario', label: 'Horarios y Asistencia', icon: CalendarClock },
   { id: 'acceso', label: 'Acceso y Contraseña', icon: KeyRound },
-  { id: 'chat', label: 'Chat', icon: MessageCircle },
+  { id: 'nomina', label: 'Nómina', icon: Wallet },
 ] as const
 type TabId = typeof TABS[number]['id']
 
@@ -52,9 +52,6 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
   const [newPw, setNewPw] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [tab, setTab] = useState<TabId>('perfil')
-  const [thread, setThread] = useState<TeamMessage[]>([])
-  const [chatLoading, setChatLoading] = useState(false)
-  const [chatText, setChatText] = useState('')
 
   async function loadWeek() { setWeek(await getEmployeeWeekAction(employeeId)) }
 
@@ -90,15 +87,6 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     setTOut(r?.check_out ? r.check_out.slice(11, 16) : '')
   }, [daySel, week])
 
-  // Chat: carga el hilo al abrir la pestaña y lo refresca cada 15 s.
-  useEffect(() => {
-    if (tab !== 'chat') return
-    let alive = true
-    const load = async () => { const t = await getThreadAction(employeeId); if (alive) { setThread(t); setChatLoading(false) } }
-    setChatLoading(true); load()
-    const i = setInterval(load, 15000)
-    return () => { alive = false; clearInterval(i) }
-  }, [tab, employeeId])
 
   const weekMap = new Map(week.map(r => [r.work_date, r]))
   const stateOf = (date: string): DayState => {
@@ -108,6 +96,12 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     return (r.note ?? '').toLowerCase().includes('justific') ? 'justified' : 'absent'
   }
   const nextState = (s: DayState): DayState => s === 'none' ? 'present' : s === 'present' ? 'absent' : s === 'absent' ? 'justified' : 'none'
+  // Resumen de la semana para la pestaña Nómina
+  const weekSummary = {
+    present: days.filter(d => stateOf(d) === 'present').length,
+    absent: days.filter(d => stateOf(d) === 'absent').length,
+    justified: days.filter(d => stateOf(d) === 'justified').length,
+  }
 
   function cycleDay(date: string) {
     const next = nextState(stateOf(date))
@@ -133,15 +127,6 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     startTransition(async () => {
       const r = await setEmployeePasswordAction(employeeId, newPw)
       if (r.success) { toast.success('Contraseña actualizada. Compártela con el empleado.'); setNewPw('') }
-      else toast.error(r.error ?? 'Error')
-    })
-  }
-  function sendChat() {
-    const m = chatText.trim()
-    if (!m) return
-    startTransition(async () => {
-      const r = await bossSendMessageAction(employeeId, m)
-      if (r.success) { setChatText(''); setThread(await getThreadAction(employeeId)) }
       else toast.error(r.error ?? 'Error')
     })
   }
@@ -226,10 +211,6 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
                     </div>
                   </div>
                 </div>
-                <div>
-                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Sueldo base</label>
-                  <Input type="number" min="0" value={meta.salary ?? ''} onChange={e => setMeta(m => ({ ...m, salary: e.target.value ? parseFloat(e.target.value) : null }))} className="h-9 text-sm" placeholder="0.00" />
-                </div>
               </div>
             </div>
             <button onClick={save} disabled={isPending} className="w-full h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
@@ -253,7 +234,12 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Contraseña actual</label>
                   <div className="flex items-center justify-between gap-2 h-9 px-3 rounded-lg border border-gray-200 bg-gray-100/70 text-sm text-gray-500 select-none">
                     <span className="tracking-[0.3em]">••••••••</span>
-                    <span className="inline-flex items-center gap-1 text-[10px] text-gray-400"><Lock size={11} /> cifrada — no puede mostrarse</span>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-gray-400"><Lock size={11} /> cifrada</span>
+                      <button type="button" title="Intentar mostrar"
+                        onClick={() => toast('🔒 Por seguridad, la contraseña se guarda cifrada con hash irreversible: ni siquiera el sistema puede verla. Si el empleado la olvidó, asigna una nueva abajo.', { duration: 6000 })}
+                        className="text-gray-400 hover:text-gray-700"><Eye size={14} /></button>
+                    </span>
                   </div>
                 </div>
                 <div>
@@ -330,32 +316,45 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
             </div>
             </>)}
 
-            {tab === 'chat' && (
-              <div className="rounded-2xl border border-gray-100 overflow-hidden">
-                <div className="max-h-72 min-h-[220px] overflow-y-auto p-3 space-y-2.5 flex flex-col bg-gray-50/40">
-                  {chatLoading && thread.length === 0 ? (
-                    <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-indigo-500" /></div>
-                  ) : thread.length === 0 ? (
-                    <p className="text-xs text-gray-400 text-center py-10">Sin mensajes con {employeeName}. Escribe el primero.</p>
-                  ) : thread.map(m => {
-                    const mine = m.from_role === 'boss'
-                    return (
-                      <div key={m.id} className={`flex flex-col max-w-[85%] ${mine ? 'self-end items-end' : 'self-start items-start'}`}>
-                        <div className={`text-sm px-3 py-1.5 rounded-2xl ${mine ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-700 rounded-bl-sm'}`}>{m.message}</div>
-                        <span className="text-[9px] text-gray-300 mt-0.5 px-1">{new Date(m.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                    )
-                  })}
+            {tab === 'nomina' && (<>
+            {/* Sueldo base (se guarda con el botón de abajo) */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+              <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 mb-2"><Wallet size={13} /> Sueldo</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Sueldo base</label>
+                  <Input type="number" min="0" value={meta.salary ?? ''} onChange={e => setMeta(m => ({ ...m, salary: e.target.value ? parseFloat(e.target.value) : null }))} className="h-9 text-sm" placeholder="0.00" />
                 </div>
-                <div className="flex gap-2 p-3 border-t border-gray-100 bg-white">
-                  <input value={chatText} onChange={e => setChatText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendChat() }}
-                    placeholder={`Mensaje a ${employeeName}…`} className="flex-1 h-10 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-                  <button onClick={sendChat} disabled={isPending} className="inline-flex items-center justify-center w-11 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-                    {isPending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                  </button>
+                <div>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Registrado</label>
+                  <div className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 flex items-center font-semibold">
+                    {meta.salary != null ? formatCurrency(meta.salary) : '—'}
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Resumen de asistencia de la semana (alimenta la nómina) */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                <p className="text-xl font-black text-emerald-600">{weekSummary.present}</p>
+                <p className="text-[10px] font-semibold text-emerald-700">Presentes</p>
+              </div>
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center">
+                <p className="text-xl font-black text-red-500">{weekSummary.absent}</p>
+                <p className="text-[10px] font-semibold text-red-600">Faltas</p>
+              </div>
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center">
+                <p className="text-xl font-black text-blue-500">{weekSummary.justified}</p>
+                <p className="text-[10px] font-semibold text-blue-600">Justificadas</p>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400">Bonos, descuentos, ISR/IMSS, neto y el recibo PDF se gestionan en la tabla <strong>Nómina · Semanal</strong> de la página Empleados.</p>
+
+            <button onClick={save} disabled={isPending} className="w-full h-10 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
+              {isPending ? <Loader2 size={16} className="animate-spin" /> : <><Save size={15} /> Guardar sueldo</>}
+            </button>
+            </>)}
           </div>
         )}
       </div>
