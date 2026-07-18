@@ -24,6 +24,19 @@ export type ActionResult = {
   data?: unknown
 }
 
+/**
+ * URL base para los enlaces de los correos (confirmación y reseteo).
+ * NUNCA localhost en producción: usa NEXT_PUBLIC_APP_URL si es https y no es
+ * local; si no, la URL del deploy de Vercel; y como último recurso, el dominio
+ * de producción. Así los correos jamás mandan al usuario a localhost.
+ */
+function getAppUrl(): string {
+  const env = process.env.NEXT_PUBLIC_APP_URL
+  if (env && /^https:\/\//.test(env) && !/localhost|127\.0\.0\.1/.test(env)) return env.replace(/\/$/, '')
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return 'https://emprendetech.vercel.app'
+}
+
 // ─── REGISTRO ────────────────────────────────────────────────
 export async function registerAction(formData: FormData): Promise<ActionResult> {
   const raw = {
@@ -44,7 +57,7 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
     password: parsed.data.password,
     options: {
       data: { full_name: parsed.data.full_name },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/verify-email`,
+      emailRedirectTo: `${getAppUrl()}/verify-email`,
     },
   })
 
@@ -253,8 +266,10 @@ export async function forgotPasswordAction(formData: FormData): Promise<ActionRe
 
   const supabase = await createClient()
 
+  // El enlace pasa por /auth/callback (canje de sesión probado) y luego lleva a
+  // /reset-password ya con sesión. getAppUrl evita el bug de mandar a localhost.
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+    redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
   })
 
   if (error) {

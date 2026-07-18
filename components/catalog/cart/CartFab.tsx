@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { ShoppingCart, X, Plus, Minus, Trash2, Loader2, Check, ChevronLeft, ShoppingBag } from 'lucide-react'
+import { ShoppingCart, X, Plus, Minus, Trash2, Loader2, Check, ChevronLeft, ShoppingBag, CreditCard } from 'lucide-react'
 import { useCart } from './CartProvider'
 import { createOrderFromCartAction, type CheckoutInput } from '@/lib/actions/cart'
 import { formatCurrency } from '@/lib/utils/format'
 
-const PAYMENTS = ['Pago contra entrega', 'Tarjeta']
+// Solo pago con tarjeta (Stripe). Sin contra entrega.
+const PAYMENTS = ['Tarjeta (Stripe)']
 
 export default function CartFab() {
   const cart = useCart()
@@ -136,14 +137,10 @@ export default function CartFab() {
                     <div className="col-span-2">{input('notes', 'Referencias (entre calles, color de casa…)')}</div>
                   </div>
                   <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Método de pago</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PAYMENTS.map(p => (
-                      <button key={p} type="button" onClick={() => set('payment_method', p)}
-                        className={`text-xs px-2.5 py-1.5 rounded-lg border ${f.payment_method === p ? 'text-white border-transparent' : 'border-gray-200 text-gray-600'}`}
-                        style={f.payment_method === p ? { backgroundColor: color } : undefined}>{p}</button>
-                    ))}
+                  <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium text-white" style={{ backgroundColor: color }}>
+                    <CreditCard size={15} /> Tarjeta con Stripe
                   </div>
-                  <p className="text-[11px] text-gray-400">El negocio recibe tu pedido y te contacta para confirmar el pago y la entrega.</p>
+                  <p className="text-[11px] text-gray-400">Pago con tarjeta seguro procesado por Stripe. El negocio confirma tu pedido y coordina el envío.</p>
                 </div>
                 <div className="border-t border-gray-100 p-4 shrink-0">
                   <button onClick={submit} disabled={isPending}

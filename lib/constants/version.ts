@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.114'
-export const APP_BUILD = '2026-07-13' // v7.114: OAuth Google — código verificado end-to-end (PKCE cookies + error visible en /login + logs del proveedor en callback; falta solo allowlist en Supabase); migración 052 en archivo propio; Ventas Online abre en "Pagado" (listos para enviar); checkout sin Transferencia (Contra entrega + Tarjeta).
+export const APP_VERSION = 'v7.115'
+export const APP_BUILD = '2026-07-13' // v7.115: página /reset-password completa (recuperación real vía /auth/callback); correos con getAppUrl (nunca localhost); checkout del catálogo SOLO Stripe (fuera contra entrega); modal empleado 4 pestañas sin chat y ventas online→jefe (verificados).
