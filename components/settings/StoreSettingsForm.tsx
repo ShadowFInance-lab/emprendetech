@@ -376,9 +376,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">Métodos de pago</p>
               <div className="flex flex-wrap gap-1.5">
                 <span className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700">💵 Contra entrega</span>
-                <span className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700">🏦 Transferencia / SPEI</span>
+                <span className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700">💳 Tarjeta</span>
               </div>
-              <p className="text-[11px] text-gray-400 mt-2">Próximamente más métodos de pago.</p>
             </div>
           )}
         </div>

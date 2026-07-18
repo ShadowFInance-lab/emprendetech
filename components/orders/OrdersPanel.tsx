@@ -33,7 +33,9 @@ const isToday = (s: string) => new Date(s).toDateString() === new Date().toDateS
 export default function OrdersPanel() {
   const [orders, setOrders] = useState<OnlineOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'todos' | OrderStatus>('todos')
+  // Vista por defecto: SOLO pedidos pagados (listos para enviar). Los chips de
+  // filtro permiten ver pendientes, enviados, cancelados o todos.
+  const [filter, setFilter] = useState<'todos' | OrderStatus>('pagado')
   const [selected, setSelected] = useState<OnlineOrder | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -102,7 +104,7 @@ export default function OrdersPanel() {
       {shown.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <Inbox size={40} className="mx-auto text-gray-300 mb-3" />
-          <p className="font-semibold text-gray-700">Sin pedidos {filter !== 'todos' ? `«${cap(filter)}»` : 'todavía'}</p>
+          <p className="font-semibold text-gray-700">{filter === 'pagado' ? 'Sin pedidos pagados listos para enviar' : `Sin pedidos ${filter !== 'todos' ? `«${cap(filter)}»` : 'todavía'}`}</p>
           <p className="text-sm text-gray-400">Los pedidos de «Compra Online» de tu catálogo aparecerán aquí.</p>
         </div>
       ) : (

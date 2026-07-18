@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.113'
-export const APP_BUILD = '2026-07-13' // v7.113: pestaña Chat → Nómina en el modal (sueldo + resumen semanal); ojo honesto en contraseña actual; Ventas Online con acciones rápidas ("→ siguiente paso" por fila + Avanzar/Cancelar en detalle); Términos y Condiciones legales en 4 cláusulas (LFPDPPP).
+export const APP_VERSION = 'v7.114'
+export const APP_BUILD = '2026-07-13' // v7.114: OAuth Google — código verificado end-to-end (PKCE cookies + error visible en /login + logs del proveedor en callback; falta solo allowlist en Supabase); migración 052 en archivo propio; Ventas Online abre en "Pagado" (listos para enviar); checkout sin Transferencia (Contra entrega + Tarjeta).

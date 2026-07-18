@@ -12,6 +12,12 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/dashboard'
 
+  // Si Google/Supabase regresan un error explícito (p. ej. URL de redirect no
+  // permitida en Supabase o cancelación del usuario), déjalo en los logs de
+  // Vercel para diagnóstico — el usuario ve el aviso en /login.
+  const providerErr = searchParams.get('error_description') || searchParams.get('error')
+  if (providerErr) console.error('[oauth callback] el proveedor devolvió error:', providerErr)
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
