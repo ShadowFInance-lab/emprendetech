@@ -111,6 +111,9 @@ export async function createStripePaymentLinkAction(
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
     const body = new URLSearchParams({
       mode: 'payment',
+      // El link caduca en 1 hora: un link viejo reabierto muestra "expirado" en
+      // vez del confuso "ya está pagado" de Stripe al reusar sesiones cobradas.
+      expires_at: String(Math.floor(Date.now() / 1000) + 3600),
       // Pago directo: el botón dice "Pagar" (sin pasos extra tipo "reservar").
       submit_type: 'pay',
       // SOLO tarjeta: al fijar payment_method_types no aparece Link de Stripe
@@ -189,12 +192,28 @@ export async function createPlanCheckoutAction(plan: string): Promise<{ success:
     const cfg = PLAN_CHECKOUT[plan]
     if (!cfg) return { success: false, error: 'Plan no válido' }
 
+    // Anti "ya está pagado": si el usuario YA tiene este plan pagado y vigente,
+    // no generamos otro checkout (evita el doble cobro). Quien está en PRUEBA
+    // gratis sí puede pagar para convertir su trial en plan pagado.
+    const { data: prof } = await supabase.from('profiles')
+      .select('plan, plan_status, plan_expires_at').eq('id', user.id).maybeSingle()
+    if (prof?.plan === plan) {
+      const enTrial = ['trial', 'trialing'].includes(String(prof.plan_status))
+      const vigente = plan === 'vip_plus' ||
+        (!!prof.plan_expires_at && new Date(prof.plan_expires_at as string).getTime() > Date.now())
+      if (!enTrial && vigente) {
+        return { success: false, error: 'Este plan ya está pagado y activo en tu cuenta. No necesitas pagarlo de nuevo.' }
+      }
+    }
+
     const secret = process.env.STRIPE_SECRET_KEY
     if (!secret) return { success: false, error: 'Pagos en configuración. Falta STRIPE_SECRET_KEY en el entorno.' }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
     const body = new URLSearchParams({
       mode: 'payment',
+      // Caduca en 1 hora (evita reusar links viejos ya cobrados).
+      expires_at: String(Math.floor(Date.now() / 1000) + 3600),
       submit_type: 'pay',
       'payment_method_types[0]': 'card',
       locale: 'es-419',

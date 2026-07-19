@@ -6,13 +6,14 @@ export const metadata: Metadata = { title: 'Iniciar Sesión' }
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { redirect?: string; reset?: string; error?: string }
+  searchParams: { redirect?: string; reset?: string; error?: string; google?: string }
 }) {
   return (
     <LoginForm
       redirectTo={searchParams.redirect}
       showResetSuccess={searchParams.reset === 'true'}
       oauthError={searchParams.error === 'oauth'}
+      autoGoogle={searchParams.google === '1'}
     />
   )
 }

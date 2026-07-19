@@ -15,10 +15,11 @@ interface LoginFormProps {
   redirectTo?: string
   showResetSuccess?: boolean // muestra toast si true
   oauthError?: boolean // viene de /login?error=oauth
+  autoGoogle?: boolean // viene de /login?google=1 (salto desde preview)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function LoginForm({ redirectTo, showResetSuccess, oauthError }: LoginFormProps) {
+export default function LoginForm({ redirectTo, showResetSuccess, oauthError, autoGoogle }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(
@@ -124,7 +125,7 @@ export default function LoginForm({ redirectTo, showResetSuccess, oauthError }: 
 
         {/* OAuth */}
         <div className="mt-5">
-          <SocialAuthButtons />
+          <SocialAuthButtons autoStart={autoGoogle} />
         </div>
       </CardContent>
 

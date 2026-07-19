@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -8,16 +8,29 @@ import { createClient } from '@/lib/supabase/client'
 /**
  * Login con Google (Supabase OAuth).
  * Requiere habilitar Google en Supabase → Authentication → Providers.
+ *
+ * FIX "redirige a localhost": el flujo OAuth corre SIEMPRE en el dominio
+ * canónico. Si el usuario está en un preview de Vercel (dominio cambiante que
+ * Supabase no tiene en su allowlist), primero saltamos a producción con
+ * ?google=1 y ahí arranca Google — Supabase nunca cae a su Site URL.
+ * En desarrollo local (localhost) el flujo se queda local.
  */
-export default function SocialAuthButtons() {
+export default function SocialAuthButtons({ autoStart = false }: { autoStart?: boolean }) {
   const [loading, setLoading] = useState(false)
 
   async function signInWithGoogle() {
     setLoading(true)
+    const canonical = (process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app').replace(/\/$/, '')
+    const origin = window.location.origin
+    const isLocalDev = /localhost|127\.0\.0\.1/.test(origin)
+    if (!isLocalDev && origin !== canonical) {
+      window.location.href = `${canonical}/login?google=1`
+      return
+    }
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${origin}/auth/callback` },
     })
     if (error) {
       const notEnabled = /not enabled|unsupported|provider/i.test(error.message)
@@ -31,6 +44,12 @@ export default function SocialAuthButtons() {
     }
     // Si no hay error, el navegador redirige a Google (login real).
   }
+
+  // Arranque automático al llegar desde un preview (?google=1 en /login).
+  useEffect(() => {
+    if (autoStart) signInWithGoogle()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart])
 
   return (
     <div className="space-y-3">
