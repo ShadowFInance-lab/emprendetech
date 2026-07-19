@@ -1,7 +1,7 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { createPublicClient } from '@/lib/supabase/server'
+import { createPublicClient, createAdminClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
 const COOKIE = 'mb_cart'
@@ -189,8 +189,13 @@ export interface CheckoutInput {
   payment_method: string
 }
 
-/** Crea el pedido real desde el carrito: número de orden, guarda en BD y vacía el carrito. */
-export async function createOrderFromCartAction(input: CheckoutInput): Promise<ActionResult & { order_no?: string }> {
+/**
+ * Crea el pedido real desde el carrito: número de orden, guarda en BD y vacía
+ * el carrito. Si la tienda tiene su cuenta de Stripe conectada, devuelve
+ * además `checkoutUrl` para que el comprador PAGUE con tarjeta al instante;
+ * el webhook marca el pedido como "pagado" al completarse el pago.
+ */
+export async function createOrderFromCartAction(input: CheckoutInput): Promise<ActionResult & { order_no?: string; checkoutUrl?: string }> {
   try {
     if (!input.customer_name.trim() || !input.phone.trim() || !input.address.trim()) {
       return { success: false, error: 'Nombre, teléfono y dirección son obligatorios' }
@@ -210,13 +215,13 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
       : input.address.trim()
 
     // Fetch reception preference from store (soporta multi-select)
-    const { data: storeCfg } = await supabase.from('stores').select('online_reception_type, online_reception_value').eq('id', cart.store_id).single()
+    const { data: storeCfg } = await supabase.from('stores').select('online_reception_type, online_reception_value, slug, owner_id').eq('id', cart.store_id).single()
     const recType = storeCfg?.online_reception_type
     const recVal = storeCfg?.online_reception_value
     const prefix = recType === 'multi' ? 'Multi' : (recType === 'employee' ? 'Empleado' : 'Sucursal')
     const notesWithRec = [input.notes?.trim(), recVal ? `[Recepción: ${prefix} ${recVal}]` : ''].filter(Boolean).join(' ')
 
-    const { error } = await supabase.from('online_orders').insert({
+    const { data: order, error } = await supabase.from('online_orders').insert({
       store_id: cart.store_id,
       order_no,
       customer_name: input.customer_name.trim(),
@@ -231,14 +236,106 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
       items: items.map(it => ({ name: it.name, price: it.price, qty: it.qty })),
       total,
       status: 'pendiente',
-    })
-    if (error) return { success: false, error: 'No se pudo crear el pedido (¿corriste la migración 038?)' }
+    }).select('id').single()
+    if (error || !order) return { success: false, error: 'No se pudo crear el pedido (¿corriste la migración 038?)' }
 
     // Vaciar carrito + cerrar cookie
     await supabase.from('cart_items').delete().eq('cart_id', id)
     const cookieStore = await cookies()
     const isProd = process.env.NODE_ENV === 'production'
     cookieStore.set(COOKIE, '', { path: '/', maxAge: 0, secure: isProd })
-    return { success: true, order_no }
+
+    // ─── Pago con tarjeta (Stripe): checkout inmediato para el comprador ─────
+    // Best-effort: si la tienda no tiene Stripe conectado o falta la clave de
+    // plataforma, el pedido queda "pendiente" y el negocio cobra por su cuenta.
+    const checkoutUrl = await createOrderStripeCheckout({
+      orderId: order.id as string,
+      orderNo: order_no,
+      storeId: cart.store_id as string,
+      ownerId: (storeCfg?.owner_id as string) ?? null,
+      slug: (storeCfg?.slug as string) ?? null,
+      total,
+      customerName: input.customer_name.trim(),
+    })
+
+    return { success: true, order_no, checkoutUrl: checkoutUrl ?? undefined }
   } catch { return { success: false, error: 'Error' } }
+}
+
+/** Crea la sesión de Stripe Checkout del pedido (destination charge a la cuenta
+ *  conectada de la tienda, con la comisión de plataforma según el plan del dueño). */
+async function createOrderStripeCheckout(p: {
+  orderId: string; orderNo: string; storeId: string
+  ownerId: string | null; slug: string | null
+  total: number; customerName: string
+}): Promise<string | null> {
+  try {
+    const secret = process.env.STRIPE_SECRET_KEY
+    if (!secret || !(p.total > 0)) return null
+
+    const admin = createAdminClient()
+    const { data: cfg } = await admin.from('store_payment_config')
+      .select('stripe_account_id').eq('store_id', p.storeId).maybeSingle()
+    const accountId = cfg?.stripe_account_id as string | undefined
+    if (!accountId) return null
+
+    // Comisión por plan del dueño: Gratis 3% · Emprendedor/Negocio 0% · VIP 2%
+    // (VIP: primeras 1,000 ventas del mes sin comisión, igual que el POS).
+    let feePct = 0.03
+    if (p.ownerId) {
+      const { data: prof } = await admin.from('profiles').select('plan').eq('id', p.ownerId).maybeSingle()
+      const plan = (prof?.plan as string) ?? 'free'
+      feePct = plan === 'vip_plus' ? 0.02
+        : (plan === 'emprendedor' || plan === 'negocio' || plan === 'lifetime') ? 0
+        : 0.03
+      if (plan === 'vip_plus') {
+        const now = new Date()
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+        const { count } = await admin.from('sales')
+          .select('*', { count: 'exact', head: true })
+          .eq('store_id', p.storeId).eq('status', 'completed').gte('created_at', monthStart)
+        if ((count ?? 0) < 1000) feePct = 0
+      }
+    }
+    const feeCents = Math.round(p.total * 100 * feePct)
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
+    const backUrl = p.slug ? `${appUrl}/catalog/${p.slug}` : appUrl
+    const body = new URLSearchParams({
+      mode: 'payment',
+      expires_at: String(Math.floor(Date.now() / 1000) + 3600),
+      submit_type: 'pay',
+      'payment_method_types[0]': 'card',
+      locale: 'es-419',
+      customer_creation: 'if_required',
+      billing_address_collection: 'auto',
+      'line_items[0][price_data][currency]': 'mxn',
+      'line_items[0][price_data][product_data][name]': `Pedido ${p.orderNo}`,
+      'line_items[0][price_data][unit_amount]': String(Math.round(p.total * 100)),
+      'line_items[0][quantity]': '1',
+      'payment_intent_data[transfer_data][destination]': accountId,
+      'metadata[type]': 'order',
+      'metadata[order_id]': p.orderId,
+      'metadata[order_no]': p.orderNo,
+      'metadata[store_id]': p.storeId,
+      success_url: `${backUrl}?pago=exitoso`,
+      cancel_url: `${backUrl}?pago=cancelado`,
+    })
+    if (feeCents > 0) body.set('payment_intent_data[application_fee_amount]', String(feeCents))
+
+    const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    if (!res.ok) {
+      console.error('[order checkout] Stripe rechazó la sesión:', res.status, (await res.text()).slice(0, 200))
+      return null
+    }
+    const session = await res.json()
+    return (session?.url as string) ?? null
+  } catch (e) {
+    console.error('[order checkout] error creando sesión:', e)
+    return null
+  }
 }

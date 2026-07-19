@@ -130,6 +130,22 @@ async function registerSaleFromSession(session: StripeSession) {
   console.log('[stripe webhook] ✅ venta registrada', ins.data.folio, 'sesión', session.id)
 }
 
+// ─── Pedidos online (metadata.type = 'order') ───────────────────────────────
+// El comprador pagó su pedido del catálogo con Stripe: se marca "pagado" y
+// aparece así en Ventas Online (cuya vista por defecto es justamente Pagado).
+async function markOrderPaidFromSession(session: StripeSession) {
+  if (session.payment_status && session.payment_status !== 'paid') return
+  const meta = session.metadata || {}
+  const orderId = meta.order_id
+  if (!orderId) { console.warn('[stripe webhook] sesión de pedido sin order_id:', session.id); return }
+  const admin = createAdminClient()
+  const { error } = await admin.from('online_orders')
+    .update({ status: 'pagado' }).eq('id', orderId)
+  if (error) { console.error('[stripe webhook] error marcando pedido pagado:', error.message); return }
+  revalidatePath('/orders')
+  console.log('[stripe webhook] ✅ pedido', meta.order_no || orderId, 'marcado como PAGADO')
+}
+
 // ─── Activación de PLANES (metadata.type = 'plan') ──────────────────────────
 // Espejo del webhook de Mercado Pago: al pagarse el checkout del plan, activa
 // el plan del usuario (profiles) y registra subscription + payment.
@@ -214,8 +230,10 @@ export async function POST(req: NextRequest) {
     // confirma después. La idempotencia por session.id evita duplicados.
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const session = event.data?.object as StripeSession
-      // metadata.type='plan' → suscripción de la plataforma; si no, venta del POS.
+      // metadata.type: 'plan' → suscripción de la plataforma · 'order' → pedido
+      // online del catálogo · si no, venta del POS (con items).
       if (session?.metadata?.type === 'plan') await activatePlanFromSession(session)
+      else if (session?.metadata?.type === 'order') await markOrderPaidFromSession(session)
       else await registerSaleFromSession(session)
     }
   } catch (err) {

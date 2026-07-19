@@ -7,7 +7,7 @@ import { useCart } from './CartProvider'
 import { createOrderFromCartAction, type CheckoutInput } from '@/lib/actions/cart'
 import { formatCurrency } from '@/lib/utils/format'
 
-// Solo pago con tarjeta (Stripe). Sin contra entrega.
+// Único método de pago del checkout: tarjeta con Stripe.
 const PAYMENTS = ['Tarjeta (Stripe)']
 
 export default function CartFab() {
@@ -26,6 +26,9 @@ export default function CartFab() {
     startTransition(async () => {
       const r = await createOrderFromCartAction(f)
       if (!r.success || !r.order_no) { toast.error(r.error ?? 'Error'); return }
+      // Con Stripe conectado: el comprador paga AHORA con tarjeta; el webhook
+      // marca el pedido como "Pagado" automáticamente al completarse.
+      if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return }
       finish(r.order_no)
     })
   }
@@ -145,7 +148,7 @@ export default function CartFab() {
                 <div className="border-t border-gray-100 p-4 shrink-0">
                   <button onClick={submit} disabled={isPending}
                     className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl text-white font-bold hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: color }}>
-                    {isPending ? <Loader2 size={18} className="animate-spin" /> : <><ShoppingBag size={18} /> Enviar pedido · {formatCurrency(subtotal, currency)}</>}
+                    {isPending ? <Loader2 size={18} className="animate-spin" /> : <><CreditCard size={18} /> Pagar · {formatCurrency(subtotal, currency)}</>}
                   </button>
                 </div>
               </>
