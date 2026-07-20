@@ -375,7 +375,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
               <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">Métodos de pago</p>
               <div className="flex flex-wrap gap-1.5">
-                <span className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700">💳 Tarjeta con Stripe</span>
+                <span className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700">💳 Pago con Stripe</span>
               </div>
             </div>
           )}

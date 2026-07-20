@@ -283,7 +283,10 @@ async function createOrderStripeCheckout(p: {
     const { data: cfg } = await admin.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', p.storeId).maybeSingle()
     const accountId = cfg?.stripe_account_id as string | undefined
-    if (!accountId) return null
+    // Sin cuenta conectada NO se bloquea el cobro: la sesión se crea sin
+    // destination y el dinero entra a la cuenta Stripe de la PLATAFORMA — el
+    // pedido igual se paga y queda "Pagado". Cuando la tienda conecte su
+    // cuenta, el cobro pasa automáticamente a destination charge + comisión.
 
     // Comisión por plan del dueño: Gratis 3% · Emprendedor/Negocio 0% · VIP 2%
     // (VIP: primeras 1,000 ventas del mes sin comisión, igual que el POS).
@@ -319,7 +322,6 @@ async function createOrderStripeCheckout(p: {
       'line_items[0][price_data][product_data][name]': `Pedido ${p.orderNo}`,
       'line_items[0][price_data][unit_amount]': String(Math.round(p.total * 100)),
       'line_items[0][quantity]': '1',
-      'payment_intent_data[transfer_data][destination]': accountId,
       'metadata[type]': 'order',
       'metadata[order_id]': p.orderId,
       'metadata[order_no]': p.orderNo,
@@ -327,7 +329,11 @@ async function createOrderStripeCheckout(p: {
       success_url: `${backUrl}?pago=exitoso`,
       cancel_url: `${backUrl}?pago=cancelado`,
     })
-    if (feeCents > 0) body.set('payment_intent_data[application_fee_amount]', String(feeCents))
+    // Destination charge + comisión SOLO si la tienda tiene cuenta conectada.
+    if (accountId) {
+      body.set('payment_intent_data[transfer_data][destination]', accountId)
+      if (feeCents > 0) body.set('payment_intent_data[application_fee_amount]', String(feeCents))
+    }
 
     const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',

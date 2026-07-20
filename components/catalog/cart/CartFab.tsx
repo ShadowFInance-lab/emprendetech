@@ -7,8 +7,8 @@ import { useCart } from './CartProvider'
 import { createOrderFromCartAction, type CheckoutInput } from '@/lib/actions/cart'
 import { formatCurrency } from '@/lib/utils/format'
 
-// Único método de pago del checkout: tarjeta con Stripe.
-const PAYMENTS = ['Tarjeta (Stripe)']
+// Único método de pago del checkout: Stripe.
+const PAYMENTS = ['Pago con Stripe']
 
 export default function CartFab() {
   const cart = useCart()
@@ -141,7 +141,7 @@ export default function CartFab() {
                   </div>
                   <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Método de pago</p>
                   <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium text-white" style={{ backgroundColor: color }}>
-                    <CreditCard size={15} /> Tarjeta con Stripe
+                    <CreditCard size={15} /> Pago con Stripe
                   </div>
                   <p className="text-[11px] text-gray-400">Pago con tarjeta seguro procesado por Stripe. El negocio confirma tu pedido y coordina el envío.</p>
                 </div>
