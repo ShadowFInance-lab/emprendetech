@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { getAppUrl } from '@/lib/utils/app-url'
 
 /**
  * Login con Google (Supabase OAuth).
@@ -20,7 +21,12 @@ export default function SocialAuthButtons({ autoStart = false }: { autoStart?: b
 
   async function signInWithGoogle() {
     setLoading(true)
-    const canonical = (process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app').replace(/\/$/, '')
+    // BUG CORREGIDO (v7.121): antes usábamos process.env.NEXT_PUBLIC_APP_URL
+    // en crudo. Si esa variable quedó = http://localhost:3000 en Vercel, el
+    // salto al dominio canónico mandaba al usuario de PRODUCCIÓN a
+    // localhost:3000/login?google=1 (página muerta) → "Google no funciona" +
+    // "aparece localhost". getAppUrl() descarta cualquier valor local.
+    const canonical = getAppUrl()
     const origin = window.location.origin
     const isLocalDev = /localhost|127\.0\.0\.1/.test(origin)
     if (!isLocalDev && origin !== canonical) {
