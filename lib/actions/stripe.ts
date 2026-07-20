@@ -162,14 +162,18 @@ export async function createStripePaymentLinkAction(
     })
     if (!res.ok) {
       const txt = await res.text()
-      console.error('[stripe] checkout session failed', res.status, txt.slice(0, 300))
-      return { success: false, error: 'Stripe rechazó la solicitud. Revisa STRIPE_SECRET_KEY y la cuenta conectada.' }
+      let stripeMsg = ''
+      try { stripeMsg = (JSON.parse(txt)?.error?.message as string) || '' } catch { /* no json */ }
+      console.error('[stripe] checkout session failed', res.status, txt.slice(0, 400))
+      return { success: false, error: `Stripe rechazó el cobro (HTTP ${res.status})${stripeMsg ? ': ' + stripeMsg : ''}` }
     }
     const session = await res.json()
     if (!session?.url) return { success: false, error: 'Stripe no devolvió un link de pago.' }
     return { success: true, url: session.url as string }
-  } catch {
-    return { success: false, error: 'No se pudo generar el link de pago' }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[stripe] excepción creando el link de pago:', msg)
+    return { success: false, error: `No se pudo generar el link de pago: ${msg}` }
   }
 }
 
@@ -238,13 +242,17 @@ export async function createPlanCheckoutAction(plan: string): Promise<{ success:
     })
     if (!res.ok) {
       const txt = await res.text()
-      console.error('[stripe] plan checkout failed', res.status, txt.slice(0, 300))
-      return { success: false, error: 'Stripe rechazó la solicitud. Revisa STRIPE_SECRET_KEY.' }
+      let stripeMsg = ''
+      try { stripeMsg = (JSON.parse(txt)?.error?.message as string) || '' } catch { /* no json */ }
+      console.error('[stripe] plan checkout failed', res.status, txt.slice(0, 400))
+      return { success: false, error: `Stripe rechazó el pago del plan (HTTP ${res.status})${stripeMsg ? ': ' + stripeMsg : ''}` }
     }
     const session = await res.json()
     if (!session?.url) return { success: false, error: 'Stripe no devolvió el checkout.' }
     return { success: true, url: session.url as string }
-  } catch {
-    return { success: false, error: 'No se pudo iniciar el pago del plan' }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[stripe] excepción en el checkout del plan:', msg)
+    return { success: false, error: `No se pudo iniciar el pago del plan: ${msg}` }
   }
 }

@@ -32,6 +32,7 @@ export async function GET(req: Request) {
   const has = (v?: string) => !!(v && v.trim())
   const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || ''
   const looksLocal = /localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]/i.test(rawAppUrl)
+  const runStripeTest = new URL(req.url).searchParams.get('stripe_test') === '1'
 
   // ── Stripe: ping REAL a la cuenta con la clave secreta ──
   const stripeKey = process.env.STRIPE_SECRET_KEY?.trim()
@@ -58,6 +59,45 @@ export async function GET(req: Request) {
       }
     } catch (e) {
       stripe = { secretPresent: true, ok: false, mode, error: e instanceof Error ? e.message : 'error de red al contactar Stripe' }
+    }
+  }
+
+  // ── Prueba REAL de crear un Checkout Session (opt-in ?stripe_test=1) ──
+  // Usa la MISMA llamada que falla en el catálogo (modo plataforma, sin
+  // destination). Crea una sesión de prueba de $10 MXN que nadie paga y expira
+  // sola. Devuelve el error EXACTO de Stripe si algo está mal (p. ej. la cuenta
+  // no puede hacer cargos en vivo, o la llave no tiene permisos de escritura).
+  let stripeSessionTest: Record<string, unknown> | undefined
+  if (runStripeTest && stripeKey) {
+    try {
+      const back = getAppUrl()
+      const body = new URLSearchParams({
+        mode: 'payment',
+        'payment_method_types[0]': 'card',
+        locale: 'es-419',
+        'line_items[0][price_data][currency]': 'mxn',
+        'line_items[0][price_data][product_data][name]': 'Prueba /api/diag',
+        'line_items[0][price_data][unit_amount]': '1000',
+        'line_items[0][quantity]': '1',
+        success_url: `${back}/?diag=ok`,
+        cancel_url: `${back}/?diag=cancel`,
+      })
+      const r = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${stripeKey}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      })
+      const raw = await r.text()
+      if (r.ok) {
+        const j = JSON.parse(raw) as { id?: string }
+        stripeSessionTest = { ok: true, sessionCreated: j.id ?? true, mensaje: '✅ La plataforma SÍ puede crear Checkout Sessions. El error del catálogo, si persiste, viene de la cuenta conectada (destination charge) o de datos del pedido.' }
+      } else {
+        let msg = ''
+        try { msg = (JSON.parse(raw)?.error?.message as string) || '' } catch { /* no json */ }
+        stripeSessionTest = { ok: false, status: r.status, error: msg || raw.slice(0, 300), mensaje: '❌ Este es el error EXACTO que impide el pago. Suele ser: la cuenta Stripe no está activada para cargos en vivo, o la llave no tiene permisos de escritura.' }
+      }
+    } catch (e) {
+      stripeSessionTest = { ok: false, error: e instanceof Error ? e.message : 'error de red', mensaje: '❌ Excepción al contactar Stripe.' }
     }
   }
 
@@ -95,6 +135,7 @@ export async function GET(req: Request) {
       stripe: {
         ...stripe,
         STRIPE_WEBHOOK_SECRET_presente: has(process.env.STRIPE_WEBHOOK_SECRET),
+        pruebaCrearSesion: stripeSessionTest ?? '(agrega ?stripe_test=1 a la URL para crear una sesión de prueba real y ver el error exacto)',
         nota_publishable:
           'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY NO se usa en esta app (el checkout es hospedado por Stripe con la llave secreta del servidor). No la necesitas.',
         nota_flujo:

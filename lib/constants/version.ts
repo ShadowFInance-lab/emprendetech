@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.121'
-export const APP_BUILD = '2026-07-20' // v7.121: AUDITORÍA Google Login + Stripe. FIX real: SocialAuthButtons usaba NEXT_PUBLIC_APP_URL en crudo para el salto canónico → si esa env era localhost en Vercel, mandaba a los usuarios de prod a localhost:3000 (rompía Google + "aparece localhost"); ahora usa getAppUrl(). Nuevo endpoint /api/diag: ping REAL a Stripe con la llave, detecta si APP_URL es localhost y qué variables faltan, sin exponer secretos. Confirmado por grep: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY no se usa (checkout hospedado con llave secreta).
+export const APP_VERSION = 'v7.122'
+export const APP_BUILD = '2026-07-20' // v7.122: STRIPE — el checkout ahora DEVUELVE el error REAL de Stripe/excepción al frontend y logs (antes tragaba todo en "Error creando el pago con Stripe"); lectura de cuenta/comisión aislada en su try (degrada a modo plataforma). Corregidos 2 catch{} vacíos en stripe.ts (POS + planes). GOOGLE — callback reescrito: adjunta las cookies de sesión a la respuesta de redirect (antes no persistía la sesión → rebotaba al inicio y pedía login otra vez); con sesión SIEMPRE va a /dashboard o /onboarding, nunca a la landing/login. /api/diag ahora crea una sesión de prueba real con ?stripe_test=1.

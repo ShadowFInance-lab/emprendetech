@@ -287,15 +287,21 @@ async function createOrderStripeCheckout(p: {
   }
   if (!(p.total > 0)) return { url: null, error: 'El total del pedido no es válido' }
 
+  // ── Cuenta conectada + comisión por plan ──
+  // Va en SU PROPIO try: si falla (p. ej. falta SUPABASE_SERVICE_ROLE_KEY y
+  // createAdminClient() lanza, o la tabla no existe), NO se cae el checkout — se
+  // cobra en MODO PLATAFORMA. Antes cualquier fallo aquí caía al catch general y
+  // mostraba el genérico "Error creando el pago con Stripe", ocultando la causa.
+  let accountId: string | undefined
+  let feePct = 0.03
   try {
     const admin = createAdminClient()
-    const { data: cfg } = await admin.from('store_payment_config')
+    const { data: cfg, error: cfgErr } = await admin.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', p.storeId).maybeSingle()
-    const accountId = cfg?.stripe_account_id as string | undefined
-
+    if (cfgErr) console.error('[order checkout] leyendo store_payment_config:', cfgErr.message)
+    accountId = (cfg?.stripe_account_id as string | undefined) || undefined
     // Comisión por plan del dueño: Gratis 3% · Emprendedor/Negocio 0% · VIP 2%
     // (VIP: primeras 1,000 ventas del mes sin comisión, igual que el POS).
-    let feePct = 0.03
     if (p.ownerId) {
       const { data: prof } = await admin.from('profiles').select('plan').eq('id', p.ownerId).maybeSingle()
       const plan = (prof?.plan as string) ?? 'free'
@@ -311,69 +317,79 @@ async function createOrderStripeCheckout(p: {
         if ((count ?? 0) < 1000) feePct = 0
       }
     }
-    const feeCents = Math.round(p.total * 100 * feePct)
+  } catch (e) {
+    console.error('[order checkout] no se pudo leer cuenta/plan; sigo en MODO PLATAFORMA:', e instanceof Error ? e.message : e)
+    accountId = undefined
+    feePct = 0.03
+  }
+  const feeCents = Math.round(p.total * 100 * feePct)
+  console.log(`[order checkout] pedido ${p.orderNo} · total ${p.total} · modo ${accountId ? 'destination ' + accountId : 'plataforma'} · fee ${feeCents}¢`)
 
-    const appUrl = getAppUrl()
-    const backUrl = p.slug ? `${appUrl}/catalog/${p.slug}` : appUrl
-    const c = p.customer
+  const appUrl = getAppUrl()
+  const backUrl = p.slug ? `${appUrl}/catalog/${p.slug}` : appUrl
+  const c = p.customer
 
-    // Items compactos para metadata: [[nombre(≤40), precio, cant], ...]. Si no
-    // caben (carrito grande, límite de 500 chars por valor), se omiten y el
-    // webhook los reconstruye leyendo cart_items por cart_id.
-    const compactItems = JSON.stringify(p.items.map(it => [it.name.slice(0, 40), it.price, it.qty]))
+  // Items compactos para metadata: [[nombre(≤40), precio, cant], ...]. Si no
+  // caben (límite 500 chars/valor) se omiten y el webhook los reconstruye por cart_id.
+  const compactItems = JSON.stringify(p.items.map(it => [String(it.name ?? 'Producto').slice(0, 40), it.price, it.qty]))
 
-    const body = new URLSearchParams({
-      mode: 'payment',
-      expires_at: String(Math.floor(Date.now() / 1000) + 3600),
-      submit_type: 'pay',
-      'payment_method_types[0]': 'card',
-      locale: 'es-419',
-      customer_creation: 'if_required',
-      billing_address_collection: 'auto',
-      'line_items[0][price_data][currency]': 'mxn',
-      'line_items[0][price_data][product_data][name]': `Pedido ${p.orderNo}`,
-      'line_items[0][price_data][unit_amount]': String(Math.round(p.total * 100)),
-      'line_items[0][quantity]': '1',
-      'metadata[type]': 'order',
-      'metadata[order_no]': p.orderNo,
-      'metadata[store_id]': p.storeId,
-      'metadata[cart_id]': p.cartId,
-      'metadata[total]': String(p.total),
-      'metadata[cust_name]': c.name.slice(0, 200),
-      'metadata[phone]': c.phone.slice(0, 60),
-      'metadata[email]': c.email.slice(0, 120),
-      'metadata[address]': c.address.slice(0, 300),
-      'metadata[city]': c.city.slice(0, 80),
-      'metadata[state]': c.state.slice(0, 80),
-      'metadata[zip]': c.zip.slice(0, 20),
-      'metadata[notes]': c.notes.slice(0, 300),
-      success_url: `${backUrl}?pago=exitoso`,
-      cancel_url: `${backUrl}?pago=cancelado`,
-    })
-    if (compactItems.length <= 480) body.set('metadata[items]', compactItems)
-    // Destination charge + comisión SOLO si la tienda tiene cuenta conectada.
-    if (accountId) {
-      body.set('payment_intent_data[transfer_data][destination]', accountId)
-      if (feeCents > 0) body.set('payment_intent_data[application_fee_amount]', String(feeCents))
-    }
+  const body = new URLSearchParams({
+    mode: 'payment',
+    expires_at: String(Math.floor(Date.now() / 1000) + 3600),
+    submit_type: 'pay',
+    'payment_method_types[0]': 'card',
+    locale: 'es-419',
+    customer_creation: 'if_required',
+    billing_address_collection: 'auto',
+    'line_items[0][price_data][currency]': 'mxn',
+    'line_items[0][price_data][product_data][name]': `Pedido ${p.orderNo}`,
+    'line_items[0][price_data][unit_amount]': String(Math.round(p.total * 100)),
+    'line_items[0][quantity]': '1',
+    'metadata[type]': 'order',
+    'metadata[order_no]': p.orderNo,
+    'metadata[store_id]': p.storeId,
+    'metadata[cart_id]': p.cartId,
+    'metadata[total]': String(p.total),
+    'metadata[cust_name]': c.name.slice(0, 200),
+    'metadata[phone]': c.phone.slice(0, 60),
+    'metadata[email]': c.email.slice(0, 120),
+    'metadata[address]': c.address.slice(0, 300),
+    'metadata[city]': c.city.slice(0, 80),
+    'metadata[state]': c.state.slice(0, 80),
+    'metadata[zip]': c.zip.slice(0, 20),
+    'metadata[notes]': c.notes.slice(0, 300),
+    success_url: `${backUrl}?pago=exitoso`,
+    cancel_url: `${backUrl}?pago=cancelado`,
+  })
+  if (compactItems.length <= 480) body.set('metadata[items]', compactItems)
+  // Destination charge + comisión SOLO si la tienda tiene cuenta conectada.
+  if (accountId) {
+    body.set('payment_intent_data[transfer_data][destination]', accountId)
+    if (feeCents > 0) body.set('payment_intent_data[application_fee_amount]', String(feeCents))
+  }
 
+  // ── Llamada a Stripe. Aquí SÍ devolvemos el error REAL (de Stripe o excepción). ──
+  try {
     const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     })
+    const raw = await res.text()
     if (!res.ok) {
-      const detail = (await res.text()).slice(0, 300)
-      console.error('[order checkout] Stripe rechazó la sesión:', res.status, detail)
-      return { url: null, error: 'Stripe rechazó el pago. Verifica la configuración de pagos de la tienda.' }
+      let stripeMsg = ''
+      try { stripeMsg = (JSON.parse(raw)?.error?.message as string) || '' } catch { /* no era json */ }
+      console.error('[order checkout] Stripe rechazó la sesión:', res.status, raw.slice(0, 500))
+      return { url: null, error: `Stripe rechazó el pago (HTTP ${res.status})${stripeMsg ? ': ' + stripeMsg : ''}` }
     }
-    const session = await res.json()
-    const url = (session?.url as string) ?? null
-    if (!url) return { url: null, error: 'Stripe no devolvió el enlace de pago' }
+    let session: { url?: string; id?: string }
+    try { session = JSON.parse(raw) } catch { return { url: null, error: 'Stripe devolvió una respuesta no válida' } }
+    if (!session.url) return { url: null, error: 'Stripe no devolvió el enlace de pago' }
     console.log('[order checkout] ✅ sesión creada', session.id, '· pedido', p.orderNo)
-    return { url }
+    return { url: session.url }
   } catch (e) {
-    console.error('[order checkout] error creando sesión:', e)
-    return { url: null, error: 'Error creando el pago con Stripe' }
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[order checkout] EXCEPCIÓN llamando a Stripe:', msg)
+    return { url: null, error: `Error creando el pago con Stripe: ${msg}` }
   }
 }
