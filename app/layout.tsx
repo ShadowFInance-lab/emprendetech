@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Toaster } from 'sonner'
+import { getAppUrl } from '@/lib/utils/app-url'
 import './globals.css'
 
 const inter = Inter({
@@ -16,7 +17,8 @@ export const metadata: Metadata = {
   },
   description:
     'Crea tu catálogo online, administra inventario, registra ventas y haz crecer tu negocio.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
+  // getAppUrl() nunca devuelve localhost en producción (ver lib/utils/app-url).
+  metadataBase: new URL(getAppUrl()),
 }
 
 export default function RootLayout({

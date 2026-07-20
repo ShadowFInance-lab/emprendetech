@@ -7,6 +7,7 @@ import MinimalistaSkin from '@/components/catalog/skins/MinimalistaSkin'
 import { CartProvider } from '@/components/catalog/cart/CartProvider'
 import CartFab from '@/components/catalog/cart/CartFab'
 import WishlistFab from '@/components/catalog/cart/WishlistFab'
+import { getAppUrl } from '@/lib/utils/app-url'
 import type { Store, Category, Product } from '@/lib/types'
 
 // Forzar datos frescos de tienda (colores etc) al refrescar, sin caché
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title = `${store.name}${store.tagline ? ` — ${store.tagline}` : ''}`
   const description = store.description ?? `Visita el catálogo de ${store.name} y encuentra lo que buscas.`
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/catalog/${store.slug}`
+  const url = `${getAppUrl()}/catalog/${store.slug}`
 
   return {
     title,
@@ -161,7 +162,7 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
     '@type': 'Store',
     name: store.name,
     description: store.description,
-    url: `${process.env.NEXT_PUBLIC_APP_URL}/catalog/${store.slug}`,
+    url: `${getAppUrl()}/catalog/${store.slug}`,
     telephone: store.whatsapp,
     sameAs: [store.facebook, store.instagram, store.tiktok].filter(Boolean),
   }

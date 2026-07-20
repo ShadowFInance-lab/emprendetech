@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getAppUrl } from '@/lib/utils/app-url'
 import { z } from 'zod'
 
 // ─── Schemas de validación ───────────────────────────────────
@@ -24,18 +25,8 @@ export type ActionResult = {
   data?: unknown
 }
 
-/**
- * URL base para los enlaces de los correos (confirmación y reseteo).
- * NUNCA localhost en producción: usa NEXT_PUBLIC_APP_URL si es https y no es
- * local; si no, la URL del deploy de Vercel; y como último recurso, el dominio
- * de producción. Así los correos jamás mandan al usuario a localhost.
- */
-function getAppUrl(): string {
-  const env = process.env.NEXT_PUBLIC_APP_URL
-  if (env && /^https:\/\//.test(env) && !/localhost|127\.0\.0\.1/.test(env)) return env.replace(/\/$/, '')
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return 'https://emprendetech.vercel.app'
-}
+// La URL base de la app (nunca localhost en producción) vive en
+// `@/lib/utils/app-url` para compartirse con Stripe, el catálogo y el layout.
 
 // ─── REGISTRO ────────────────────────────────────────────────
 export async function registerAction(formData: FormData): Promise<ActionResult> {

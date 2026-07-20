@@ -746,4 +746,26 @@ DROP POLICY IF EXISTS "reviews_owner_delete" ON product_reviews;
 CREATE POLICY "reviews_owner_delete" ON product_reviews FOR DELETE
   USING (store_id IN (SELECT id FROM stores WHERE owner_id = auth.uid()));
 
+-- ─── 053: Estado de pago en pedidos online (flujo PAGO-PRIMERO con Stripe) ───
+-- El pedido ya NO se crea antes de pagar: el webhook de Stripe lo crea con estos
+-- indicadores tras confirmarse el cobro (checkout.session.completed).
+ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS payment_status        TEXT;
+ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS stripe_session_id     TEXT;
+ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS stripe_payment_intent TEXT;
+ALTER TABLE online_orders ADD COLUMN IF NOT EXISTS paid_at               TIMESTAMPTZ;
+
+-- Idempotencia a nivel BD: un webhook reintentado no puede duplicar el pedido.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_online_orders_session
+  ON online_orders (stripe_session_id) WHERE stripe_session_id IS NOT NULL;
+
+-- Backfill: los pedidos que ya avanzaron del estado 'pendiente' se marcan como
+-- pagados; los 'pendiente' heredados quedan 'pending' y dejan de mostrarse en
+-- Ventas Online (que ahora solo lista pagos confirmados).
+UPDATE online_orders
+   SET payment_status = CASE
+     WHEN status IN ('pagado','preparando','enviado','entregado') THEN 'paid'
+     ELSE 'pending'
+   END
+ WHERE payment_status IS NULL;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

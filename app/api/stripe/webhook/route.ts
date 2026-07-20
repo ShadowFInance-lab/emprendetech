@@ -38,6 +38,7 @@ interface StripeSession {
   id: string
   amount_total?: number | null
   payment_status?: string
+  payment_intent?: string | null
   metadata?: Record<string, string> | null
 }
 
@@ -131,19 +132,119 @@ async function registerSaleFromSession(session: StripeSession) {
 }
 
 // ─── Pedidos online (metadata.type = 'order') ───────────────────────────────
-// El comprador pagó su pedido del catálogo con Stripe: se marca "pagado" y
-// aparece así en Ventas Online (cuya vista por defecto es justamente Pagado).
-async function markOrderPaidFromSession(session: StripeSession) {
+// FLUJO PAGO-PRIMERO: el pedido NO existe hasta que Stripe confirma el pago.
+// Aquí se CREA el pedido (estado "pagado", payment_status "paid") con los datos
+// que viajaron en la metadata del Checkout, se guardan los indicadores de pago
+// (session id, payment_intent, fecha) y se vacía el carrito del comprador.
+// Idempotente por stripe_session_id (respaldo por order_no si falta la columna).
+// Compatible con sesiones "en vuelo" del flujo anterior (traían order_id de un
+// pedido ya insertado): esas solo se marcan como pagadas, no se duplican.
+type Admin = ReturnType<typeof createAdminClient>
+interface OrderLine { name: string; price: number; qty: number }
+const PAY_COLS_RE = /payment_status|stripe_session_id|stripe_payment_intent|paid_at|column|schema cache/i
+
+async function createOrderFromSession(session: StripeSession) {
   if (session.payment_status && session.payment_status !== 'paid') return
   const meta = session.metadata || {}
-  const orderId = meta.order_id
-  if (!orderId) { console.warn('[stripe webhook] sesión de pedido sin order_id:', session.id); return }
+  const storeId = meta.store_id
+  if (!storeId) { console.warn('[stripe webhook] pedido sin store_id:', session.id); return }
+
   const admin = createAdminClient()
-  const { error } = await admin.from('online_orders')
-    .update({ status: 'pagado' }).eq('id', orderId)
-  if (error) { console.error('[stripe webhook] error marcando pedido pagado:', error.message); return }
+  const paidAt = new Date().toISOString()
+  const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : null
+
+  // Idempotencia por sesión (Stripe reintenta eventos).
+  const dup = await admin.from('online_orders').select('id').eq('stripe_session_id', session.id).maybeSingle()
+  if (dup.error) {
+    // Migración 053 pendiente (sin columna): respaldo por order_no.
+    if (meta.order_no) {
+      const byNo = await admin.from('online_orders').select('id').eq('store_id', storeId).eq('order_no', meta.order_no).limit(1)
+      if (byNo.data && byNo.data.length > 0) { console.log('[stripe webhook] pedido ya existe (order_no)', meta.order_no); return }
+    }
+  } else if (dup.data) {
+    console.log('[stripe webhook] pedido ya creado para', session.id); return
+  }
+
+  // Compatibilidad: si la sesión trae order_id y ese pedido YA existe (creado
+  // antes de pagar en una versión previa), solo se marca como pagado.
+  if (meta.order_id) {
+    const { data: legacy } = await admin.from('online_orders').select('id').eq('id', meta.order_id).maybeSingle()
+    if (legacy) {
+      await markOrderPaid(admin, meta.order_id, session.id, paymentIntent, paidAt)
+      revalidatePath('/orders')
+      console.log('[stripe webhook] ✅ pedido previo', meta.order_no || meta.order_id, 'marcado PAGADO')
+      return
+    }
+  }
+
+  // Items: desde metadata (self-contained); si no vinieron (carrito grande) se
+  // leen de cart_items por cart_id (el carrito sigue vivo hasta este momento).
+  let items: OrderLine[] = []
+  if (meta.items) {
+    try {
+      const compact = JSON.parse(meta.items) as [string, number, number][]
+      items = compact.map(c => ({ name: String(c[0] ?? 'Producto'), price: Number(c[1]) || 0, qty: Number(c[2]) || 0 }))
+    } catch (e) { console.error('[stripe webhook] items de pedido inválidos:', e) }
+  }
+  if (items.length === 0 && meta.cart_id) {
+    const { data: rows } = await admin.from('cart_items').select('name, price, qty').eq('cart_id', meta.cart_id).order('created_at')
+    items = (rows ?? []).map(r => ({ name: String(r.name ?? 'Producto'), price: Number(r.price) || 0, qty: Number(r.qty) || 0 }))
+  }
+
+  const amountTotal = (session.amount_total ?? 0) / 100
+  const total = amountTotal > 0 ? amountTotal
+    : (Number(meta.total) || items.reduce((s, i) => s + i.price * i.qty, 0))
+  const orderNo = meta.order_no || ('MB-' + session.id.slice(-6).toUpperCase())
+
+  const payload: Record<string, unknown> = {
+    store_id: storeId,
+    order_no: orderNo,
+    customer_name: meta.cust_name || 'Cliente',
+    phone: meta.phone || null,
+    email: meta.email || null,
+    address: meta.address || null,
+    city: meta.city || null,
+    state: meta.state || null,
+    zip: meta.zip || null,
+    notes: meta.notes || null,
+    payment_method: 'Pago con Stripe',
+    items,
+    total,
+    status: 'pagado',
+    payment_status: 'paid',
+    stripe_session_id: session.id,
+    stripe_payment_intent: paymentIntent,
+    paid_at: paidAt,
+  }
+
+  let ins = await admin.from('online_orders').insert(payload).select('id').maybeSingle()
+  // Resiliencia si la migración 053 (columnas de pago) no se ha corrido: se
+  // reintenta sin esas columnas para NO perder el pedido ya pagado.
+  if (ins.error && PAY_COLS_RE.test(ins.error.message || '')) {
+    for (const k of ['payment_status', 'stripe_session_id', 'stripe_payment_intent', 'paid_at']) delete payload[k]
+    ins = await admin.from('online_orders').insert(payload).select('id').maybeSingle()
+  }
+  if (ins.error) { console.error('[stripe webhook] error creando pedido pagado:', ins.error.message); return }
+
+  // El comprador ya pagó: se vacía su carrito.
+  if (meta.cart_id) await admin.from('cart_items').delete().eq('cart_id', meta.cart_id)
+
   revalidatePath('/orders')
-  console.log('[stripe webhook] ✅ pedido', meta.order_no || orderId, 'marcado como PAGADO')
+  console.log('[stripe webhook] ✅ pedido', orderNo, 'CREADO y PAGADO · sesión', session.id)
+}
+
+// Marca un pedido ya existente como pagado (flujo previo en vuelo). Resiliente
+// a que falten las columnas de pago (migración 053).
+async function markOrderPaid(admin: Admin, orderId: string, sessionId: string, paymentIntent: string | null, paidAt: string) {
+  const upd = {
+    status: 'pagado', payment_status: 'paid',
+    stripe_session_id: sessionId, stripe_payment_intent: paymentIntent, paid_at: paidAt,
+  }
+  let r = await admin.from('online_orders').update(upd).eq('id', orderId)
+  if (r.error && PAY_COLS_RE.test(r.error.message || '')) {
+    r = await admin.from('online_orders').update({ status: 'pagado' }).eq('id', orderId)
+  }
+  if (r.error) console.error('[stripe webhook] error marcando pedido pagado:', r.error.message)
 }
 
 // ─── Activación de PLANES (metadata.type = 'plan') ──────────────────────────
@@ -233,7 +334,7 @@ export async function POST(req: NextRequest) {
       // metadata.type: 'plan' → suscripción de la plataforma · 'order' → pedido
       // online del catálogo · si no, venta del POS (con items).
       if (session?.metadata?.type === 'plan') await activatePlanFromSession(session)
-      else if (session?.metadata?.type === 'order') await markOrderPaidFromSession(session)
+      else if (session?.metadata?.type === 'order') await createOrderFromSession(session)
       else await registerSaleFromSession(session)
     }
   } catch (err) {

@@ -24,6 +24,18 @@ export interface OnlineOrder {
   created_at: string
   online_reception_type?: string | null
   online_reception_value?: string | null
+  // Indicadores de pago (migración 053). Opcionales por compatibilidad.
+  payment_status?: string | null
+  stripe_payment_intent?: string | null
+  paid_at?: string | null
+}
+
+// Un pedido cuenta como "pagado" si Stripe lo confirmó (payment_status='paid')
+// o —para filas antiguas sin esa columna— si su estado ya pasó del pendiente.
+const PAID_FULFILLMENT = ['pagado', 'preparando', 'enviado', 'entregado']
+function isPaidOrder(o: { payment_status?: string | null; status: string }): boolean {
+  if (o.payment_status) return o.payment_status === 'paid'
+  return PAID_FULFILLMENT.includes(o.status)
 }
 
 export interface OnlineOrderInput {
@@ -88,7 +100,14 @@ export async function listOnlineOrdersAction(): Promise<OnlineOrder[]> {
       status: (o.status as OrderStatus) ?? 'pendiente', created_at: o.created_at as string,
       online_reception_type: (o.online_reception_type as string) ?? null,
       online_reception_value: (o.online_reception_value as string) ?? null,
+      payment_status: (o.payment_status as string) ?? null,
+      stripe_payment_intent: (o.stripe_payment_intent as string) ?? null,
+      paid_at: (o.paid_at as string) ?? null,
     }))
+    // REGLA: Ventas Online SOLO muestra pedidos con pago confirmado por Stripe.
+    // (En el flujo pago-primero ya nunca se crean pedidos sin pagar; el filtro
+    // además oculta cualquier pedido "pendiente" heredado del flujo anterior.)
+      .filter(isPaidOrder)
   } catch { return [] }
 }
 

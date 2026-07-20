@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { UserPlus, Loader2, Lock, Crown, Check, Copy, ClipboardList, Wallet, ChevronLeft } from 'lucide-react'
+import { UserPlus, Loader2, Lock, Crown, Check, Copy, ClipboardList, Wallet, MessageSquare, ListChecks } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createEmployeeAction, listEmployeesAction, type Employee } from '@/lib/actions/employees'
@@ -14,6 +14,16 @@ import TeamChatPanel from '@/components/team/TeamChatPanel'
 
 const PAID_PLANS = ['emprendedor', 'negocio', 'vip_plus'] // Solo planes pagos
 
+// Pestañas del módulo de empleados. Reducen la saturación visual: cada área en
+// su propia sección, con una barra de pills al estilo del botón de Nómina.
+const TABS = [
+  { id: 'datos', label: 'Datos y Creación', icon: UserPlus },
+  { id: 'nomina', label: 'Nómina', icon: Wallet },
+  { id: 'chat', label: 'Chat de Empleados', icon: MessageSquare },
+  { id: 'tareas', label: 'Tareas', icon: ListChecks },
+] as const
+type TabId = typeof TABS[number]['id']
+
 export default function EmployeesSection({ plan }: { plan: string }) {
   const isPaid = PAID_PLANS.includes(plan)
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -21,7 +31,7 @@ export default function EmployeesSection({ plan }: { plan: string }) {
   const [form, setForm] = useState({ name: '', password: '' })
   const [lastCreated, setLastCreated] = useState<string | null>(null)
   const [signal, setSignal] = useState(0)
-  const [showNomina, setShowNomina] = useState(false)
+  const [tab, setTab] = useState<TabId>('datos')
 
   const refresh = useCallback(async () => {
     setEmployees(await listEmployeesAction())
@@ -101,37 +111,43 @@ export default function EmployeesSection({ plan }: { plan: string }) {
     )
   }
 
-  // Vista dedicada de Nómina DENTRO de la misma página (sin modal emergente)
-  if (showNomina) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <button onClick={() => setShowNomina(false)} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50">
-            <ChevronLeft size={16} /> Volver a empleados
-          </button>
-          <p className="font-bold text-gray-900 flex items-center gap-2"><Wallet size={18} className="text-violet-600" /> Nómina</p>
-        </div>
-        <PayrollDashboard refreshSignal={signal} isPaid={isPaid} />
-      </div>
-    )
-  }
-
   return (
-    <div className="grid lg:grid-cols-3 gap-4 items-start">
-      {/* Columna principal */}
-      <div className="lg:col-span-2 space-y-4">
-        <button onClick={() => setShowNomina(true)} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold shadow-sm transition-colors">
-          <Wallet size={15} /> Ver Nómina
-        </button>
-        {/* Inline: crear empleado + KPIs + tabla. Descuentos/resumen solo en "Ver Nómina". */}
-        <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} compact />
-        <TasksManager employees={employees} />
+    <div className="space-y-5">
+      {/* Barra de pestañas (pills, estilo del botón de Nómina) */}
+      <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-3">
+        {TABS.map(t => {
+          const active = tab === t.id
+          return (
+            <button key={t.id} type="button" onClick={() => setTab(t.id)}
+              className={`inline-flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-semibold transition-colors ${active ? 'bg-violet-600 text-white shadow-sm shadow-violet-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+              <t.icon size={16} /> {t.label}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Columna derecha: chats */}
-      <div className="lg:col-span-1 lg:sticky lg:top-4 space-y-4">
-        <TeamChatPanel employees={employees} />
-      </div>
+      {/* TAB 1 · Datos y Creación: crear empleado + KPIs (activos, presentes hoy,
+          horas trabajadas, período de pago) + tabla de empleados. */}
+      {tab === 'datos' && (
+        <PayrollDashboard createSlot={createCard} refreshSignal={signal} isPaid={isPaid} compact />
+      )}
+
+      {/* TAB 2 · Nómina: tabla completa, horas, asistencia, exportar, filtros. */}
+      {tab === 'nomina' && (
+        <PayrollDashboard refreshSignal={signal} isPaid={isPaid} />
+      )}
+
+      {/* TAB 3 · Chat de Empleados: mensajería interna (individual y grupal). */}
+      {tab === 'chat' && (
+        <div className="max-w-3xl">
+          <TeamChatPanel employees={employees} />
+        </div>
+      )}
+
+      {/* TAB 4 · Tareas: crear, asignar, fechas y seguimiento. */}
+      {tab === 'tareas' && (
+        <TasksManager employees={employees} />
+      )}
     </div>
   )
 }

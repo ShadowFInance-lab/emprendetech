@@ -75,6 +75,27 @@ export function CartProvider({
     getCartAction().then(c => { setItems(c.items); setLoading(false) })
   }, [enabled])
 
+  // Regreso desde Stripe Checkout (?pago=exitoso | ?pago=cancelado). En el flujo
+  // pago-primero el pedido lo crea el webhook al confirmarse el pago; aquí solo
+  // damos feedback al comprador y limpiamos el carrito localmente (el webhook lo
+  // vacía en el servidor). No tocamos el carrito del servidor para no interferir
+  // con la reconstrucción del pedido por cart_id.
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const pago = params.get('pago')
+    if (!pago) return
+    if (pago === 'exitoso') {
+      setItems([])
+      toast.success('¡Pago recibido! Tu pedido fue confirmado y el negocio ya lo está preparando.', { duration: 7000 })
+    } else if (pago === 'cancelado') {
+      toast('Pago cancelado. Tu carrito sigue disponible cuando quieras volver a intentarlo.', { icon: '🛒' })
+    }
+    params.delete('pago')
+    const qs = params.toString()
+    window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''))
+  }, [enabled])
+
   function add(p: ProductForCart, variantText?: string) {
     startTransition(async () => {
       const c = await addToCartAction(storeId, p, 1, variantText ?? null)

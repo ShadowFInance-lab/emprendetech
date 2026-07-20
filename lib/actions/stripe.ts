@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getAppUrl } from '@/lib/utils/app-url'
 import type { ActionResult } from './auth'
 
 /**
@@ -108,7 +109,7 @@ export async function createStripePaymentLinkAction(
     const accountId = cfg?.stripe_account_id as string | undefined
     if (!accountId) return { success: false, error: 'Conecta tu cuenta de Stripe primero.' }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
+    const appUrl = getAppUrl()
     const body = new URLSearchParams({
       mode: 'payment',
       // El link caduca en 1 hora: un link viejo reabierto muestra "expirado" en
@@ -209,7 +210,7 @@ export async function createPlanCheckoutAction(plan: string): Promise<{ success:
     const secret = process.env.STRIPE_SECRET_KEY
     if (!secret) return { success: false, error: 'Pagos en configuración. Falta STRIPE_SECRET_KEY en el entorno.' }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
+    const appUrl = getAppUrl()
     const body = new URLSearchParams({
       mode: 'payment',
       // Caduca en 1 hora (evita reusar links viejos ya cobrados).

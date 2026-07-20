@@ -5,6 +5,7 @@ import AdBanner from '@/components/catalog/AdBanner'
 import AddToCartButtons from '@/components/catalog/cart/AddToCartButtons'
 import { formatCurrency } from '@/lib/utils/format'
 import { buildStoreWhatsAppLink, buildProductWhatsAppLink } from '@/lib/utils/whatsapp'
+import { getAppUrl } from '@/lib/utils/app-url'
 import type { Store, Category, Product } from '@/lib/types'
 
 interface SkinProps {
@@ -335,7 +336,7 @@ export default function ModernaSkin({
                             product.name,
                             product.sale_price,
                             store.name,
-                            `${process.env.NEXT_PUBLIC_APP_URL}/catalog/${store.slug}/product/${product.slug}`
+                            `${getAppUrl()}/catalog/${store.slug}/product/${product.slug}`
                           )}
                           target="_blank"
                           rel="noopener noreferrer"

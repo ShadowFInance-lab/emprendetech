@@ -33,9 +33,10 @@ const isToday = (s: string) => new Date(s).toDateString() === new Date().toDateS
 export default function OrdersPanel() {
   const [orders, setOrders] = useState<OnlineOrder[]>([])
   const [loading, setLoading] = useState(true)
-  // Vista por defecto: SOLO pedidos pagados (listos para enviar). Los chips de
-  // filtro permiten ver pendientes, enviados, cancelados o todos.
-  const [filter, setFilter] = useState<'todos' | OrderStatus>('pagado')
+  // La lista ya llega filtrada a SOLO pagados (regla de Ventas Online). Por eso
+  // la vista por defecto es "todos" = todos los pedidos pagados; los chips
+  // permiten acotar por etapa de entrega (preparando, enviado, entregado…).
+  const [filter, setFilter] = useState<'todos' | OrderStatus>('todos')
   const [selected, setSelected] = useState<OnlineOrder | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -60,17 +61,18 @@ export default function OrdersPanel() {
   const stats = useMemo(() => ({
     total: orders.length,
     hoy: orders.filter(o => isToday(o.created_at)).length,
-    pendientes: orders.filter(o => o.status === 'pendiente').length,
+    // Pagados que aún faltan por despachar (recién pagados o en preparación).
+    porEnviar: orders.filter(o => o.status === 'pagado' || o.status === 'preparando').length,
     ingresos: orders.reduce((s, o) => s + (o.total ?? 0), 0),
   }), [orders])
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-indigo-500" /></div>
 
   const cards = [
-    { label: 'Ventas online', value: String(stats.total), icon: ShoppingBag, c: 'from-indigo-500 to-violet-600' },
+    { label: 'Pedidos pagados', value: String(stats.total), icon: ShoppingBag, c: 'from-indigo-500 to-violet-600' },
     { label: 'Hoy', value: String(stats.hoy), icon: CalendarDays, c: 'from-cyan-500 to-sky-600' },
-    { label: 'Pendientes', value: String(stats.pendientes), icon: Clock, c: 'from-amber-500 to-orange-600' },
-    { label: 'Ingresos', value: formatCurrency(stats.ingresos), icon: DollarSign, c: 'from-emerald-500 to-green-600' },
+    { label: 'Por enviar', value: String(stats.porEnviar), icon: Clock, c: 'from-amber-500 to-orange-600' },
+    { label: 'Ingresos cobrados', value: formatCurrency(stats.ingresos), icon: DollarSign, c: 'from-emerald-500 to-green-600' },
   ]
 
   return (
@@ -127,7 +129,11 @@ export default function OrdersPanel() {
                   <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-500 whitespace-nowrap">{o.order_no || o.id.slice(0, 6).toUpperCase()}</td>
                   <td className="px-4 py-2.5 font-medium text-gray-900 whitespace-nowrap">{o.customer_name || 'Cliente'}</td>
                   <td className="px-4 py-2.5"><span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${STATUS_STYLE[o.status] ?? STATUS_STYLE.pendiente}`}>{cap(o.status || 'pendiente')}</span></td>
-                  <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{o.payment_method || '—'}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full" title={o.paid_at ? `Pagado ${fmtDate(o.paid_at)}` : 'Pago confirmado por Stripe'}>
+                      <Check size={11} /> Pagado
+                    </span>
+                  </td>
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900 whitespace-nowrap">{o.total != null ? formatCurrency(o.total) : '—'}</td>
                   <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{fmtDate(o.created_at)}</td>
                   <td className="px-4 py-2.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
@@ -192,10 +198,18 @@ export default function OrdersPanel() {
                 </div>
               )}
 
-              {/* Pago */}
-              {selected.payment_method && (
-                <p className="text-sm text-gray-600 flex items-center gap-1.5"><CreditCard size={14} className="text-gray-400" /> Pago: <strong className="text-gray-800">{selected.payment_method}</strong></p>
-              )}
+              {/* Pago — indicadores confirmados por Stripe */}
+              <div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Pago</p>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-1 text-sm">
+                  <p className="flex items-center gap-1.5 font-bold text-emerald-700"><Check size={14} /> Pago confirmado</p>
+                  <p className="text-gray-600 flex items-center gap-1.5"><CreditCard size={13} className="text-gray-400" /> Método: <strong className="text-gray-800">{selected.payment_method || 'Tarjeta (Stripe)'}</strong></p>
+                  {selected.paid_at && <p className="text-gray-600 flex items-center gap-1.5"><CalendarDays size={13} className="text-gray-400" /> Fecha de pago: <strong className="text-gray-800">{fmtDate(selected.paid_at)}</strong></p>}
+                  {selected.stripe_payment_intent && (
+                    <p className="text-gray-500 text-xs break-all">ID transacción Stripe: <code className="text-gray-700">{selected.stripe_payment_intent}</code></p>
+                  )}
+                </div>
+              </div>
 
               {/* Notas */}
               {selected.notes && (

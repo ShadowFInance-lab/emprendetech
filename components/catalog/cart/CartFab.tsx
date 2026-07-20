@@ -12,7 +12,7 @@ const PAYMENTS = ['Pago con Stripe']
 
 export default function CartFab() {
   const cart = useCart()
-  const { enabled, items, count, subtotal, color, currency, open, view, setOpen, openCart, goCheckout, setQty, remove, clear, finish, lastOrderNo, storeName } = cart
+  const { enabled, items, count, subtotal, color, currency, open, view, setOpen, openCart, goCheckout, setQty, remove, clear, lastOrderNo, storeName } = cart
 
   const [f, setF] = useState<CheckoutInput>({ customer_name: '', phone: '', email: '', address: '', colonia: '', city: '', state: '', zip: '', notes: '', payment_method: PAYMENTS[0] })
   const [isPending, startTransition] = useTransition()
@@ -25,11 +25,11 @@ export default function CartFab() {
     if (!f.customer_name.trim() || !f.phone.trim() || !f.address.trim()) { toast.error('Nombre, teléfono y dirección son obligatorios'); return }
     startTransition(async () => {
       const r = await createOrderFromCartAction(f)
-      if (!r.success || !r.order_no) { toast.error(r.error ?? 'Error'); return }
-      // Con Stripe conectado: el comprador paga AHORA con tarjeta; el webhook
-      // marca el pedido como "Pagado" automáticamente al completarse.
-      if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return }
-      finish(r.order_no)
+      // PAGO PRIMERO: el pedido NO se crea aquí. Se redirige a Stripe y solo al
+      // confirmarse el pago el webhook crea el pedido (estado "Pagado"). Si no
+      // se pudo iniciar el cobro, se muestra el error y no se crea nada.
+      if (r.success && r.checkoutUrl) { window.location.href = r.checkoutUrl; return }
+      toast.error(r.error ?? 'No se pudo iniciar el pago. Intenta de nuevo.')
     })
   }
 

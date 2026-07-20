@@ -7,6 +7,7 @@ import { Payment } from 'mercadopago'
 import type { Plan } from '@/lib/types'
 import type { ActionResult } from './auth'
 import { grantTrialIfNewProfile } from './auth'
+import { getAppUrl } from '@/lib/utils/app-url'
 
 const PLAN_PRICES: Record<string, { amount: number; title: string; recurring: boolean }> = {
   emprendedor: { amount: 199, title: 'Mercanta Business — Plan Emprendedor (mensual)', recurring: true },
@@ -183,7 +184,7 @@ export async function createCheckoutAction(plan: Plan): Promise<ActionResult & {
 
   // ─── [MP DEBUG] diagnóstico de configuración (sin exponer el token) ────────
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN || ''
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+  const appUrl = getAppUrl()
   const httpsUrl = /^https:\/\//.test(appUrl) // MP rechaza auto_return/back_urls si no son https válidos
   console.log('[MP DEBUG] createCheckoutAction →', {
     plan,
@@ -457,7 +458,7 @@ export async function createSalePaymentLink(
     return { success: false, error: 'Configura tu cuenta de Mercado Pago para ventas en Configuración (o agrega MERCADOPAGO_ACCESS_TOKEN en Vercel).' }
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+  const appUrl = getAppUrl()
   const httpsUrl = /^https:\/\//.test(appUrl)
   console.log('[MP DEBUG] createSalePaymentLink →', {
     amount, appUrl, httpsUrl,

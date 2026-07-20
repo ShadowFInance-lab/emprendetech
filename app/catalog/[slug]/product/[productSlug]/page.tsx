@@ -6,6 +6,7 @@ import ProductDetailView from '@/components/catalog/ProductDetailView'
 import { CartProvider } from '@/components/catalog/cart/CartProvider'
 import CartFab from '@/components/catalog/cart/CartFab'
 import WishlistFab from '@/components/catalog/cart/WishlistFab'
+import { getAppUrl } from '@/lib/utils/app-url'
 
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = `${product.name} — ${store.name}`
   const description = product.description
     ?? `${product.name} disponible en ${store.name}.`
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/catalog/${store.slug}/product/${params.productSlug}`
+  const url = `${getAppUrl()}/catalog/${store.slug}/product/${params.productSlug}`
 
   return {
     title,

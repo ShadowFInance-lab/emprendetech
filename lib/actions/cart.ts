@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { createPublicClient, createAdminClient } from '@/lib/supabase/server'
+import { getAppUrl } from '@/lib/utils/app-url'
 import type { ActionResult } from './auth'
 
 const COOKIE = 'mb_cart'
@@ -190,10 +191,19 @@ export interface CheckoutInput {
 }
 
 /**
- * Crea el pedido real desde el carrito: número de orden, guarda en BD y vacía
- * el carrito. Si la tienda tiene su cuenta de Stripe conectada, devuelve
- * además `checkoutUrl` para que el comprador PAGUE con tarjeta al instante;
- * el webhook marca el pedido como "pagado" al completarse el pago.
+ * PAGO PRIMERO — inicia el Checkout de Stripe con TODOS los datos del pedido
+ * viajando en la metadata de la sesión.
+ *
+ * IMPORTANTE (nuevo flujo): esta acción NO crea el pedido ni vacía el carrito.
+ * El pedido se crea EXCLUSIVAMENTE cuando Stripe confirma el pago, en el webhook
+ * (`checkout.session.completed`). Así jamás quedan pedidos "pendientes" sin
+ * pagar contaminando Ventas Online.
+ *
+ *   Cliente → Checkout Stripe → Pago → Webhook → Pedido creado (Pagado)
+ *
+ * Devuelve `checkoutUrl` para redirigir al comprador. Si no se puede iniciar el
+ * cobro (falta STRIPE_SECRET_KEY o Stripe rechaza la sesión) devuelve `error` y
+ * NO se crea absolutamente nada.
  */
 export async function createOrderFromCartAction(input: CheckoutInput): Promise<ActionResult & { order_no?: string; checkoutUrl?: string }> {
   try {
@@ -209,84 +219,79 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
     if (!cart || items.length === 0) return { success: false, error: 'Tu carrito está vacío' }
 
     const total = items.reduce((s, it) => s + it.price * it.qty, 0)
+    if (!(total > 0)) return { success: false, error: 'El total del pedido no es válido' }
     const order_no = 'MB-' + Math.random().toString(36).slice(2, 8).toUpperCase()
     const address = input.colonia?.trim()
       ? `${input.address.trim()}, Col. ${input.colonia.trim()}`
       : input.address.trim()
 
-    // Fetch reception preference from store (soporta multi-select)
-    const { data: storeCfg } = await supabase.from('stores').select('online_reception_type, online_reception_value, slug, owner_id').eq('id', cart.store_id).single()
+    // Preferencia de recepción de la tienda (sucursal / empleado / multi)
+    const { data: storeCfg } = await supabase.from('stores')
+      .select('online_reception_type, online_reception_value, slug, owner_id').eq('id', cart.store_id).single()
     const recType = storeCfg?.online_reception_type
     const recVal = storeCfg?.online_reception_value
     const prefix = recType === 'multi' ? 'Multi' : (recType === 'employee' ? 'Empleado' : 'Sucursal')
     const notesWithRec = [input.notes?.trim(), recVal ? `[Recepción: ${prefix} ${recVal}]` : ''].filter(Boolean).join(' ')
 
-    // El id se genera AQUÍ (no con .select() de vuelta): el comprador anónimo
-    // tiene permiso de INSERTAR pedidos pero no de leerlos (RLS) — un
-    // insert().select() falla con el error de "migración 038" aunque la tabla
-    // exista. Con el UUID propio el insert es puro y el checkout tiene su id.
-    const orderId = crypto.randomUUID()
-    const { error } = await supabase.from('online_orders').insert({
-      id: orderId,
-      store_id: cart.store_id,
-      order_no,
-      customer_name: input.customer_name.trim(),
-      phone: input.phone.trim(),
-      email: input.email?.trim() || null,
-      address,
-      city: input.city?.trim() || null,
-      state: input.state?.trim() || null,
-      zip: input.zip?.trim() || null,
-      notes: notesWithRec || null,
-      payment_method: input.payment_method || null,
-      items: items.map(it => ({ name: it.name, price: it.price, qty: it.qty })),
-      total,
-      status: 'pendiente',
-    })
-    if (error) return { success: false, error: 'No se pudo crear el pedido (¿corriste la migración 038?)' }
-
-    // Vaciar carrito + cerrar cookie
-    await supabase.from('cart_items').delete().eq('cart_id', id)
-    const cookieStore = await cookies()
-    const isProd = process.env.NODE_ENV === 'production'
-    cookieStore.set(COOKIE, '', { path: '/', maxAge: 0, secure: isProd })
-
-    // ─── Pago con tarjeta (Stripe): checkout inmediato para el comprador ─────
-    // Best-effort: si la tienda no tiene Stripe conectado o falta la clave de
-    // plataforma, el pedido queda "pendiente" y el negocio cobra por su cuenta.
-    const checkoutUrl = await createOrderStripeCheckout({
-      orderId,
+    // Inicia el cobro. El pedido NO se guarda aquí: sus datos viajan en la
+    // metadata (más el cart_id como respaldo) y lo crea el webhook al pagarse.
+    const checkout = await createOrderStripeCheckout({
+      cartId: id,
       orderNo: order_no,
       storeId: cart.store_id as string,
       ownerId: (storeCfg?.owner_id as string) ?? null,
       slug: (storeCfg?.slug as string) ?? null,
       total,
-      customerName: input.customer_name.trim(),
+      items,
+      customer: {
+        name: input.customer_name.trim(),
+        phone: input.phone.trim(),
+        email: input.email?.trim() || '',
+        address,
+        city: input.city?.trim() || '',
+        state: input.state?.trim() || '',
+        zip: input.zip?.trim() || '',
+        notes: notesWithRec,
+      },
     })
 
-    return { success: true, order_no, checkoutUrl: checkoutUrl ?? undefined }
-  } catch { return { success: false, error: 'Error' } }
+    if (!checkout.url) {
+      return { success: false, error: checkout.error ?? 'No se pudo iniciar el pago con Stripe. Intenta de nuevo.' }
+    }
+    return { success: true, order_no, checkoutUrl: checkout.url }
+  } catch (e) {
+    console.error('[cart checkout] error:', e)
+    return { success: false, error: 'Error al iniciar el pago' }
+  }
 }
 
-/** Crea la sesión de Stripe Checkout del pedido (destination charge a la cuenta
- *  conectada de la tienda, con la comisión de plataforma según el plan del dueño). */
+/**
+ * Crea la sesión de Stripe Checkout del pedido con TODA la información en la
+ * metadata (para que el webhook pueda construir el pedido tras el pago):
+ * - `type=order` + datos del cliente + `total` + `items` compactos + `cart_id`.
+ * - Destination charge + comisión por plan SOLO si la tienda tiene su cuenta de
+ *   Stripe conectada; si no, el cobro entra a la cuenta de la PLATAFORMA (el
+ *   pago se realiza igual y el pedido queda Pagado).
+ * Devuelve `{ url }` o `{ url: null, error }` — nunca lanza.
+ */
 async function createOrderStripeCheckout(p: {
-  orderId: string; orderNo: string; storeId: string
+  cartId: string; orderNo: string; storeId: string
   ownerId: string | null; slug: string | null
-  total: number; customerName: string
-}): Promise<string | null> {
-  try {
-    const secret = process.env.STRIPE_SECRET_KEY
-    if (!secret || !(p.total > 0)) return null
+  total: number; items: CartItem[]
+  customer: { name: string; phone: string; email: string; address: string; city: string; state: string; zip: string; notes: string }
+}): Promise<{ url: string | null; error?: string }> {
+  const secret = process.env.STRIPE_SECRET_KEY
+  if (!secret) {
+    console.error('[order checkout] falta STRIPE_SECRET_KEY: no se puede cobrar en línea')
+    return { url: null, error: 'Los pagos en línea aún no están configurados. Contacta a la tienda.' }
+  }
+  if (!(p.total > 0)) return { url: null, error: 'El total del pedido no es válido' }
 
+  try {
     const admin = createAdminClient()
     const { data: cfg } = await admin.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', p.storeId).maybeSingle()
     const accountId = cfg?.stripe_account_id as string | undefined
-    // Sin cuenta conectada NO se bloquea el cobro: la sesión se crea sin
-    // destination y el dinero entra a la cuenta Stripe de la PLATAFORMA — el
-    // pedido igual se paga y queda "Pagado". Cuando la tienda conecte su
-    // cuenta, el cobro pasa automáticamente a destination charge + comisión.
 
     // Comisión por plan del dueño: Gratis 3% · Emprendedor/Negocio 0% · VIP 2%
     // (VIP: primeras 1,000 ventas del mes sin comisión, igual que el POS).
@@ -308,8 +313,15 @@ async function createOrderStripeCheckout(p: {
     }
     const feeCents = Math.round(p.total * 100 * feePct)
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://emprendetech.vercel.app'
+    const appUrl = getAppUrl()
     const backUrl = p.slug ? `${appUrl}/catalog/${p.slug}` : appUrl
+    const c = p.customer
+
+    // Items compactos para metadata: [[nombre(≤40), precio, cant], ...]. Si no
+    // caben (carrito grande, límite de 500 chars por valor), se omiten y el
+    // webhook los reconstruye leyendo cart_items por cart_id.
+    const compactItems = JSON.stringify(p.items.map(it => [it.name.slice(0, 40), it.price, it.qty]))
+
     const body = new URLSearchParams({
       mode: 'payment',
       expires_at: String(Math.floor(Date.now() / 1000) + 3600),
@@ -323,12 +335,22 @@ async function createOrderStripeCheckout(p: {
       'line_items[0][price_data][unit_amount]': String(Math.round(p.total * 100)),
       'line_items[0][quantity]': '1',
       'metadata[type]': 'order',
-      'metadata[order_id]': p.orderId,
       'metadata[order_no]': p.orderNo,
       'metadata[store_id]': p.storeId,
+      'metadata[cart_id]': p.cartId,
+      'metadata[total]': String(p.total),
+      'metadata[cust_name]': c.name.slice(0, 200),
+      'metadata[phone]': c.phone.slice(0, 60),
+      'metadata[email]': c.email.slice(0, 120),
+      'metadata[address]': c.address.slice(0, 300),
+      'metadata[city]': c.city.slice(0, 80),
+      'metadata[state]': c.state.slice(0, 80),
+      'metadata[zip]': c.zip.slice(0, 20),
+      'metadata[notes]': c.notes.slice(0, 300),
       success_url: `${backUrl}?pago=exitoso`,
       cancel_url: `${backUrl}?pago=cancelado`,
     })
+    if (compactItems.length <= 480) body.set('metadata[items]', compactItems)
     // Destination charge + comisión SOLO si la tienda tiene cuenta conectada.
     if (accountId) {
       body.set('payment_intent_data[transfer_data][destination]', accountId)
@@ -341,13 +363,17 @@ async function createOrderStripeCheckout(p: {
       body,
     })
     if (!res.ok) {
-      console.error('[order checkout] Stripe rechazó la sesión:', res.status, (await res.text()).slice(0, 200))
-      return null
+      const detail = (await res.text()).slice(0, 300)
+      console.error('[order checkout] Stripe rechazó la sesión:', res.status, detail)
+      return { url: null, error: 'Stripe rechazó el pago. Verifica la configuración de pagos de la tienda.' }
     }
     const session = await res.json()
-    return (session?.url as string) ?? null
+    const url = (session?.url as string) ?? null
+    if (!url) return { url: null, error: 'Stripe no devolvió el enlace de pago' }
+    console.log('[order checkout] ✅ sesión creada', session.id, '· pedido', p.orderNo)
+    return { url }
   } catch (e) {
     console.error('[order checkout] error creando sesión:', e)
-    return null
+    return { url: null, error: 'Error creando el pago con Stripe' }
   }
 }
