@@ -221,7 +221,13 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
     const prefix = recType === 'multi' ? 'Multi' : (recType === 'employee' ? 'Empleado' : 'Sucursal')
     const notesWithRec = [input.notes?.trim(), recVal ? `[Recepción: ${prefix} ${recVal}]` : ''].filter(Boolean).join(' ')
 
-    const { data: order, error } = await supabase.from('online_orders').insert({
+    // El id se genera AQUÍ (no con .select() de vuelta): el comprador anónimo
+    // tiene permiso de INSERTAR pedidos pero no de leerlos (RLS) — un
+    // insert().select() falla con el error de "migración 038" aunque la tabla
+    // exista. Con el UUID propio el insert es puro y el checkout tiene su id.
+    const orderId = crypto.randomUUID()
+    const { error } = await supabase.from('online_orders').insert({
+      id: orderId,
       store_id: cart.store_id,
       order_no,
       customer_name: input.customer_name.trim(),
@@ -236,8 +242,8 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
       items: items.map(it => ({ name: it.name, price: it.price, qty: it.qty })),
       total,
       status: 'pendiente',
-    }).select('id').single()
-    if (error || !order) return { success: false, error: 'No se pudo crear el pedido (¿corriste la migración 038?)' }
+    })
+    if (error) return { success: false, error: 'No se pudo crear el pedido (¿corriste la migración 038?)' }
 
     // Vaciar carrito + cerrar cookie
     await supabase.from('cart_items').delete().eq('cart_id', id)
@@ -249,7 +255,7 @@ export async function createOrderFromCartAction(input: CheckoutInput): Promise<A
     // Best-effort: si la tienda no tiene Stripe conectado o falta la clave de
     // plataforma, el pedido queda "pendiente" y el negocio cobra por su cuenta.
     const checkoutUrl = await createOrderStripeCheckout({
-      orderId: order.id as string,
+      orderId,
       orderNo: order_no,
       storeId: cart.store_id as string,
       ownerId: (storeCfg?.owner_id as string) ?? null,

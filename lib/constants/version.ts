@@ -3,5 +3,5 @@
  * Sirve para confirmar QUÉ build estás viendo en producción.
  * Súbelo cada vez que despliegues cambios grandes.
  */
-export const APP_VERSION = 'v7.117'
-export const APP_BUILD = '2026-07-13' // v7.117: el comprador PAGA con Stripe al finalizar el pedido (checkout con destination charge + comisión por plan) y el webhook lo marca "Pagado" solo; checkout 100% Tarjeta con Stripe (cero menciones a contra entrega/transferencia); pestañas y OAuth canónico verificados.
+export const APP_VERSION = 'v7.118'
+export const APP_BUILD = '2026-07-13' // v7.118: FIX del error "migración 038" al crear pedidos — era el insert().select() de v7.117 contra RLS de comprador anónimo; ahora el id del pedido se genera en el servidor (insert puro). Checkout solo-Stripe, pestañas y OAuth canónico re-verificados con grep.
