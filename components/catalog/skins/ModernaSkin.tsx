@@ -47,6 +47,9 @@ export default function ModernaSkin({
           backgroundSize: ((store as { bg_fit?: string }).bg_fit === 'contain' ? 'contain' : (store as { bg_fit?: string }).bg_fit === 'fill' ? '100% 100%' : 'cover'),
           backgroundPosition: (store as { bg_position?: string }).bg_position || 'center',
           backgroundRepeat: 'no-repeat',
+          // Fijo al viewport: el fondo cubre la pantalla y no se estira raro en
+          // catálogos largos (antes se escalaba a toda la altura de la página).
+          backgroundAttachment: 'fixed',
         } : {}),
       }}
     >

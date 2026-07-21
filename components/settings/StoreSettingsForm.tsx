@@ -59,6 +59,37 @@ const BG_POSITIONS = [
   { v: 'left bottom', l: '↙' }, { v: 'center bottom', l: '↓' }, { v: 'right bottom', l: '↘' },
 ]
 
+// Preview EN VIVO grande del fondo. Muestra exactamente cómo se verá con la
+// imagen (ajuste + posición) o el color sólido, y se actualiza al instante.
+function BgLivePreview({ color, url, fit, position, kind }: { color: string; url: string; fit: string; position: string; kind: 'catalog' | 'admin' }) {
+  const size = fit === 'contain' ? 'contain' : fit === 'fill' ? '100% 100%' : 'cover'
+  const bgStyle = url
+    ? { backgroundColor: color || '#f1f5f9', backgroundImage: `url(${url})`, backgroundSize: size, backgroundPosition: position || 'center', backgroundRepeat: 'no-repeat' as const }
+    : { backgroundColor: color || '#f1f5f9' }
+  return (
+    <div className="relative h-40 rounded-xl overflow-hidden ring-1 ring-black/10 shadow-inner" style={bgStyle}>
+      {kind === 'catalog' ? (
+        <div className="absolute inset-0 p-3 flex flex-col">
+          <span className="self-start text-[10px] font-bold text-white bg-black/35 backdrop-blur px-2 py-1 rounded-lg">Mi tienda</span>
+          <div className="grid grid-cols-3 gap-2 mt-auto">
+            {[0, 1, 2].map(n => <div key={n} className="bg-white/85 backdrop-blur-sm rounded-lg h-14 shadow-sm" />)}
+          </div>
+        </div>
+      ) : (
+        <div className="absolute inset-0 flex">
+          <div className="w-12 bg-slate-900/45 backdrop-blur-sm flex flex-col gap-1 p-1.5">
+            {[0, 1, 2].map(n => <div key={n} className="h-2 rounded bg-white/50" />)}
+          </div>
+          <div className="flex-1 p-3 grid grid-cols-2 gap-2 content-start">
+            {[0, 1, 2, 3].map(n => <div key={n} className="bg-white/85 backdrop-blur-sm rounded-lg h-9 shadow-sm" />)}
+          </div>
+        </div>
+      )}
+      <span className="absolute bottom-1.5 right-1.5 text-[9px] font-semibold text-white/90 bg-black/30 backdrop-blur px-1.5 py-0.5 rounded">Vista previa en vivo</span>
+    </div>
+  )
+}
+
 const SKINS = [
   { id: 'moderna', label: 'Moderna', description: 'Gradientes, cards con sombra, bold' },
   { id: 'minimalista', label: 'Minimalista', description: 'Línea fina, limpio, tipografía elegante' },
@@ -913,23 +944,24 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               {/* Fondo del catálogo + estilo de botones — compacto */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-sm">
                   <div>
-                    <Label className="text-xs text-gray-500">Fondo del catálogo</Label>
+                    <Label className="text-sm font-semibold text-gray-700">Fondo del catálogo</Label>
+                    {/* Preview en vivo del catálogo */}
                     <div className="mt-1.5">
-                      <div className="flex flex-wrap gap-1.5 mb-1">
-                        {FONDO_NAMED_COLORS.map(c => (
-                          <button
-                            key={c.hex}
-                            type="button"
-                            onClick={() => setBgColor(c.hex)}
-                            title={c.name}
-                            className={`w-6 h-6 rounded border ${bgColor === c.hex ? 'ring-2 ring-blue-500' : 'border-gray-300'}`}
-                            style={{ backgroundColor: c.hex }}
-                          />
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-gray-400">{FONDO_NAMED_COLORS.find(c=>c.hex===bgColor)?.name || 'custom'}</span>
-                      </div>
+                      <BgLivePreview kind="catalog" color={bgColor} url={backgroundUrl} fit={bgFit} position={bgPosition} />
+                    </div>
+                    {/* Color de fondo sólido — fácil, un clic (quita la imagen) */}
+                    <p className="text-[11px] font-medium text-gray-500 mt-2.5">Elegir color de fondo (sin imagen)</p>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {FONDO_NAMED_COLORS.map(c => (
+                        <button
+                          key={c.hex}
+                          type="button"
+                          onClick={() => { setBgColor(c.hex); setBackgroundUrl('') }}
+                          title={c.name}
+                          className={`w-8 h-8 rounded-lg ring-1 ring-black/10 transition-transform hover:scale-110 ${bgColor === c.hex && !backgroundUrl ? 'ring-2 ring-indigo-500 scale-110' : ''}`}
+                          style={{ backgroundColor: c.hex }}
+                        />
+                      ))}
                     </div>
                     {/* Imagen de fondo opcional (se ve detrás del catálogo) */}
                     <div className="mt-2 flex items-center gap-2">
@@ -980,8 +1012,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   </div>
                   {/* Imagen de fondo del Dashboard / Panel Admin */}
                   <div className="pt-2 border-t border-gray-100 mt-2">
-                    <Label className="text-xs text-gray-500">Imagen de fondo del panel admin</Label>
-                    <div className="mt-1.5 flex items-center gap-2">
+                    <Label className="text-sm font-semibold text-gray-700">Fondo del panel admin</Label>
+                    {/* Preview en vivo del panel admin */}
+                    <div className="mt-1.5">
+                      <BgLivePreview kind="admin" color={dashboardBgColor} url={dashboardBgUrl} fit={dashboardBgFit} position={dashboardBgPosition} />
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
                       {dashboardBgUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={dashboardBgUrl} alt="Fondo dashboard" className="w-12 h-9 rounded-lg object-cover ring-1 ring-black/10" />
@@ -1026,22 +1062,19 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       </div>
                     )}
                     <p className="text-[10px] text-gray-400 mt-1">Se aplica con overlay semitransparente para legibilidad.</p>
-                    {/* Color de fondo sólido (sin imagen) — igual de fácil que el del catálogo */}
-                    <div className="mt-2">
-                      <Label className="text-[11px] text-gray-400">Color de fondo (sin imagen)</Label>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {FONDO_NAMED_COLORS.map(c => (
-                          <button
-                            key={c.hex}
-                            type="button"
-                            onClick={() => { setDashboardBgColor(c.hex); setDashboardBgUrl('') }}
-                            title={c.name}
-                            className={`w-6 h-6 rounded-md ring-1 ring-black/10 transition-transform hover:scale-110 ${dashboardBgColor === c.hex && !dashboardBgUrl ? 'ring-2 ring-indigo-500 scale-110' : ''}`}
-                            style={{ backgroundColor: c.hex }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-gray-400 mt-1">Elige un color y listo — no necesitas subir imagen. ({FONDO_NAMED_COLORS.find(c => c.hex === dashboardBgColor)?.name || 'personalizado'})</p>
+                    {/* Color de fondo sólido — fácil, un clic (quita la imagen) */}
+                    <p className="text-[11px] font-medium text-gray-500 mt-2.5">Elegir color de fondo (sin imagen)</p>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {FONDO_NAMED_COLORS.map(c => (
+                        <button
+                          key={c.hex}
+                          type="button"
+                          onClick={() => { setDashboardBgColor(c.hex); setDashboardBgUrl('') }}
+                          title={c.name}
+                          className={`w-8 h-8 rounded-lg ring-1 ring-black/10 transition-transform hover:scale-110 ${dashboardBgColor === c.hex && !dashboardBgUrl ? 'ring-2 ring-indigo-500 scale-110' : ''}`}
+                          style={{ backgroundColor: c.hex }}
+                        />
+                      ))}
                     </div>
                   </div>
                   <div>
@@ -1125,21 +1158,22 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         </div>
       )}
 
-      {/* Barra de guardado fija */}
-      <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white/90 backdrop-blur border-t border-gray-200 px-4 lg:px-6 py-3 z-30">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+      {/* Barra de guardado FLOTANTE (glassmorphism, compacta, no tapa contenido) */}
+      <div className="fixed bottom-4 left-1/2 lg:left-[calc(50%+8rem)] -translate-x-1/2 z-30">
+        <div className="flex items-center gap-1.5 rounded-full border border-white/50 bg-white/60 backdrop-blur-xl shadow-lg shadow-black/10 px-2 py-1.5">
           <a href={`/catalog/${store.slug}`} target="_blank" rel="noopener noreferrer"
-            className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1.5">
-            <ExternalLink size={14} /> <span className="hidden sm:inline">Ver mi catálogo</span>
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 px-3 py-1.5 rounded-full hover:bg-white/70 transition-colors">
+            <ExternalLink size={13} /> <span className="hidden sm:inline">Ver catálogo</span>
           </a>
-          <Button type="submit" disabled={isPending}
-            className={`min-w-44 h-11 transition-all hover:scale-[1.02] active:scale-95 ${saved ? 'bg-green-600 hover:bg-green-600' : ''}`}>
+          <span className="w-px h-5 bg-gray-300/60" />
+          <Button type="submit" disabled={isPending} size="sm"
+            className={`h-9 rounded-full px-4 text-sm shadow-sm transition-all active:scale-95 ${saved ? 'bg-emerald-600 hover:bg-emerald-600' : ''}`}>
             {isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando…</>
+              <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Guardando…</>
             ) : saved ? (
-              <><Check className="mr-2 h-4 w-4" /> ¡Cambios guardados!</>
+              <><Check className="mr-1.5 h-3.5 w-3.5" /> Guardado</>
             ) : (
-              <><Save className="mr-2 h-4 w-4" /> Guardar cambios</>
+              <><Save className="mr-1.5 h-3.5 w-3.5" /> Guardar</>
             )}
           </Button>
         </div>
