@@ -14,6 +14,9 @@ export default async function OrdersPage() {
   // Solo el dueño gestiona pedidos
   if (profile?.role === 'employee' || profile?.role === 'supervisor') redirect('/sales/new')
 
+  const { data: store } = await supabase.from('stores').select('name').eq('owner_id', user.id).maybeSingle()
+  const storeName = (store?.name as string) || 'la tienda'
+
   const paidPlans = ['emprendedor', 'negocio', 'vip_plus']
   const isPaid = paidPlans.includes((profile?.plan as string) ?? 'free')
 
@@ -47,7 +50,7 @@ export default async function OrdersPage() {
           <p className="text-gray-500 text-sm">Ventas de «Compra Online» de tu catálogo. Cambia el estado para darles seguimiento.</p>
         </div>
       </div>
-      <OrdersPanel />
+      <OrdersPanel storeName={storeName} />
     </div>
   )
 }

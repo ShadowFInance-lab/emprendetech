@@ -1,10 +1,21 @@
 'use server'
 
-import { createClient, createPublicClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+import { createClient, createPublicClient, createAdminClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 import { ORDER_STATUSES, type OrderStatus } from '@/lib/constants/orders'
+import { getAppUrl } from '@/lib/utils/app-url'
+import { sendEmail } from '@/lib/utils/email'
+import { trackingUrl, buildShipWhatsApp, buildShipmentEmailHtml } from '@/lib/utils/shipping'
 
 export type { OrderStatus }
+
+export interface StatusHistoryEntry {
+  status: string
+  at: string
+  tracking_number?: string
+  shipping_carrier?: string
+}
 
 export interface OnlineOrder {
   id: string
@@ -28,6 +39,11 @@ export interface OnlineOrder {
   payment_status?: string | null
   stripe_payment_intent?: string | null
   paid_at?: string | null
+  // Seguimiento / envío (migración 054).
+  tracking_number?: string | null
+  shipping_carrier?: string | null
+  shipped_at?: string | null
+  status_history?: StatusHistoryEntry[] | null
 }
 
 // Un pedido cuenta como "pagado" si Stripe lo confirmó (payment_status='paid')
@@ -103,6 +119,10 @@ export async function listOnlineOrdersAction(): Promise<OnlineOrder[]> {
       payment_status: (o.payment_status as string) ?? null,
       stripe_payment_intent: (o.stripe_payment_intent as string) ?? null,
       paid_at: (o.paid_at as string) ?? null,
+      tracking_number: (o.tracking_number as string) ?? null,
+      shipping_carrier: (o.shipping_carrier as string) ?? null,
+      shipped_at: (o.shipped_at as string) ?? null,
+      status_history: (o.status_history as StatusHistoryEntry[]) ?? null,
     }))
     // REGLA: Ventas Online SOLO muestra pedidos con pago confirmado por Stripe.
     // (En el flujo pago-primero ya nunca se crean pedidos sin pagar; el filtro
@@ -111,17 +131,126 @@ export async function listOnlineOrdersAction(): Promise<OnlineOrder[]> {
   } catch { return [] }
 }
 
-/** Cambia el estado de un pedido (auto-guardado). */
-export async function updateOnlineOrderStatusAction(id: string, status: OrderStatus): Promise<ActionResult> {
+/**
+ * Cambia el estado de un pedido. Al marcar "enviado" guarda la guía, la
+ * paquetería y la fecha de envío, agrega el cambio al historial, envía un correo
+ * automático al cliente (si tiene) y devuelve un mensaje de WhatsApp listo para
+ * copiar. Resiliente si la migración 054 no se corrió (reintenta sin columnas).
+ */
+export async function updateOnlineOrderStatusAction(
+  id: string,
+  status: OrderStatus,
+  tracking?: { trackingNumber?: string; carrier?: string },
+): Promise<ActionResult & { whatsapp?: string }> {
   try {
     if (!ORDER_STATUSES.includes(status)) return { success: false, error: 'Estado inválido' }
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
-    const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).single()
+    const { data: store } = await supabase.from('stores').select('id, name').eq('owner_id', user.id).single()
     if (!store) return { success: false, error: 'Sin tienda' }
-    const { error } = await supabase.from('online_orders').update({ status }).eq('id', id).eq('store_id', store.id)
-    if (error) return { success: false, error: 'No se pudo actualizar' }
-    return { success: true }
+
+    // Pedido actual (para historial + correo + WhatsApp).
+    const { data: order } = await supabase.from('online_orders')
+      .select('*').eq('id', id).eq('store_id', store.id).maybeSingle()
+    if (!order) return { success: false, error: 'Pedido no encontrado' }
+
+    const now = new Date().toISOString()
+    const history: StatusHistoryEntry[] = Array.isArray(order.status_history) ? order.status_history : []
+    const entry: StatusHistoryEntry = { status, at: now }
+    const update: Record<string, unknown> = { status }
+
+    if (status === 'enviado') {
+      update.shipped_at = now
+      const g = tracking?.trackingNumber?.trim()
+      const c = tracking?.carrier?.trim()
+      if (g) { update.tracking_number = g; entry.tracking_number = g }
+      if (c) { update.shipping_carrier = c; entry.shipping_carrier = c }
+    }
+    update.status_history = [...history, entry]
+
+    let upd = await supabase.from('online_orders').update(update).eq('id', id).eq('store_id', store.id)
+    // Resiliencia si la migración 054 no se corrió: reintenta solo con el estado.
+    if (upd.error && /tracking_number|shipping_carrier|shipped_at|status_history|column|schema cache/i.test(upd.error.message || '')) {
+      upd = await supabase.from('online_orders').update({ status }).eq('id', id).eq('store_id', store.id)
+    }
+    if (upd.error) return { success: false, error: 'No se pudo actualizar' }
+    revalidatePath('/orders')
+
+    // Al enviar: correo automático (best-effort) + mensaje de WhatsApp.
+    let whatsapp: string | undefined
+    if (status === 'enviado') {
+      const carrier = (update.shipping_carrier as string) || (order.shipping_carrier as string) || null
+      const guide = (update.tracking_number as string) || (order.tracking_number as string) || null
+      const trackUrl = `${getAppUrl()}/rastreo/${order.order_no ?? id}`
+      const carrierUrl = trackingUrl(carrier, guide)
+      whatsapp = buildShipWhatsApp({ store: store.name, orderNo: order.order_no as string, carrier, guide, carrierUrl, trackUrl })
+      if (order.email) {
+        // No bloquea la respuesta; si Resend no está configurado, se omite.
+        void sendEmail(
+          order.email as string,
+          `Tu pedido ${order.order_no ?? ''} va en camino 📦`,
+          buildShipmentEmailHtml({ storeName: store.name, orderNo: order.order_no as string, carrier, guide, carrierUrl, trackUrl }),
+        )
+      }
+    }
+    return { success: true, whatsapp }
   } catch { return { success: false, error: 'Error' } }
+}
+
+// ─── Rastreo PÚBLICO por número de orden (cliente sin cuenta) ────────────────
+export interface PublicOrderTracking {
+  order_no: string | null
+  status: OrderStatus
+  status_history: StatusHistoryEntry[]
+  shipping_carrier: string | null
+  tracking_number: string | null
+  tracking_url: string | null
+  shipped_at: string | null
+  created_at: string
+  paid_at: string | null
+  total: number | null
+  item_count: number
+  store_name: string | null
+  store_slug: string | null
+}
+
+/**
+ * Devuelve el estado de un pedido para el cliente (página /rastreo). Usa
+ * service-role filtrando por order_no y expone SOLO datos no sensibles (nada de
+ * dirección, teléfono ni correo). Devuelve null si no existe.
+ */
+export async function getPublicOrderTrackingAction(orderNo: string): Promise<PublicOrderTracking | null> {
+  try {
+    const code = (orderNo || '').trim()
+    if (!code) return null
+    const admin = createAdminClient()
+    const { data: o } = await admin.from('online_orders').select('*').eq('order_no', code).maybeSingle()
+    if (!o) return null
+    let storeName: string | null = null
+    let storeSlug: string | null = null
+    if (o.store_id) {
+      const { data: s } = await admin.from('stores').select('name, slug').eq('id', o.store_id).maybeSingle()
+      storeName = (s?.name as string) ?? null
+      storeSlug = (s?.slug as string) ?? null
+    }
+    const carrier = (o.shipping_carrier as string) ?? null
+    const guide = (o.tracking_number as string) ?? null
+    const items = (o.items as { qty: number }[] | null) ?? []
+    return {
+      order_no: (o.order_no as string) ?? null,
+      status: (o.status as OrderStatus) ?? 'pagado',
+      status_history: Array.isArray(o.status_history) ? (o.status_history as StatusHistoryEntry[]) : [],
+      shipping_carrier: carrier,
+      tracking_number: guide,
+      tracking_url: trackingUrl(carrier, guide),
+      shipped_at: (o.shipped_at as string) ?? null,
+      created_at: o.created_at as string,
+      paid_at: (o.paid_at as string) ?? null,
+      total: o.total == null ? null : Number(o.total),
+      item_count: items.reduce((s, it) => s + (Number(it.qty) || 0), 0),
+      store_name: storeName,
+      store_slug: storeSlug,
+    }
+  } catch { return null }
 }

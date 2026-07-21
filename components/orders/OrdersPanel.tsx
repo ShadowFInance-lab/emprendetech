@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Inbox, Loader2, Phone, MapPin, CreditCard, RefreshCw, X, ShoppingBag, CalendarDays, Clock, DollarSign, Check } from 'lucide-react'
+import { Inbox, Loader2, Phone, MapPin, CreditCard, RefreshCw, X, ShoppingBag, CalendarDays, Clock, DollarSign, Check, Truck, Copy, ExternalLink, MessageCircle } from 'lucide-react'
 import { listOnlineOrdersAction, updateOnlineOrderStatusAction, type OnlineOrder } from '@/lib/actions/orders'
 import { ORDER_STATUSES, type OrderStatus } from '@/lib/constants/orders'
 import { formatCurrency } from '@/lib/utils/format'
+import { CARRIERS, trackingUrl, buildShipWhatsApp } from '@/lib/utils/shipping'
 
 const STATUS_STYLE: Record<OrderStatus, string> = {
   pendiente: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -30,7 +31,17 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const fmtDate = (s: string) => new Date(s).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 const isToday = (s: string) => new Date(s).toDateString() === new Date().toDateString()
 
-export default function OrdersPanel() {
+// Mensaje de WhatsApp del pedido enviado (link de rastreo en el dominio actual).
+function waMessage(o: OnlineOrder, storeName: string): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  return buildShipWhatsApp({
+    store: storeName, orderNo: o.order_no, carrier: o.shipping_carrier, guide: o.tracking_number,
+    carrierUrl: trackingUrl(o.shipping_carrier, o.tracking_number),
+    trackUrl: `${origin}/rastreo/${o.order_no ?? ''}`,
+  })
+}
+
+export default function OrdersPanel({ storeName = 'la tienda' }: { storeName?: string }) {
   const [orders, setOrders] = useState<OnlineOrder[]>([])
   const [loading, setLoading] = useState(true)
   // La lista ya llega filtrada a SOLO pagados (regla de Ventas Online). Por eso
@@ -39,6 +50,9 @@ export default function OrdersPanel() {
   const [filter, setFilter] = useState<'todos' | OrderStatus>('todos')
   const [selected, setSelected] = useState<OnlineOrder | null>(null)
   const [isPending, startTransition] = useTransition()
+  // Modal "Marcar como enviado" (guía + paquetería opcionales)
+  const [shipFor, setShipFor] = useState<OnlineOrder | null>(null)
+  const [ship, setShip] = useState({ carrier: '', guide: '' })
 
   async function load() {
     setLoading(true)
@@ -48,20 +62,45 @@ export default function OrdersPanel() {
   }
   useEffect(() => { load() }, [])
 
-  function setStatus(id: string, status: OrderStatus) {
-    setOrders(prev => prev.map(o => (o.id === id ? { ...o, status } : o)))
-    setSelected(s => (s && s.id === id ? { ...s, status } : s))
+  function setStatus(id: string, status: OrderStatus, tracking?: { trackingNumber?: string; carrier?: string }) {
+    const now = new Date().toISOString()
+    const patch = (o: OnlineOrder): OnlineOrder => {
+      const hist = Array.isArray(o.status_history) ? o.status_history : []
+      const entry = { status, at: now, ...(tracking?.carrier ? { shipping_carrier: tracking.carrier } : {}), ...(tracking?.trackingNumber ? { tracking_number: tracking.trackingNumber } : {}) }
+      return {
+        ...o, status,
+        ...(status === 'enviado' ? { shipped_at: now, shipping_carrier: tracking?.carrier || o.shipping_carrier, tracking_number: tracking?.trackingNumber || o.tracking_number } : {}),
+        status_history: [...hist, entry],
+      }
+    }
+    setOrders(prev => prev.map(o => (o.id === id ? patch(o) : o)))
+    setSelected(s => (s && s.id === id ? patch(s) : s))
     startTransition(async () => {
-      const r = await updateOnlineOrderStatusAction(id, status)
-      if (!r.success) { toast.error(r.error ?? 'Error'); load() } else toast.success('Estado actualizado')
+      const r = await updateOnlineOrderStatusAction(id, status, tracking)
+      if (!r.success) { toast.error(r.error ?? 'Error'); load() }
+      else toast.success(status === 'enviado' ? '📦 Pedido marcado como enviado' : 'Estado actualizado')
     })
+  }
+
+  // Avanzar de estado: si el siguiente es "enviado", abrimos el modal de guía.
+  function advance(o: OnlineOrder, to: OrderStatus) {
+    if (to === 'enviado') { setShip({ carrier: '', guide: '' }); setShipFor(o); return }
+    setStatus(o.id, to)
+  }
+  function confirmShip() {
+    if (!shipFor) return
+    setStatus(shipFor.id, 'enviado', { trackingNumber: ship.guide.trim() || undefined, carrier: ship.carrier.trim() || undefined })
+    setShipFor(null)
+  }
+
+  function copy(text: string) {
+    navigator.clipboard?.writeText(text).then(() => toast.success('Mensaje copiado')).catch(() => {})
   }
 
   const shown = filter === 'todos' ? orders : orders.filter(o => o.status === filter)
   const stats = useMemo(() => ({
     total: orders.length,
     hoy: orders.filter(o => isToday(o.created_at)).length,
-    // Pagados que aún faltan por despachar (recién pagados o en preparación).
     porEnviar: orders.filter(o => o.status === 'pagado' || o.status === 'preparando').length,
     ingresos: orders.reduce((s, o) => s + (o.total ?? 0), 0),
   }), [orders])
@@ -106,18 +145,19 @@ export default function OrdersPanel() {
       {shown.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <Inbox size={40} className="mx-auto text-gray-300 mb-3" />
-          <p className="font-semibold text-gray-700">{filter === 'pagado' ? 'Sin pedidos pagados listos para enviar' : `Sin pedidos ${filter !== 'todos' ? `«${cap(filter)}»` : 'todavía'}`}</p>
-          <p className="text-sm text-gray-400">Los pedidos de «Compra Online» de tu catálogo aparecerán aquí.</p>
+          <p className="font-semibold text-gray-700">{`Sin pedidos ${filter !== 'todos' ? `«${cap(filter)}»` : 'todavía'}`}</p>
+          <p className="text-sm text-gray-400">Los pedidos pagados de tu catálogo aparecerán aquí.</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm">
-          <table className="w-full text-sm min-w-[640px]">
+          <table className="w-full text-sm min-w-[680px]">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-gray-400 bg-gray-50/70">
                 <th className="px-4 py-2.5 font-semibold">ID</th>
                 <th className="px-4 py-2.5 font-semibold">Cliente</th>
                 <th className="px-4 py-2.5 font-semibold">Estado</th>
                 <th className="px-4 py-2.5 font-semibold">Pago</th>
+                <th className="px-4 py-2.5 font-semibold">Envío</th>
                 <th className="px-4 py-2.5 font-semibold text-right">Total</th>
                 <th className="px-4 py-2.5 font-semibold whitespace-nowrap">Fecha</th>
                 <th className="px-4 py-2.5 font-semibold">Acción</th>
@@ -134,13 +174,18 @@ export default function OrdersPanel() {
                       <Check size={11} /> Pagado
                     </span>
                   </td>
+                  <td className="px-4 py-2.5 text-xs whitespace-nowrap">
+                    {o.tracking_number
+                      ? <span className="inline-flex items-center gap-1 text-cyan-700"><Truck size={12} /> {o.shipping_carrier || 'Guía'}</span>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900 whitespace-nowrap">{o.total != null ? formatCurrency(o.total) : '—'}</td>
                   <td className="px-4 py-2.5 text-gray-400 text-xs whitespace-nowrap">{fmtDate(o.created_at)}</td>
                   <td className="px-4 py-2.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                     {o.status === 'cancelado' ? (
                       <span className="text-xs text-gray-300">—</span>
                     ) : nextOf(o.status) ? (
-                      <button type="button" disabled={isPending} onClick={() => setStatus(o.id, nextOf(o.status)!)}
+                      <button type="button" disabled={isPending} onClick={() => advance(o, nextOf(o.status)!)}
                         className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
                         → {NEXT_ACTION[o.status]}
                       </button>
@@ -211,6 +256,35 @@ export default function OrdersPanel() {
                 </div>
               </div>
 
+              {/* Envío / guía */}
+              {(selected.tracking_number || selected.shipping_carrier || selected.shipped_at) && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Envío</p>
+                  <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3 space-y-1 text-sm">
+                    <p className="flex items-center gap-1.5 font-bold text-cyan-700"><Truck size={14} /> {selected.shipping_carrier || 'Enviado'}</p>
+                    {selected.tracking_number && <p className="text-gray-600">Guía: <strong className="text-gray-800 font-mono">{selected.tracking_number}</strong></p>}
+                    {selected.shipped_at && <p className="text-gray-600">Enviado: <strong className="text-gray-800">{fmtDate(selected.shipped_at)}</strong></p>}
+                    {trackingUrl(selected.shipping_carrier, selected.tracking_number) && (
+                      <a href={trackingUrl(selected.shipping_carrier, selected.tracking_number)!} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-cyan-700 font-semibold hover:underline"><ExternalLink size={12} /> Rastrear paquete</a>
+                    )}
+                  </div>
+                  {/* Avisar al cliente por WhatsApp */}
+                  <div className="mt-2 flex gap-2">
+                    <button type="button" onClick={() => copy(waMessage(selected, storeName))}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-50">
+                      <Copy size={13} /> Copiar mensaje
+                    </button>
+                    {selected.phone && (
+                      <a href={`https://wa.me/${(selected.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waMessage(selected, storeName))}`} target="_blank" rel="noopener noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-green-500 text-white text-xs font-semibold hover:bg-green-600">
+                        <MessageCircle size={13} /> Enviar WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Notas */}
               {selected.notes && (
                 <div>
@@ -219,9 +293,9 @@ export default function OrdersPanel() {
                 </div>
               )}
 
-              {/* Historial / línea de estados */}
+              {/* Progreso del pedido */}
               <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Historial de estados</p>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Progreso</p>
                 {selected.status === 'cancelado' ? (
                   <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"><X size={15} /> Pedido cancelado</div>
                 ) : (
@@ -239,12 +313,28 @@ export default function OrdersPanel() {
                   </ol>
                 )}
               </div>
+
+              {/* Historial real de cambios de estado */}
+              {selected.status_history && selected.status_history.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Historial de cambios</p>
+                  <ol className="space-y-2 border-l-2 border-gray-100 pl-3">
+                    {[...selected.status_history].reverse().map((h, i) => (
+                      <li key={i} className="text-sm">
+                        <span className="font-semibold text-gray-800">{cap(h.status)}</span>
+                        <span className="text-gray-400 text-xs"> · {fmtDate(h.at)}</span>
+                        {h.tracking_number && <span className="block text-xs text-gray-500">Guía {h.tracking_number}{h.shipping_carrier ? ` · ${h.shipping_carrier}` : ''}</span>}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </div>
 
             {/* Acciones rápidas + cambiar estado */}
             <div className="border-t border-gray-100 p-4 shrink-0 space-y-2">
               {selected.status !== 'cancelado' && nextOf(selected.status) && (
-                <button type="button" disabled={isPending} onClick={() => setStatus(selected.id, nextOf(selected.status)!)}
+                <button type="button" disabled={isPending} onClick={() => advance(selected, nextOf(selected.status)!)}
                   className="w-full h-10 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-50">
                   → Avanzar a {cap(nextOf(selected.status)!)}
                 </button>
@@ -256,10 +346,46 @@ export default function OrdersPanel() {
                 </button>
               )}
               <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5 block">O elige un estado</label>
-              <select value={selected.status} onChange={e => setStatus(selected.id, e.target.value as OrderStatus)} disabled={isPending}
+              <select value={selected.status} onChange={e => { const v = e.target.value as OrderStatus; if (v === 'enviado') advance(selected, 'enviado'); else setStatus(selected.id, v) }} disabled={isPending}
                 className="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
                 {ORDER_STATUSES.map(st => <option key={st} value={st}>{cap(st)}</option>)}
               </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal "Marcar como enviado" (guía + paquetería) ── */}
+      {shipFor && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShipFor(null)} />
+          <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-cyan-500 to-sky-600 text-white">
+              <p className="font-bold flex items-center gap-2"><Truck size={18} /> Marcar como enviado</p>
+              <button onClick={() => setShipFor(null)} className="text-white/80 hover:text-white"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-gray-500">Pedido <strong className="text-gray-800">{shipFor.order_no}</strong>. La guía y la paquetería son opcionales; si agregas el correo del cliente recibirá un email con el rastreo.</p>
+              <div>
+                <label className="text-xs font-bold text-gray-600">Paquetería</label>
+                <select value={ship.carrier} onChange={e => setShip(s => ({ ...s, carrier: e.target.value }))}
+                  className="mt-1 w-full h-10 text-sm border border-gray-200 rounded-lg px-2 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                  <option value="">Sin especificar</option>
+                  {CARRIERS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-600">Número de guía</label>
+                <input value={ship.guide} onChange={e => setShip(s => ({ ...s, guide: e.target.value }))} placeholder="Ej. 1234 5678 9012"
+                  className="mt-1 w-full h-10 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+              </div>
+            </div>
+            <div className="flex gap-2 p-4 border-t border-gray-100">
+              <button onClick={() => setShipFor(null)} className="flex-1 h-10 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50">Cancelar</button>
+              <button onClick={confirmShip} disabled={isPending}
+                className="flex-1 h-10 rounded-xl bg-cyan-600 text-white text-sm font-bold hover:bg-cyan-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5">
+                <Truck size={15} /> Marcar enviado
+              </button>
             </div>
           </div>
         </div>

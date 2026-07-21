@@ -5,6 +5,7 @@ import { createPublicClient } from '@/lib/supabase/server'
 import ModernaSkin from '@/components/catalog/skins/ModernaSkin'
 import MinimalistaSkin from '@/components/catalog/skins/MinimalistaSkin'
 import { CartProvider } from '@/components/catalog/cart/CartProvider'
+import Link from 'next/link'
 import CartFab from '@/components/catalog/cart/CartFab'
 import WishlistFab from '@/components/catalog/cart/WishlistFab'
 import { getAppUrl } from '@/lib/utils/app-url'
@@ -188,6 +189,15 @@ export default async function CatalogPage({ params, searchParams }: PageProps) {
         ) : (
           <ModernaSkin {...skinProps} />
         )}
+        <footer className="border-t border-gray-100 py-8 px-4 text-center text-xs text-gray-400 bg-white">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
+            <Link href="/terminos" className="hover:text-gray-600 transition-colors">Términos</Link>
+            <Link href="/privacidad" className="hover:text-gray-600 transition-colors">Privacidad</Link>
+            <Link href="/rastreo" className="hover:text-gray-600 transition-colors">Rastrear pedido</Link>
+            <Link href={`/reportar?tienda=${store.slug}`} className="hover:text-red-500 transition-colors">Reportar tienda</Link>
+          </div>
+          <p className="mt-2">Vendido por <strong className="text-gray-500">{store.name}</strong>. Mercanta Business es solo la plataforma tecnológica.</p>
+        </footer>
         <CartFab />
         <WishlistFab slug={store.slug} color={store.primary_color ?? '#2563EB'} currency={store.currency ?? undefined} />
       </CartProvider>

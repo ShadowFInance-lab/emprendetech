@@ -136,6 +136,11 @@ export default function LoginForm({ redirectTo, showResetSuccess, oauthError, au
             Regístrate gratis
           </Link>
         </p>
+        <p className="text-[11px] text-gray-400">
+          <Link href="/terminos" className="hover:underline">Términos</Link>
+          {' · '}
+          <Link href="/privacidad" className="hover:underline">Privacidad</Link>
+        </p>
         <p className="text-[10px] text-gray-300">Mercanta Business {APP_VERSION}</p>
       </CardFooter>
     </Card>

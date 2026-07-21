@@ -82,6 +82,17 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* Footer legal */}
+      <footer className="bg-slate-950 border-t border-white/10 py-8 px-4 text-center">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-400">
+          <Link href="/terminos" className="hover:text-white transition-colors">Términos y Condiciones</Link>
+          <Link href="/privacidad" className="hover:text-white transition-colors">Aviso de Privacidad</Link>
+          <Link href="/rastreo" className="hover:text-white transition-colors">Rastrear pedido</Link>
+          <Link href="/reportar" className="hover:text-white transition-colors">Reportar</Link>
+        </div>
+        <p className="mt-3 text-xs text-slate-500">© {new Date().getFullYear()} Mercanta Business · Plataforma tecnológica para negocios.</p>
+      </footer>
     </div>
   )
 }

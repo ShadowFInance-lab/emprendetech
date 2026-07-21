@@ -163,17 +163,22 @@ export default function RegisterForm() {
             </div>
           )}
 
-          {/* Términos */}
-          <p className="text-xs text-gray-500 text-center">
-            Al registrarte aceptas nuestros{' '}
-            <Link href="/terms" className="text-blue-600 hover:underline">
-              Términos de Servicio
-            </Link>{' '}
-            y{' '}
-            <Link href="/privacy" className="text-blue-600 hover:underline">
-              Política de Privacidad
-            </Link>
-          </p>
+          {/* Términos — checkbox obligatorio (el navegador bloquea el envío sin él) */}
+          <label className="flex items-start gap-2.5 text-xs text-gray-600">
+            <input
+              type="checkbox"
+              name="accept_terms"
+              required
+              disabled={isPending}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
+            />
+            <span>
+              Acepto los{' '}
+              <Link href="/terminos" target="_blank" className="text-blue-600 hover:underline">Términos y Condiciones</Link>
+              {' '}y el{' '}
+              <Link href="/privacidad" target="_blank" className="text-blue-600 hover:underline">Aviso de Privacidad</Link>.
+            </span>
+          </label>
 
           {/* Submit */}
           <Button type="submit" className="w-full" disabled={isPending}>
