@@ -293,28 +293,28 @@ async function createOrderStripeCheckout(p: {
   // cobra en MODO PLATAFORMA. Antes cualquier fallo aquí caía al catch general y
   // mostraba el genérico "Error creando el pago con Stripe", ocultando la causa.
   let accountId: string | undefined
-  let feePct = 0.03
+  let feePct = 0.025
   try {
     const admin = createAdminClient()
     const { data: cfg, error: cfgErr } = await admin.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', p.storeId).maybeSingle()
     if (cfgErr) console.error('[order checkout] leyendo store_payment_config:', cfgErr.message)
     accountId = (cfg?.stripe_account_id as string | undefined) || undefined
-    // Comisión por plan del dueño: Gratis 3% · Emprendedor/Negocio 0% · VIP 2%
-    // (VIP: primeras 1,000 ventas del mes sin comisión, igual que el POS).
+    // Comisión por plan del dueño (misma política que el POS):
+    //   Gratis 2.5% · Emprendedor/Negocio 0% · VIP Plus 0% hasta 1,000 ventas
+    //   registradas y 2.5% desde la venta 1,001 (conteo REAL total).
     if (p.ownerId) {
       const { data: prof } = await admin.from('profiles').select('plan').eq('id', p.ownerId).maybeSingle()
       const plan = (prof?.plan as string) ?? 'free'
-      feePct = plan === 'vip_plus' ? 0.02
-        : (plan === 'emprendedor' || plan === 'negocio' || plan === 'lifetime') ? 0
-        : 0.03
-      if (plan === 'vip_plus') {
-        const now = new Date()
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+      if (plan === 'emprendedor' || plan === 'negocio' || plan === 'lifetime') {
+        feePct = 0
+      } else if (plan === 'vip_plus') {
         const { count } = await admin.from('sales')
           .select('*', { count: 'exact', head: true })
-          .eq('store_id', p.storeId).eq('status', 'completed').gte('created_at', monthStart)
-        if ((count ?? 0) < 1000) feePct = 0
+          .eq('store_id', p.storeId).eq('status', 'completed')
+        feePct = (count ?? 0) >= 1000 ? 0.025 : 0
+      } else {
+        feePct = 0.025
       }
     }
   } catch (e) {

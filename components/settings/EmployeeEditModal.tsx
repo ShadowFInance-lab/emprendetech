@@ -52,6 +52,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
   const [newPw, setNewPw] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [savedPw, setSavedPw] = useState<string | null>(null) // se muestra 1 sola vez tras guardar
+  const [showSaved, setShowSaved] = useState(true) // ojito del recuadro de resultado
   const [copied, setCopied] = useState(false)
   const [tab, setTab] = useState<TabId>('perfil')
 
@@ -74,11 +75,25 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     e.target.value = ''
   }
   useEffect(() => {
-    Promise.all([getEmployeeMeta(employeeId), getEmployeeWeekAction(employeeId)]).then(([m, w]) => {
-      if (m) setMeta({ ...EMPTY, ...m })
-      setWeek(w); setLoaded(true)
-    })
-    getEmployeeLoginAction(employeeId).then(r => setEmail(r.email))
+    let alive = true
+    setLoaded(false)
+    ;(async () => {
+      try {
+        // Cargas independientes: si una falla, NO deja la otra vacía NI cuelga el
+        // modal en el spinner (antes un rechazo dejaba `loaded` en false = "sin datos").
+        const [m, w] = await Promise.all([
+          getEmployeeMeta(employeeId).catch(() => null),
+          getEmployeeWeekAction(employeeId).catch(() => [] as AttendanceRow[]),
+        ])
+        if (!alive) return
+        if (m) setMeta({ ...EMPTY, ...m })
+        setWeek(w)
+      } finally {
+        if (alive) setLoaded(true) // SIEMPRE se marca cargado
+      }
+    })()
+    getEmployeeLoginAction(employeeId).then(r => { if (alive) setEmail(r.email) }).catch(() => {})
+    return () => { alive = false }
   }, [employeeId])
 
   // Al elegir un día, precarga sus horas guardadas — así cada día es editable
@@ -263,12 +278,19 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
                   </div>
                 </div>
 
-                {/* Resultado: la nueva contraseña se muestra grande SOLO esta vez, para copiar */}
+                {/* Resultado: la nueva contraseña se muestra grande SOLO esta vez,
+                    con ojito para revelar/ocultar y botón para copiar. */}
                 {savedPw && (
                   <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-3 space-y-2">
                     <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5"><Check size={13} /> Contraseña actualizada — cópiala y pásasela al empleado</p>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-base font-bold font-mono text-gray-900 tracking-wide break-all select-all">{savedPw}</code>
+                      <code className="flex-1 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-base font-bold font-mono text-gray-900 tracking-wide break-all select-all">
+                        {showSaved ? savedPw : '•'.repeat(Math.min(savedPw.length, 12))}
+                      </code>
+                      <button type="button" onClick={() => setShowSaved(v => !v)} title={showSaved ? 'Ocultar' : 'Mostrar'}
+                        className="h-10 w-10 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-100 inline-flex items-center justify-center shrink-0">
+                        {showSaved ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
                       <button type="button" onClick={() => copyPw(savedPw)} className="h-10 px-3 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 inline-flex items-center gap-1.5 shrink-0">
                         {copied ? <><Check size={15} /> Copiado</> : <><Copy size={15} /> Copiar</>}
                       </button>

@@ -84,22 +84,25 @@ export async function createStripePaymentLinkAction(
     if (!store) return { success: false, error: 'No autorizado' }
 
     // Comisión de la plataforma por venta con tarjeta, según el plan:
-    // Gratis = 3% · Emprendedor y Negocio = 0% · VIP Plus = 2%, PERO sus
-    // primeras 1,000 ventas de cada mes van SIN comisión.
-    // application_fee_amount va en centavos y Stripe la deposita
-    // automáticamente en la cuenta de la PLATAFORMA.
+    //   Gratis                → 2.5% siempre
+    //   Emprendedor / Negocio → 0%
+    //   VIP Plus              → 0% hasta 1,000 ventas registradas de la tienda;
+    //                           desde la venta 1,001 en adelante, 2.5%
+    //                           (conteo REAL total de ventas, no mensual).
+    // application_fee_amount va en centavos y Stripe la deposita en la cuenta
+    // de la PLATAFORMA.
     const { data: prof } = await supabase.from('profiles').select('plan').eq('id', user.id).maybeSingle()
     const plan = (prof?.plan as string) ?? 'free'
-    let feePct = plan === 'vip_plus' ? 0.02
-      : (plan === 'emprendedor' || plan === 'negocio' || plan === 'lifetime') ? 0
-      : 0.03
-    if (plan === 'vip_plus') {
-      const now = new Date()
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    let feePct: number
+    if (plan === 'emprendedor' || plan === 'negocio' || plan === 'lifetime') {
+      feePct = 0
+    } else if (plan === 'vip_plus') {
       const { count } = await supabase.from('sales')
         .select('*', { count: 'exact', head: true })
-        .eq('store_id', store.id).eq('status', 'completed').gte('created_at', monthStart)
-      if ((count ?? 0) < 1000) feePct = 0
+        .eq('store_id', store.id).eq('status', 'completed')
+      feePct = (count ?? 0) >= 1000 ? 0.025 : 0
+    } else {
+      feePct = 0.025 // Gratis
     }
     const feeCents = Math.round(amount * 100 * feePct)
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Search, Plus, Minus, Trash2, ShoppingCart, Loader2,
-  Package, X, CheckCircle2, Banknote, ArrowLeftRight, UserCheck, CreditCard,
+  Package, X, CheckCircle2, Banknote, ArrowLeftRight, UserCheck, CreditCard, QrCode, Copy,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,6 +29,7 @@ type POSProduct = {
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Efectivo', icon: Banknote },
   { id: 'card', label: 'Tarjeta', icon: CreditCard },
+  { id: 'qr', label: 'QR', icon: QrCode },
   { id: 'transfer', label: 'Transferencia', icon: ArrowLeftRight },
 ] as const
 
@@ -50,10 +51,13 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
 
   // Checkout fields
   const [discount, setDiscount] = useState('0')
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer' | 'qr'>('cash')
   const [customerName, setCustomerName] = useState(presetCustomer?.name ?? '')
   const [customerPhone, setCustomerPhone] = useState(presetCustomer?.phone ?? '')
   const [stripeLoading, setStripeLoading] = useState(false)
+  // Pago con QR: url del checkout de Stripe + imagen QR (data URL)
+  const [qrUrl, setQrUrl] = useState<string | null>(null)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
   // ─── Buscar productos (con debounce) ─────────────────────
   const search = useCallback(async (q: string) => {
@@ -75,9 +79,10 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   // Tarjeta = Stripe Checkout directo: genera el link por el TOTAL del carrito y
   // lo abre al instante. El webhook (/api/stripe/webhook) registra la venta sola
   // (con items → descuenta stock) cuando el pago se completa.
-  async function handleStripeCard() {
-    if (items.length === 0) { toast.error('Agrega productos al carrito'); return }
-    setStripeLoading(true)
+  // Genera el link de Stripe (con la comisión correcta según el plan). Lo usan
+  // tanto Tarjeta (abre el checkout) como QR (muestra el código para escanear).
+  async function generateStripeLink(): Promise<string | null> {
+    if (items.length === 0) { toast.error('Agrega productos al carrito'); return null }
     const res = await createStripePaymentLinkAction({
       amount: total,
       concept: 'Venta en tienda',
@@ -88,14 +93,36 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
         customerPhone: customerPhone || undefined,
       },
     })
-    setStripeLoading(false)
-    if (res.success && res.url) {
-      // Sin notificación: el Checkout se abre y listo. La venta la registra el webhook.
-      window.open(res.url, '_blank', 'noopener')
-    } else {
-      toast.error(res.error ?? 'No se pudo generar el pago con Stripe')
-    }
+    if (res.success && res.url) return res.url
+    toast.error(res.error ?? 'No se pudo generar el pago con Stripe')
+    return null
   }
+
+  async function handleStripeCard() {
+    setStripeLoading(true)
+    const url = await generateStripeLink()
+    setStripeLoading(false)
+    // La venta la registra el webhook al completarse el pago.
+    if (url) window.open(url, '_blank', 'noopener')
+  }
+
+  // QR: genera el link y su imagen QR para que el cliente la escanee y pague.
+  async function handleQr() {
+    setStripeLoading(true)
+    const url = await generateStripeLink()
+    if (url) {
+      try {
+        const QRCode = (await import('qrcode')).default
+        const dataUrl = await QRCode.toDataURL(url, { width: 360, margin: 1 })
+        setQrDataUrl(dataUrl)
+      } catch {
+        setQrDataUrl(null) // fallback: al menos mostramos el link para copiar
+      }
+      setQrUrl(url)
+    }
+    setStripeLoading(false)
+  }
+  function closeQr() { setQrUrl(null); setQrDataUrl(null) }
 
   function handleCheckout() {
     if (items.length === 0) {
@@ -113,7 +140,9 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
           unit_cost: i.cost_price,
         })),
         discount_amt: discountNum,
-        payment_method: paymentMethod,
+        // 'qr' se cobra por Stripe (lo registra el webhook), no llega aquí; si
+        // llegara, se guarda como 'card' (pago con tarjeta vía QR).
+        payment_method: paymentMethod === 'qr' ? 'card' : paymentMethod,
         customer_id: presetCustomer?.id,
         customer_name: customerName || undefined,
         customer_phone: customerPhone || undefined,
@@ -401,6 +430,16 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
                 {stripeLoading ? <Loader2 className="mr-1 h-5 w-5 animate-spin" /> : <CreditCard size={20} />}
                 Cobrar {formatCurrency(total)} con Stripe
               </button>
+            ) : paymentMethod === 'qr' ? (
+              <button
+                type="button"
+                onClick={handleQr}
+                disabled={stripeLoading}
+                className="w-full flex items-center justify-center gap-2 h-14 rounded-xl text-lg font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-colors disabled:opacity-60"
+              >
+                {stripeLoading ? <Loader2 className="mr-1 h-5 w-5 animate-spin" /> : <QrCode size={20} />}
+                Generar QR · {formatCurrency(total)}
+              </button>
             ) : (
               <Button
                 onClick={handleCheckout}
@@ -417,6 +456,34 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
           </div>
         )}
       </div>
+
+      {/* Modal de pago con QR — grande, centrado y con link para copiar */}
+      {qrUrl && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeQr} />
+          <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 bg-[#635bff] text-white">
+              <p className="font-bold flex items-center gap-2"><QrCode size={18} /> Pago con QR</p>
+              <button type="button" onClick={closeQr} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
+            </div>
+            <div className="p-6 text-center space-y-3">
+              <p className="text-lg font-bold text-gray-900">Escanea el QR para pagar</p>
+              <p className="text-3xl font-black text-gray-900 tabular-nums">{formatCurrency(total)}</p>
+              <div className="mx-auto w-64 h-64 rounded-2xl ring-1 ring-gray-200 bg-white flex items-center justify-center p-3">
+                {qrDataUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={qrDataUrl} alt="Código QR de pago" className="w-full h-full object-contain" />
+                  : <Loader2 className="h-8 w-8 animate-spin text-gray-400" />}
+              </div>
+              <p className="text-xs text-gray-500">El cliente escanea con la cámara de su teléfono y paga con tarjeta. La venta se registra sola al confirmarse el pago.</p>
+              <div className="flex items-center gap-2 pt-1">
+                <input readOnly value={qrUrl} onFocus={e => e.currentTarget.select()} className="flex-1 h-9 px-2 text-xs border border-gray-200 rounded-lg bg-gray-50 text-gray-600 truncate" />
+                <button type="button" onClick={() => { navigator.clipboard?.writeText(qrUrl); toast.success('Link copiado') }} className="h-9 px-3 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 inline-flex items-center gap-1 shrink-0"><Copy size={13} /> Copiar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
