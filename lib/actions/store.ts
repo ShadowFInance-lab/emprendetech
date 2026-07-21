@@ -124,7 +124,7 @@ export async function updateStoreAction(
   }
 
   // Separar campos core de los de colores/fondo para manejar columnas faltantes (como dashboard_bg_color)
-  const colorKeys = ['primary_color', 'secondary_color', 'button_color', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_color', 'dashboard_bg_color', 'dashboard_bg_url', 'dashboard_bg_fit', 'bg_fit', 'background_url']
+  const colorKeys = ['primary_color', 'secondary_color', 'button_color', 'panel_primary', 'panel_secondary', 'panel_button', 'bg_color', 'dashboard_bg_color', 'dashboard_bg_url', 'dashboard_bg_fit', 'bg_fit', 'bg_position', 'background_url']
 
   const coreUpdates: Record<string, unknown> = {}
   const colorUpdates: Record<string, unknown> = {}

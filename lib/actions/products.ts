@@ -60,15 +60,18 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
   const plan = (profile?.plan ?? 'free') as Plan
   const limits = getPlanLimits(plan)
 
-  const { count: productCount } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('store_id', store.id)
+  // Cuenta productos + variantes: cada variante también cuenta para el límite.
+  const { data: prodRows } = await supabase
+    .from('products').select('variants').eq('store_id', store.id)
+  const productCount = prodRows?.length ?? 0
+  const variantCount = (prodRows ?? []).reduce(
+    (s, p) => s + (Array.isArray((p as { variants?: unknown[] }).variants) ? (p as { variants: unknown[] }).variants.length : 0), 0)
+  const usedCount = productCount + variantCount
 
-  if ((productCount ?? 0) >= limits.max_products) {
+  if (usedCount >= limits.max_products) {
     return {
       success: false,
-      error: `Alcanzaste el límite de ${limits.max_products} productos del plan ${limits.label}. Mejora tu plan para agregar más.`,
+      error: `Alcanzaste el límite de ${limits.max_products} productos (incluye variantes) del plan ${limits.label}. Mejora tu plan para agregar más.`,
     }
   }
 

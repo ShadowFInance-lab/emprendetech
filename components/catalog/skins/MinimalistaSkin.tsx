@@ -36,8 +36,8 @@ export default function MinimalistaSkin({
         backgroundColor: store.bg_color || undefined,
         ...(store.background_url ? {
           backgroundImage: `url(${store.background_url})`,
-          backgroundSize: ((store as { bg_fit?: string }).bg_fit === 'contain' ? 'contain' : (store as { bg_fit?: string }).bg_fit === 'center' ? 'auto' : 'cover'),
-          backgroundPosition: 'center',
+          backgroundSize: ((store as { bg_fit?: string }).bg_fit === 'contain' ? 'contain' : (store as { bg_fit?: string }).bg_fit === 'fill' ? '100% 100%' : 'cover'),
+          backgroundPosition: (store as { bg_position?: string }).bg_position || 'center',
           backgroundRepeat: 'no-repeat',
         } : {}),
       }}

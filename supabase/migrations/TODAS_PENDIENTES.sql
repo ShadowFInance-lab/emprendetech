@@ -788,4 +788,7 @@ ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "reports_insert_any" ON reports;
 CREATE POLICY "reports_insert_any" ON reports FOR INSERT WITH CHECK (true);
 
+-- ─── 055: Posición manual del fondo del catálogo ────────────────────────────
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS bg_position TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

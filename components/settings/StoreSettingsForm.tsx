@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check, ShoppingBag, CreditCard, Bell, Crown } from 'lucide-react'
+import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check, ShoppingBag, CreditCard, Bell, Crown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -38,15 +38,25 @@ const DEFAULT_PRIMARY = '#0F172A'
 const DEFAULT_SECONDARY = '#1E293B'
 const DEFAULT_BUTTON = '#CA8A04'
 
+// Fondos sólidos premium (suaves y elegantes; incluye 2 oscuros de alta gama).
 const FONDO_NAMED_COLORS = [
-  { name: 'Blanco', hex: '#ffffff' },
-  { name: 'Gris claro', hex: '#f8fafc' },
-  { name: 'Gris', hex: '#e5e7eb' },
-  { name: 'Azul suave', hex: '#dbeafe' },
-  { name: 'Verde menta', hex: '#d1fae5' },
-  { name: 'Rosa pálido', hex: '#fce7f3' },
-  { name: 'Amarillo claro', hex: '#fef9c3' },
-  { name: 'Negro suave', hex: '#1f2937' },
+  { name: 'Blanco', hex: '#FFFFFF' },
+  { name: 'Marfil', hex: '#FAFAF7' },
+  { name: 'Niebla', hex: '#F5F7FA' },
+  { name: 'Arena', hex: '#F4EFE6' },
+  { name: 'Cielo', hex: '#EEF4FB' },
+  { name: 'Menta', hex: '#EAF5EF' },
+  { name: 'Lavanda', hex: '#F1EEFA' },
+  { name: 'Durazno', hex: '#FBF0E9' },
+  { name: 'Grafito', hex: '#0F172A' },
+  { name: 'Carbón', hex: '#1E293B' },
+]
+
+// Posiciones para mover manualmente la imagen de fondo (grid 3×3).
+const BG_POSITIONS = [
+  { v: 'left top', l: '↖' },    { v: 'center top', l: '↑' },    { v: 'right top', l: '↗' },
+  { v: 'left center', l: '←' }, { v: 'center', l: '•' },        { v: 'right center', l: '→' },
+  { v: 'left bottom', l: '↙' }, { v: 'center bottom', l: '↓' }, { v: 'right bottom', l: '↘' },
 ]
 
 const SKINS = [
@@ -123,6 +133,8 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [panelSecondary, setPanelSecondary] = useState(sx.panel_secondary || store.secondary_color || DEFAULT_SECONDARY)
   const [panelButton, setPanelButton] = useState(sx.panel_button || store.button_color || '#4F46E5')
   const [bgFit, setBgFit] = useState(sx.bg_fit || 'cover')
+  const [bgPosition, setBgPosition] = useState((store as { bg_position?: string | null }).bg_position || 'center')
+  const [showColorModal, setShowColorModal] = useState(false)
   const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
   const [dashboardBgUrl, setDashboardBgUrl] = useState(sx.dashboard_bg_url || '')
   const [dashboardBgFit, setDashboardBgFit] = useState((sx as {dashboard_bg_fit?: string|null}).dashboard_bg_fit || 'cover')
@@ -240,6 +252,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('panel_secondary', panelSecondary)
     formData.set('panel_button', panelButton)
     formData.set('bg_fit', bgFit)
+    formData.set('bg_position', bgPosition)
     formData.set('online_sales', String(onlineSales && ['emprendedor', 'negocio', 'vip_plus'].includes(plan)))
     formData.set('dashboard_bg_url', dashboardBgUrl)
     formData.set('dashboard_bg_fit', dashboardBgFit)
@@ -731,6 +744,34 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </p>
             </CardHeader>
             <CardContent className="space-y-5">
+              {/* Botón único que abre el modal con TODOS los colores */}
+              <button type="button" onClick={() => setShowColorModal(true)}
+                className="w-full flex items-center justify-between gap-3 rounded-2xl border-2 border-gray-200 hover:border-gray-900 bg-white p-4 transition-all group">
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-1.5">
+                    {[primaryColor, secondaryColor, buttonColor].map((c, i) => (
+                      <span key={i} className="w-8 h-8 rounded-full ring-2 ring-white shadow-sm" style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-gray-900">Colores de la tienda</p>
+                    <p className="text-xs text-gray-400">Paletas premium y colores personalizados</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold group-hover:bg-slate-800 shrink-0">
+                  <Palette size={15} /> Elegir colores
+                </span>
+              </button>
+
+              {showColorModal && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowColorModal(false)} />
+                <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[85vh] flex flex-col">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+                    <p className="font-bold text-gray-900 flex items-center gap-2"><Palette size={18} className="text-amber-500" /> Elegir colores</p>
+                    <button type="button" onClick={() => setShowColorModal(false)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+                  </div>
+                  <div className="p-5 space-y-5 overflow-y-auto">
               {/* Paletas premium (6, serias y de alta gama) */}
               <Label className="block text-sm font-semibold mb-2">Paletas premium</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -802,7 +843,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     </div>
                     <div className="p-1.5 grid grid-cols-2 gap-1" style={{
                       backgroundColor: bgColor,
-                      ...(backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: bgFit === 'contain' ? 'contain' : 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}),
+                      ...(backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: bgFit === 'contain' ? 'contain' : bgFit === 'fill' ? '100% 100%' : 'cover', backgroundPosition: bgPosition, backgroundRepeat: 'no-repeat' } : {}),
                     }}>
                       {[1, 2].map(n => (
                         <div key={n} className={skin === 'moderna' ? 'bg-white rounded-xl shadow-sm overflow-hidden' : 'bg-white/90 rounded overflow-hidden border border-gray-100'}>
@@ -853,6 +894,13 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                   </div>
                 </div>
               </div>
+                  </div>{/* /cuerpo del modal de colores */}
+                  <div className="px-5 py-3 border-t border-gray-100 flex justify-end shrink-0">
+                    <button type="button" onClick={() => setShowColorModal(false)} className="px-5 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800">Listo</button>
+                  </div>
+                </div>
+              </div>
+              )}
 
               {/* Fondo del catálogo + estilo de botones — compacto */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-sm">
@@ -895,15 +943,29 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                     </div>
                     <input type="hidden" name="background_url" value={backgroundUrl} />
                     {backgroundUrl && (
-                      <div className="mt-2">
-                        <Label className="text-[11px] text-gray-400">Ajuste de la imagen</Label>
-                        <div className="flex gap-1.5 mt-1">
-                          {[{ v: 'cover', l: 'Cubrir' }, { v: 'contain', l: 'Contener' }, { v: 'center', l: 'Centrar' }].map(o => (
-                            <button key={o.v} type="button" onClick={() => setBgFit(o.v)}
-                              className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${bgFit === o.v ? 'border-indigo-500 bg-indigo-50 text-indigo-600' : 'border-gray-200 text-gray-500 hover:border-indigo-300'}`}>
-                              {o.l}
-                            </button>
-                          ))}
+                      <div className="mt-2 space-y-2">
+                        <div>
+                          <Label className="text-[11px] text-gray-400">Ajuste de la imagen</Label>
+                          <div className="flex gap-1.5 mt-1">
+                            {[{ v: 'cover', l: 'Cubrir' }, { v: 'contain', l: 'Contener' }, { v: 'fill', l: 'Rellenar' }].map(o => (
+                              <button key={o.v} type="button" onClick={() => setBgFit(o.v)}
+                                className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${bgFit === o.v ? 'border-indigo-500 bg-indigo-50 text-indigo-600' : 'border-gray-200 text-gray-500 hover:border-indigo-300'}`}>
+                                {o.l}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Posición manual de la imagen (grid 3×3) */}
+                        <div>
+                          <Label className="text-[11px] text-gray-400">Posición de la imagen</Label>
+                          <div className="inline-grid grid-cols-3 gap-1 mt-1">
+                            {BG_POSITIONS.map(o => (
+                              <button key={o.v} type="button" onClick={() => setBgPosition(o.v)} title={o.v}
+                                className={`w-7 h-7 rounded-lg border text-xs flex items-center justify-center transition-colors ${bgPosition === o.v ? 'border-indigo-500 bg-indigo-50 text-indigo-600' : 'border-gray-200 text-gray-400 hover:border-indigo-300'}`}>
+                                {o.l}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}

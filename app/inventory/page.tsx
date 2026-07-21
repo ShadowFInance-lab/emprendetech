@@ -5,6 +5,8 @@ import { Plus, Search, Package, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import InventoryTable from '@/components/inventory/InventoryTable'
+import { getPlanLimits } from '@/lib/constants/plans'
+import type { Plan } from '@/lib/types'
 
 export default async function InventoryPage({
   searchParams,
@@ -63,6 +65,19 @@ export default async function InventoryPage({
     .from('products').select('*', { count: 'exact', head: true })
     .eq('store_id', store.id).eq('stock', 0)
 
+  // ─── Uso del plan: productos + variantes vs. límite ──────────
+  const { data: planProfile } = await supabase.from('profiles').select('plan').eq('id', user.id).maybeSingle()
+  const plan = ((planProfile?.plan as Plan) ?? 'free')
+  const limits = getPlanLimits(plan)
+  const { data: variantRows } = await supabase.from('products').select('variants').eq('store_id', store.id)
+  const variantCount = (variantRows ?? []).reduce(
+    (s, p) => s + (Array.isArray((p as { variants?: unknown[] }).variants) ? (p as { variants: unknown[] }).variants.length : 0), 0)
+  const usedCount = (totalCount ?? 0) + variantCount
+  const limitNum = limits.max_products
+  const unlimited = !Number.isFinite(limitNum)
+  const pct = unlimited ? 0 : Math.min(100, Math.round((usedCount / limitNum) * 100))
+  const nearLimit = !unlimited && usedCount >= limitNum * 0.8
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -81,6 +96,32 @@ export default async function InventoryPage({
             </Button>
           </Link>
         </div>
+      </div>
+
+      {/* Uso del plan (productos + variantes vs. límite) */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2 text-sm flex-wrap">
+            <Package size={16} className="text-gray-400" />
+            <span className="font-bold text-gray-900">{usedCount}</span>
+            <span className="text-gray-500">{unlimited ? 'productos · ilimitado' : `de ${limitNum} productos`}</span>
+            {variantCount > 0 && <span className="text-[11px] text-gray-400">· incluye {variantCount} variante{variantCount !== 1 ? 's' : ''}</span>}
+          </div>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${unlimited ? 'bg-emerald-50 text-emerald-700' : nearLimit ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+            Plan {limits.label}
+          </span>
+        </div>
+        {!unlimited && (
+          <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-red-500' : nearLimit ? 'bg-amber-500' : 'bg-indigo-500'}`} style={{ width: `${pct}%` }} />
+          </div>
+        )}
+        {!unlimited && nearLimit && (
+          <p className="text-[11px] text-amber-600 mt-1.5">
+            {pct >= 100 ? 'Llegaste al límite de tu plan. ' : 'Estás cerca del límite. '}
+            <Link href="/subscription" className="font-semibold underline">Mejora tu plan</Link> para agregar más.
+          </p>
+        )}
       </div>
 
       {/* Badges de estado rápido */}
