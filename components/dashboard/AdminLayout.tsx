@@ -33,7 +33,7 @@ export default async function AdminLayout({
   if (!isEmployee && (!profile?.onboarding_done || !store)) redirect('/onboarding')
   if (!store) redirect('/login') // empleado sin tienda asignada (caso raro)
 
-  const s = store as typeof store & { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; dashboard_bg_url?: string | null; dashboard_bg_fit?: string | null; dashboard_bg_color?: string | null }
+  const s = store as typeof store & { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; dashboard_bg_url?: string | null; dashboard_bg_fit?: string | null; dashboard_bg_position?: string | null; dashboard_bg_color?: string | null }
   const themeVars = {
     '--brand': s.panel_primary || store.primary_color || '#4f46e5',
     '--brand-2': s.panel_secondary || store.secondary_color || '#7c3aed',
@@ -43,8 +43,8 @@ export default async function AdminLayout({
   const dashBg = s.dashboard_bg_url || null
   const dashBgColor = s.dashboard_bg_color || null
   const fit = s.dashboard_bg_fit || 'cover'
-  const bgSize = fit === 'contain' ? 'contain' : 'cover'
-  const bgPos = fit === 'center' ? 'center center' : 'center'
+  const bgSize = fit === 'contain' ? 'contain' : fit === 'fill' ? '100% 100%' : 'cover'
+  const bgPos = s.dashboard_bg_position || 'center'
   const hasBg = !!(dashBg || dashBgColor)
   const contentStyle: CSSProperties = dashBg ? {
     backgroundImage: `url(${dashBg})`,

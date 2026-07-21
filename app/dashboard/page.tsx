@@ -10,6 +10,7 @@ import DailySalesExport from '@/components/dashboard/DailySalesExport'
 import type { ExportSale } from '@/lib/utils/salesExport'
 import { getSalesChartData } from '@/lib/actions/dashboard'
 import { getMeteredUsage, ensurePlanCurrentAction } from '@/lib/actions/subscriptions'
+import OnboardingTutorial from '@/components/OnboardingTutorial'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -198,6 +199,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Tutorial guiado — primera vez que el dueño entra al panel */}
+      <OnboardingTutorial />
       {/* Bienvenida */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>

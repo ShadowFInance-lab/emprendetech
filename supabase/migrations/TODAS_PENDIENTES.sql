@@ -791,4 +791,7 @@ CREATE POLICY "reports_insert_any" ON reports FOR INSERT WITH CHECK (true);
 -- ─── 055: Posición manual del fondo del catálogo ────────────────────────────
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS bg_position TEXT;
 
+-- ─── 056: Posición manual del fondo del panel admin ─────────────────────────
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_position TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

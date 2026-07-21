@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check, ShoppingBag, CreditCard, Bell, Crown, X } from 'lucide-react'
+import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check, ShoppingBag, CreditCard, Bell, Crown, X, GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -138,6 +138,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
   const [dashboardBgUrl, setDashboardBgUrl] = useState(sx.dashboard_bg_url || '')
   const [dashboardBgFit, setDashboardBgFit] = useState((sx as {dashboard_bg_fit?: string|null}).dashboard_bg_fit || 'cover')
+  const [dashboardBgPosition, setDashboardBgPosition] = useState((store as { dashboard_bg_position?: string | null }).dashboard_bg_position || 'center')
   const [dashboardBgColor, setDashboardBgColor] = useState(((sx as unknown) as { dashboard_bg_color?: string | null }).dashboard_bg_color || '#f1f5f9') // solid bg for main page / dashboard
   const [currency, setCurrency] = useState(store.currency ?? 'MXN')
   const [bgColor, setBgColor] = useState(store.bg_color ?? '#F9FAFB')
@@ -256,6 +257,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
     formData.set('online_sales', String(onlineSales && ['emprendedor', 'negocio', 'vip_plus'].includes(plan)))
     formData.set('dashboard_bg_url', dashboardBgUrl)
     formData.set('dashboard_bg_fit', dashboardBgFit)
+    formData.set('dashboard_bg_position', dashboardBgPosition)
     formData.set('dashboard_bg_color', dashboardBgColor)
     formData.set('currency', currency)
     formData.set('bg_color', bgColor)
@@ -332,6 +334,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-tight">Configuración</h1>
           <p className="text-gray-500 text-sm">Personaliza tu tienda, diseño y redes sociales</p>
         </div>
+        {/* Volver a ver el tutorial guiado */}
+        <button type="button"
+          onClick={() => { try { localStorage.setItem('mb_tutorial_show', '1') } catch { /* ignore */ } ; router.push('/dashboard') }}
+          className="ml-auto inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors shrink-0">
+          <GraduationCap size={15} /> Ver tutorial
+        </button>
       </div>
 
       {/* Grid principal: settings (sin preview grande a la derecha) */}
@@ -991,36 +999,49 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
                       )}
                     </div>
                     {dashboardBgUrl && (
-                      <div className="mt-2">
-                        <Label className="text-[11px] text-gray-400">Ajuste del fondo del panel</Label>
-                        <div className="flex gap-1.5 mt-1">
-                          {[{ v: 'cover', l: 'Cubrir' }, { v: 'contain', l: 'Contener' }, { v: 'center', l: 'Centrar' }].map(o => (
-                            <button key={o.v} type="button" onClick={() => setDashboardBgFit(o.v)}
-                              className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${dashboardBgFit === o.v ? 'border-indigo-500 bg-indigo-50 text-indigo-600' : 'border-gray-200 text-gray-500 hover:border-indigo-300'}`}>
-                              {o.l}
-                            </button>
-                          ))}
+                      <div className="mt-2 space-y-2">
+                        <div>
+                          <Label className="text-[11px] text-gray-400">Ajuste del fondo del panel</Label>
+                          <div className="flex gap-1.5 mt-1">
+                            {[{ v: 'cover', l: 'Cubrir' }, { v: 'contain', l: 'Contener' }, { v: 'fill', l: 'Rellenar' }].map(o => (
+                              <button key={o.v} type="button" onClick={() => setDashboardBgFit(o.v)}
+                                className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${dashboardBgFit === o.v ? 'border-indigo-500 bg-indigo-50 text-indigo-600' : 'border-gray-200 text-gray-500 hover:border-indigo-300'}`}>
+                                {o.l}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Posición manual del fondo del panel (grid 3×3) */}
+                        <div>
+                          <Label className="text-[11px] text-gray-400">Posición de la imagen</Label>
+                          <div className="inline-grid grid-cols-3 gap-1 mt-1">
+                            {BG_POSITIONS.map(o => (
+                              <button key={o.v} type="button" onClick={() => setDashboardBgPosition(o.v)} title={o.v}
+                                className={`w-7 h-7 rounded-lg border text-xs flex items-center justify-center transition-colors ${dashboardBgPosition === o.v ? 'border-indigo-500 bg-indigo-50 text-indigo-600' : 'border-gray-200 text-gray-400 hover:border-indigo-300'}`}>
+                                {o.l}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
                     <p className="text-[10px] text-gray-400 mt-1">Se aplica con overlay semitransparente para legibilidad.</p>
-                    {/* Color de fondo sólido para página principal / dashboard - con nombres */}
-                    <div className="mt-1.5">
-                      <div className="flex flex-wrap gap-1 mb-1">
+                    {/* Color de fondo sólido (sin imagen) — igual de fácil que el del catálogo */}
+                    <div className="mt-2">
+                      <Label className="text-[11px] text-gray-400">Color de fondo (sin imagen)</Label>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
                         {FONDO_NAMED_COLORS.map(c => (
                           <button
                             key={c.hex}
                             type="button"
-                            onClick={() => setDashboardBgColor(c.hex)}
+                            onClick={() => { setDashboardBgColor(c.hex); setDashboardBgUrl('') }}
                             title={c.name}
-                            className={`w-5 h-5 rounded border ${dashboardBgColor === c.hex ? 'ring-2 ring-blue-500' : 'border-gray-300'}`}
+                            className={`w-6 h-6 rounded-md ring-1 ring-black/10 transition-transform hover:scale-110 ${dashboardBgColor === c.hex && !dashboardBgUrl ? 'ring-2 ring-indigo-500 scale-110' : ''}`}
                             style={{ backgroundColor: c.hex }}
                           />
                         ))}
                       </div>
-                      <div className="text-[10px] flex items-center gap-1">
-                        <span className="text-gray-400">{FONDO_NAMED_COLORS.find(c=>c.hex===dashboardBgColor)?.name || 'custom'}</span>
-                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1">Elige un color y listo — no necesitas subir imagen. ({FONDO_NAMED_COLORS.find(c => c.hex === dashboardBgColor)?.name || 'personalizado'})</p>
                     </div>
                   </div>
                   <div>
