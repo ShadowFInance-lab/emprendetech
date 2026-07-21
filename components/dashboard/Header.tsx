@@ -5,11 +5,18 @@ import type { Store } from '@/lib/types'
 
 interface HeaderProps {
   store: Store
+  hasBg?: boolean
 }
 
-export default function Header({ store }: HeaderProps) {
+export default function Header({ store, hasBg = false }: HeaderProps) {
   return (
-    <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-20">
+    <header
+      className={`px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-20 border-b transition-colors ${
+        hasBg
+          ? 'bg-white/60 supports-[backdrop-filter]:bg-white/50 backdrop-blur-xl border-white/40 shadow-sm'
+          : 'bg-white border-gray-200'
+      }`}
+    >
       {/* Espacio para el botón móvil */}
       <div className="w-8 lg:w-0" />
 

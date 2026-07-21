@@ -67,7 +67,7 @@ export default async function AdminLayout({
     <div className={`min-h-screen flex mb-theme ${hasBg ? 'bg-transparent' : 'bg-gray-50'}`} style={themeVars}>
       <Sidebar store={store} profile={profile} />
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64" style={{...contentStyle, ...(textColor ? {color: textColor} : {}) }}>
-        <Header store={store} />
+        <Header store={store} hasBg={hasBg} />
         <main className={`flex-1 p-4 lg:p-6 overflow-auto ${hasBg ? 'bg-transparent' : 'bg-white/90'}`} style={textColor ? {color: textColor} : undefined}>
           {children}
         </main>
