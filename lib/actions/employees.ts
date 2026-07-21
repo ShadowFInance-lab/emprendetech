@@ -130,20 +130,43 @@ export async function getEmployeeLoginAction(employeeId: string): Promise<{ emai
  * El jefe restablece la contraseña de un empleado (la anterior NO se puede leer:
  * está cifrada). Verifica que el empleado le pertenezca y usa el cliente admin.
  */
-export async function setEmployeePasswordAction(employeeId: string, password: string): Promise<ActionResult> {
+export async function setEmployeePasswordAction(employeeId: string, password: string): Promise<ActionResult & { password?: string }> {
   try {
     if (!password || password.length < 6) return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
-    const { data: emps } = await supabase.rpc('list_my_employees')
+
+    const { data: emps, error: listErr } = await supabase.rpc('list_my_employees')
+    if (listErr) {
+      console.error('[password] list_my_employees:', listErr.message)
+      return { success: false, error: 'No se pudo verificar el empleado (¿falta la migración 021 en Supabase?).' }
+    }
     const owns = (emps as { id: string }[] | null)?.some(e => e.id === employeeId)
-    if (!owns) return { success: false, error: 'Empleado no encontrado' }
-    const admin = createAdminClient()
+    if (!owns) return { success: false, error: 'Empleado no encontrado o no te pertenece' }
+
+    // Cliente admin (service-role). Si falta la key, createAdminClient() lanza:
+    // lo capturamos para dar un mensaje claro en vez de un error genérico.
+    let admin: ReturnType<typeof createAdminClient>
+    try {
+      admin = createAdminClient()
+    } catch {
+      console.error('[password] falta SUPABASE_SERVICE_ROLE_KEY')
+      return { success: false, error: 'Falta configurar SUPABASE_SERVICE_ROLE_KEY en el servidor (Vercel). Sin ella no se puede cambiar la contraseña.' }
+    }
+
     const { error } = await admin.auth.admin.updateUserById(employeeId, { password })
-    if (error) return { success: false, error: 'No se pudo cambiar la contraseña (falta SUPABASE_SERVICE_ROLE_KEY en el servidor).' }
-    return { success: true }
-  } catch { return { success: false, error: 'Error' } }
+    if (error) {
+      // Antes se devolvía un mensaje fijo que ocultaba la causa real. Ahora se
+      // muestra el error EXACTO de Supabase para poder diagnosticar de verdad.
+      console.error('[password] updateUserById:', error.message)
+      return { success: false, error: `No se pudo cambiar la contraseña: ${error.message}` }
+    }
+    return { success: true, password }
+  } catch (e) {
+    console.error('[password] excepción:', e instanceof Error ? e.message : e)
+    return { success: false, error: 'Error al cambiar la contraseña' }
+  }
 }
 
 export async function notifyEmployeeAction(employeeId: string, message: string): Promise<ActionResult> {

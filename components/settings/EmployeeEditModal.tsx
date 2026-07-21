@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4, Wallet } from 'lucide-react'
+import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4, Wallet, Copy, Sparkles } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, getEmployeeLoginAction, setEmployeePasswordAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { getEmployeeWeekAction, setEmployeeDayAction, setEmployeeDayTimesAction, type AttendanceRow, type DayState } from '@/lib/actions/attendance'
@@ -51,6 +51,8 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
   const [email, setEmail] = useState<string | null>(null)
   const [newPw, setNewPw] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [savedPw, setSavedPw] = useState<string | null>(null) // se muestra 1 sola vez tras guardar
+  const [copied, setCopied] = useState(false)
   const [tab, setTab] = useState<TabId>('perfil')
 
   async function loadWeek() { setWeek(await getEmployeeWeekAction(employeeId)) }
@@ -126,9 +128,26 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     if (newPw.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return }
     startTransition(async () => {
       const r = await setEmployeePasswordAction(employeeId, newPw)
-      if (r.success) { toast.success('Contraseña actualizada. Compártela con el empleado.'); setNewPw('') }
-      else toast.error(r.error ?? 'Error')
+      if (r.success) {
+        setSavedPw(r.password || newPw) // se muestra grande para copiar (solo esta vez)
+        setNewPw(''); setShowPw(false); setCopied(false)
+        toast.success('Contraseña actualizada')
+      } else {
+        toast.error(r.error ?? 'Error', { duration: 8000 })
+      }
     })
+  }
+  // Genera una contraseña segura (sin caracteres ambiguos) y la deja visible.
+  function generatePw() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+    let p = ''
+    for (let n = 0; n < 10; n++) p += chars[Math.floor(Math.random() * chars.length)]
+    setNewPw(p); setShowPw(true)
+  }
+  function copyPw(pw: string) {
+    navigator.clipboard?.writeText(pw)
+      .then(() => { setCopied(true); toast.success('Contraseña copiada'); setTimeout(() => setCopied(false), 2000) })
+      .catch(() => toast.error('No se pudo copiar'))
   }
   function setRole(role: 'employee' | 'supervisor' | 'gerente') {
     startTransition(async () => { const r = await setEmployeeRoleAction(employeeId, role); if (r.success) toast.success(role === 'supervisor' ? 'Ahora es supervisor' : 'Ahora es empleado'); else toast.error(r.error ?? 'Error') })
@@ -231,28 +250,37 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Contraseña actual</label>
-                  <div className="flex items-center justify-between gap-2 h-9 px-3 rounded-lg border border-gray-200 bg-gray-100/70 text-sm text-gray-500 select-none">
-                    <span className="tracking-[0.3em]">••••••••</span>
-                    <span className="inline-flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 text-[10px] text-gray-400"><Lock size={11} /> cifrada</span>
-                      <button type="button" title="Intentar mostrar"
-                        onClick={() => toast('🔒 Por seguridad, la contraseña se guarda cifrada con hash irreversible: ni siquiera el sistema puede verla. Si el empleado la olvidó, asigna una nueva abajo.', { duration: 6000 })}
-                        className="text-gray-400 hover:text-gray-700"><Eye size={14} /></button>
-                    </span>
-                  </div>
-                </div>
-                <div>
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Nueva contraseña</label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Input type={showPw ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Mín. 6 caracteres" className="h-9 text-sm pr-9" />
                       <button type="button" onClick={() => setShowPw(v => !v)} title={showPw ? 'Ocultar' : 'Mostrar'} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">{showPw ? <EyeOff size={15} /> : <Eye size={15} />}</button>
                     </div>
-                    <button type="button" onClick={savePassword} disabled={isPending || newPw.length < 6} className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">Guardar</button>
+                    <button type="button" onClick={generatePw} title="Generar una contraseña segura" className="h-9 px-2.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 inline-flex items-center gap-1 shrink-0"><Sparkles size={14} /> Generar</button>
+                    <button type="button" onClick={savePassword} disabled={isPending || newPw.length < 6} className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center justify-center shrink-0">
+                      {isPending ? <Loader2 size={15} className="animate-spin" /> : 'Guardar'}
+                    </button>
                   </div>
                 </div>
-                <p className="text-[10px] text-gray-400">Por seguridad la contraseña se guarda cifrada y no puede mostrarse. Si el empleado la olvidó, escribe una nueva (con el 👁 la ves mientras la escribes) y compártesela.</p>
+
+                {/* Resultado: la nueva contraseña se muestra grande SOLO esta vez, para copiar */}
+                {savedPw && (
+                  <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-3 space-y-2">
+                    <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5"><Check size={13} /> Contraseña actualizada — cópiala y pásasela al empleado</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-base font-bold font-mono text-gray-900 tracking-wide break-all select-all">{savedPw}</code>
+                      <button type="button" onClick={() => copyPw(savedPw)} className="h-10 px-3 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 inline-flex items-center gap-1.5 shrink-0">
+                        {copied ? <><Check size={15} /> Copiado</> : <><Copy size={15} /> Copiar</>}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-emerald-700/80">⚠️ Solo se muestra esta vez. Guárdala o cópiala ahora.</p>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-gray-500 bg-gray-50 rounded-lg px-3 py-2 flex items-start gap-1.5">
+                  <Lock size={13} className="text-gray-400 mt-0.5 shrink-0" />
+                  <span>Por seguridad la contraseña no se puede ver después. Si el empleado la olvida, genera una nueva y compártela.</span>
+                </p>
               </div>
             </div>
 
