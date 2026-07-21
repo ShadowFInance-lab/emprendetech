@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { CreditCard, CheckCircle2, AlertCircle, Zap, Check } from 'lucide-react'
+import { CreditCard, CheckCircle2, AlertCircle, Zap, Check, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
 import { confirmCheckoutReturn, activateFreeModeAction, ensurePlanCurrentAction } from '@/lib/actions/subscriptions'
@@ -276,6 +276,23 @@ export default async function SubscriptionPage({
             </div>
           )
         })}
+      </div>
+
+      {/* Mensaje de desarrollo continuo */}
+      <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-indigo-50/40 p-5 sm:p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <span className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
+            <Sparkles size={20} className="text-white" />
+          </span>
+          <div>
+            <p className="font-bold text-gray-900">Mercanta Business está en desarrollo activo</p>
+            <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+              Cada semana agregamos mejoras y nuevas funciones. Al suscribirte o comprar un plan
+              impulsas el crecimiento de la plataforma y <strong className="text-gray-800">desbloqueas beneficios y mejoras futuras</strong>.
+              Gracias por crecer con nosotros. 🚀
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Términos de cobros y pagos */}

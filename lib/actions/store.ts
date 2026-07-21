@@ -48,6 +48,11 @@ export async function createStoreAction(formData: FormData): Promise<ActionResul
       name: parsed.data.name,
       slug: parsed.data.slug,
       whatsapp: parsed.data.whatsapp || null,
+      // Paleta premium por defecto ("Azul Noche": navy profundo + acento oro).
+      // Solo aplica a tiendas NUEVAS; las existentes conservan sus colores.
+      primary_color: '#0F172A',
+      secondary_color: '#1E293B',
+      button_color: '#CA8A04',
     })
     .select('id')
     .single()

@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
-import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check, ShoppingBag } from 'lucide-react'
+import { Loader2, Save, Upload, ExternalLink, Palette, Store as StoreIcon, Check, ShoppingBag, CreditCard, Bell, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,19 +22,21 @@ import ColorPickerField from './ColorPickerField'
 import OrderReceptionSection from './OrderReceptionSection'
 import StripePaymentSection from './StripePaymentSection'
 
-// 10 paletas bonitas (las primeras 3 son "básicas" para el plan Gratis)
+// Paletas premium (serias y de alta gama). Se redujeron de 10 a 6 para un look
+// más profesional (nivel Shopify / Stripe / Linear). La primera es la default.
 const COLOR_PALETTES = [
-  { name: 'Océano', p: '#2563EB', s: '#1E40AF', b: '#16A34A' },
-  { name: 'Bosque', p: '#059669', s: '#047857', b: '#2563EB' },
-  { name: 'Carbón', p: '#1F2937', s: '#111827', b: '#F59E0B' },
-  { name: 'Violeta', p: '#7C3AED', s: '#5B21B6', b: '#059669' },
-  { name: 'Rosa', p: '#DB2777', s: '#9D174D', b: '#7C3AED' },
-  { name: 'Coral', p: '#EA580C', s: '#C2410C', b: '#16A34A' },
-  { name: 'Turquesa', p: '#0891B2', s: '#0E7490', b: '#F59E0B' },
-  { name: 'Rubí', p: '#E11D48', s: '#9F1239', b: '#1F2937' },
-  { name: 'Esmeralda', p: '#10B981', s: '#059669', b: '#1F2937' },
-  { name: 'Real', p: '#4F46E5', s: '#3730A3', b: '#DB2777' },
+  { name: 'Azul Noche', p: '#0F172A', s: '#1E293B', b: '#CA8A04' }, // navy + acento oro (default)
+  { name: 'Ónix',       p: '#111827', s: '#1F2937', b: '#334155' }, // negro elegante
+  { name: 'Vino',       p: '#7F1D1D', s: '#450A0A', b: '#B91C1C' }, // rojo vino
+  { name: 'Esmeralda',  p: '#064E3B', s: '#065F46', b: '#0F766E' }, // verde profundo
+  { name: 'Índigo',     p: '#312E81', s: '#3730A3', b: '#4F46E5' }, // índigo serio
+  { name: 'Grafito',    p: '#334155', s: '#1E293B', b: '#0EA5E9' }, // grafito + acento cielo
 ]
+
+// Color premium por defecto (tiendas nuevas): "Azul Noche".
+const DEFAULT_PRIMARY = '#0F172A'
+const DEFAULT_SECONDARY = '#1E293B'
+const DEFAULT_BUTTON = '#CA8A04'
 
 const FONDO_NAMED_COLORS = [
   { name: 'Blanco', hex: '#ffffff' },
@@ -66,6 +69,17 @@ const PRODUCT_ORDERS = [
   { id: 'manual', label: 'Orden manual' },
 ]
 
+// Pestañas de Configuración (organización por secciones, estilo Empleados).
+const SETTINGS_TABS = [
+  { id: 'pagos',  label: 'Cobros y Pagos',   icon: CreditCard },
+  { id: 'online', label: 'Vender Online',    icon: ShoppingBag },
+  { id: 'redes',  label: 'Redes Sociales',   icon: Share2 },
+  { id: 'info',   label: 'Información',       icon: StoreIcon },
+  { id: 'diseno', label: 'Diseño y Colores', icon: Palette },
+  { id: 'notif',  label: 'Notificaciones',   icon: Bell },
+] as const
+type SettingsTab = typeof SETTINGS_TABS[number]['id']
+
 function GoogleGlyph() {
   return (
     <svg width={22} height={22} viewBox="0 0 24 24">
@@ -84,6 +98,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const allowedSkins = getPlanLimits(plan).skins
   const [isPending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
+  // Pestaña activa. Se usa show/hide (no desmontar) para que TODOS los campos
+  // sigan en el DOM y el único "Guardar" capture todo, sin romper nada.
+  const [tab, setTab] = useState<SettingsTab>('pagos')
+  const panel = (id: SettingsTab) => (tab === id ? 'space-y-5' : 'hidden')
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const [uploadingBg, setUploadingBg] = useState(false)
@@ -97,12 +115,12 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
   const [skin, setSkin] = useState(store.skin)
   const [fontFamily, setFontFamily] = useState(store.font_family)
   const [productOrder, setProductOrder] = useState(store.product_order)
-  const [primaryColor, setPrimaryColor] = useState(store.primary_color || '#2563eb')
-  const [secondaryColor, setSecondaryColor] = useState(store.secondary_color || '#7c3aed')
-  const [buttonColor, setButtonColor] = useState(store.button_color || '#2563eb')
+  const [primaryColor, setPrimaryColor] = useState(store.primary_color || DEFAULT_PRIMARY)
+  const [secondaryColor, setSecondaryColor] = useState(store.secondary_color || DEFAULT_SECONDARY)
+  const [buttonColor, setButtonColor] = useState(store.button_color || DEFAULT_BUTTON)
   const sx = store as { panel_primary?: string | null; panel_secondary?: string | null; panel_button?: string | null; bg_fit?: string | null; online_sales?: boolean | null; online_reception_type?: string | null; online_reception_value?: string | null; dashboard_bg_url?: string | null }
-  const [panelPrimary, setPanelPrimary] = useState(sx.panel_primary || store.primary_color || '#1F2937')
-  const [panelSecondary, setPanelSecondary] = useState(sx.panel_secondary || store.secondary_color || '#111827')
+  const [panelPrimary, setPanelPrimary] = useState(sx.panel_primary || store.primary_color || DEFAULT_PRIMARY)
+  const [panelSecondary, setPanelSecondary] = useState(sx.panel_secondary || store.secondary_color || DEFAULT_SECONDARY)
   const [panelButton, setPanelButton] = useState(sx.panel_button || store.button_color || '#4F46E5')
   const [bgFit, setBgFit] = useState(sx.bg_fit || 'cover')
   const [onlineSales, setOnlineSales] = useState(!!sx.online_sales)
@@ -307,10 +325,28 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
       <div className="grid grid-cols-1 gap-6">
       <div className="space-y-6 min-w-0">
 
-      {/* ─── COBROS CON STRIPE ──── (primera sección, arriba del todo) */}
-      <StripePaymentSection />
+      {/* ── Barra de pestañas ── */}
+      <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-3">
+        {SETTINGS_TABS.map(t => {
+          const active = tab === t.id
+          return (
+            <button key={t.id} type="button" onClick={() => setTab(t.id)}
+              className={`inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-sm font-semibold transition-colors ${active ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+              <t.icon size={16} /> {t.label}
+            </button>
+          )
+        })}
+      </div>
 
-      {/* Redes sociales — fila de tarjetas ARRIBA (como la referencia) */}
+      {/* 1 · COBROS Y PAGOS */}
+      <div className={panel('pagos')}>
+        <StripePaymentSection />
+
+      </div>
+
+      {/* 3 · REDES SOCIALES */}
+      <div className={panel('redes')}>
+      {/* Redes sociales — fila de tarjetas */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
         <div className="flex items-center gap-2.5 mb-3">
           <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
@@ -350,6 +386,10 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
         <p className="text-[11px] text-gray-400 mt-3">Google abre el inicio de sesión real de tu cuenta.</p>
       </div>
 
+      </div>
+
+      {/* 2 · VENDER ONLINE + RECEPCIÓN */}
+      <div className={panel('online')}>
       {/* ─── VENDER ONLINE ──── (solo planes pagos) */}
       {['emprendedor', 'negocio', 'vip_plus'].includes(plan) ? (
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 space-y-3">
@@ -381,12 +421,25 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
           )}
         </div>
       ) : (
-        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 flex items-center gap-2">
-          <Lock size={16} className="text-gray-400" />
-          Vender Online disponible en plan pago.
+        <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-slate-100 p-6 text-center">
+          <span className="w-12 h-12 mx-auto rounded-2xl bg-amber-100 flex items-center justify-center mb-3">
+            <Lock size={22} className="text-amber-600" />
+          </span>
+          <p className="font-bold text-gray-900">Vender Online</p>
+          <p className="text-sm text-gray-500 mt-1 mb-4 max-w-sm mx-auto">
+            Recibe pedidos con pago en línea directo en tu catálogo, con seguimiento de envíos.
+            Disponible en los planes <strong>Emprendedor</strong>, <strong>Negocio</strong> y <strong>VIP Plus</strong>.
+          </p>
+          <Link href="/subscription" className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold shadow-md shadow-amber-500/20 hover:opacity-90 transition-opacity">
+            <Crown size={15} /> Disponible en planes de pago
+          </Link>
         </div>
       )}
 
+      </div>
+
+      {/* 4 · INFORMACIÓN DE LA TIENDA */}
+      <div className={panel('info')}>
       {/* ─── GENERAL: Información + Logo/Banner ──── */}
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">
           <StoreIcon size={14} /> General
@@ -552,14 +605,22 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             </CardContent>
           </Card>
           </div>
+      </div>
+
+      {/* 6 · NOTIFICACIONES */}
+      <div className={panel('notif')}>
       {/* ─── NOTIFICACIONES ─────────────────────────── */}
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">
           🔔 Notificaciones
         </h2>
         <NotificationSoundPicker />
 
+      </div>
+
+      {/* 5 · DISEÑO Y COLORES */}
+      <div className={panel('diseno')}>
       {/* ─── DISEÑO ─────────────────────────────────── */}
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-3">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 pt-1">
           <Palette size={14} /> Diseño
         </h2>
         <div className="space-y-4">
@@ -670,37 +731,9 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
               </p>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Colores principales (presets con nombre — siempre visible) */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Colores principales (presets)</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { name: 'Azul Mercanta', p: '#2563EB', s: '#1E40AF', b: '#16A34A' },
-                    { name: 'Morado Mercanta', p: '#7C3AED', s: '#5B21B6', b: '#059669' },
-                    { name: 'Verde Mercanta', p: '#059669', s: '#047857', b: '#2563EB' },
-                  ].map(c => {
-                    const active = primaryColor === c.p
-                    return (
-                      <button
-                        key={c.name}
-                        type="button"
-                        onClick={() => { setPrimaryColor(c.p); setSecondaryColor(c.s); setButtonColor(c.b); setPanelPrimary(c.p); setPanelSecondary(c.s); setPanelButton(c.b) }}
-                        className={`flex items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all ${
-                          active ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900/10' : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <span className="w-8 h-8 rounded-full flex-shrink-0 ring-1 ring-black/10 shadow-sm"
-                          style={{ background: `linear-gradient(135deg, ${c.p}, ${c.s})` }} />
-                        <span className="text-sm font-medium text-gray-700 leading-tight">{c.name}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Paletas grandes estilo moderno (como diseño ChatGPT) */}
-              <Label className="block text-sm font-semibold mb-2">Paletas recomendadas</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {/* Paletas premium (6, serias y de alta gama) */}
+              <Label className="block text-sm font-semibold mb-2">Paletas premium</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {COLOR_PALETTES.map((palette) => {
                   const isActive = primaryColor === palette.p && buttonColor === palette.b
                   return (
@@ -947,6 +980,7 @@ export default function StoreSettingsForm({ store, plan = 'free' }: Props) {
             </CardContent>
           </Card>
         </div>
+      </div>{/* fin panel Diseño y Colores */}
 
       </div>{/* fin content */}
 
