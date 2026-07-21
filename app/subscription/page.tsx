@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { CreditCard, CheckCircle2, AlertCircle, Zap, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -302,6 +303,15 @@ export default async function SubscriptionPage({
           legislación aplicable en materia de protección de datos (LFPDPPP en México) y se usan
           únicamente para operar la plataforma.
         </p>
+      </div>
+
+      {/* Enlaces legales (estilo footer: texto pequeño con separadores) */}
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs text-gray-400 pb-2">
+        <Link href="/terminos" className="hover:text-gray-600 transition-colors">Términos y Condiciones</Link>
+        <span className="text-gray-300">·</span>
+        <Link href="/privacidad" className="hover:text-gray-600 transition-colors">Aviso de Privacidad</Link>
+        <span className="text-gray-300">·</span>
+        <Link href="/reportar" className="hover:text-gray-600 transition-colors">Reportar</Link>
       </div>
     </div>
   )
