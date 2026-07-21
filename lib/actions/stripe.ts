@@ -108,9 +108,29 @@ export async function createStripePaymentLinkAction(
 
     const { data: cfg, error: cfgErr } = await supabase.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', store.id).maybeSingle()
-    if (cfgErr && isMissingCol(cfgErr)) return { success: false, error: 'Conecta tu cuenta de Stripe primero.' }
+    if (cfgErr && isMissingCol(cfgErr)) return { success: false, error: 'Conecta tu cuenta de Stripe primero en Configuración → Cobros con Stripe.' }
     const accountId = cfg?.stripe_account_id as string | undefined
-    if (!accountId) return { success: false, error: 'Conecta tu cuenta de Stripe primero.' }
+    if (!accountId) return { success: false, error: 'Conecta tu cuenta de Stripe primero en Configuración → Cobros con Stripe.' }
+
+    // Verifica que la cuenta conectada EXISTA y pueda cobrar en el modo actual de
+    // Stripe (live/test). Así se evita el error "No such destination: acct_..."
+    // que aparece cuando el id quedó de otro modo o la cuenta no completó el alta.
+    try {
+      const acctRes = await fetch(`https://api.stripe.com/v1/accounts/${accountId}`, {
+        headers: { Authorization: `Bearer ${secret}` },
+      })
+      if (!acctRes.ok) {
+        console.error('[stripe] cuenta destino inválida:', acctRes.status, accountId)
+        return { success: false, error: 'Tu cuenta de Stripe conectada no es válida en este modo (revisa que sea la misma, live o test). Reconéctala en Configuración → Cobros con Stripe.' }
+      }
+      const acct = await acctRes.json() as { charges_enabled?: boolean }
+      if (!acct?.charges_enabled) {
+        return { success: false, error: 'Tu cuenta de Stripe aún no está lista para cobrar. Completa la verificación de tu cuenta en Stripe y vuelve a intentar.' }
+      }
+    } catch (e) {
+      console.error('[stripe] error verificando la cuenta destino:', e instanceof Error ? e.message : e)
+      return { success: false, error: 'No se pudo verificar tu cuenta de Stripe. Intenta de nuevo en un momento.' }
+    }
 
     const appUrl = getAppUrl()
     const body = new URLSearchParams({

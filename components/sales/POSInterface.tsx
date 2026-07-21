@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/lib/stores/cart'
 import { searchProductsForPOS, createSaleAction } from '@/lib/actions/sales'
-import { createStripePaymentLinkAction } from '@/lib/actions/stripe'
+import { createStripePaymentLinkAction, getStripeConfigStatus } from '@/lib/actions/stripe'
 import { formatCurrency } from '@/lib/utils/format'
 
 type POSProduct = {
@@ -26,9 +26,11 @@ type POSProduct = {
   image_url: string | null
 }
 
+// "Tarjeta" se quitó temporalmente (v7.132): usa el mismo cobro de Stripe que QR
+// y estaba causando conflictos. El cobro con Stripe se hace vía "QR". Para
+// reactivar Tarjeta, vuelve a agregar { id: 'card', label: 'Tarjeta', icon: CreditCard }.
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Efectivo', icon: Banknote },
-  { id: 'card', label: 'Tarjeta', icon: CreditCard },
   { id: 'qr', label: 'QR', icon: QrCode },
   { id: 'transfer', label: 'Transferencia', icon: ArrowLeftRight },
 ] as const
@@ -58,6 +60,11 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   // Pago con QR: url del checkout de Stripe + imagen QR (data URL)
   const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  // ¿La tienda tiene su cuenta de Stripe conectada? (habilita el QR)
+  const [stripeConnected, setStripeConnected] = useState<boolean | null>(null)
+  useEffect(() => {
+    getStripeConfigStatus().then(r => setStripeConnected(r.connected)).catch(() => setStripeConnected(false))
+  }, [])
 
   // ─── Buscar productos (con debounce) ─────────────────────
   const search = useCallback(async (q: string) => {
@@ -108,6 +115,7 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
 
   // QR: genera el link y su imagen QR para que el cliente la escanee y pague.
   async function handleQr() {
+    if (!stripeConnected) { toast.error('Conecta tu cuenta de Stripe en Configuración → Cobros con Stripe'); return }
     setStripeLoading(true)
     const url = await generateStripeLink()
     if (url) {
@@ -431,15 +439,23 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
                 Cobrar {formatCurrency(total)} con Stripe
               </button>
             ) : paymentMethod === 'qr' ? (
-              <button
-                type="button"
-                onClick={handleQr}
-                disabled={stripeLoading}
-                className="w-full flex items-center justify-center gap-2 h-14 rounded-xl text-lg font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-colors disabled:opacity-60"
-              >
-                {stripeLoading ? <Loader2 className="mr-1 h-5 w-5 animate-spin" /> : <QrCode size={20} />}
-                Generar QR · {formatCurrency(total)}
-              </button>
+              stripeConnected === false ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-center">
+                  <p className="text-sm font-bold text-amber-800">Conecta tu cuenta de Stripe</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Para cobrar con QR, ve a Configuración → Cobros con Stripe.</p>
+                  <a href="/settings" className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-amber-800 underline">Ir a Configuración</a>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleQr}
+                  disabled={stripeLoading || stripeConnected === null}
+                  className="w-full flex items-center justify-center gap-2 h-14 rounded-xl text-lg font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-colors disabled:opacity-60"
+                >
+                  {stripeLoading ? <Loader2 className="mr-1 h-5 w-5 animate-spin" /> : <QrCode size={20} />}
+                  {stripeConnected === null ? 'Verificando cuenta…' : `Generar QR · ${formatCurrency(total)}`}
+                </button>
+              )
             ) : (
               <Button
                 onClick={handleCheckout}
