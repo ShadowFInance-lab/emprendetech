@@ -284,19 +284,39 @@ export interface EmployeeMeta {
 }
 
 export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta | null> {
+  console.log('[getEmployeeMeta] Cargando empleado ID:', employeeId)
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
-    if (!(await bossOwnsEmployee(supabase, employeeId))) return null
-    // Lee con service-role (bypass RLS); fallback al cliente normal si no hay key.
-    const client = adminOrNull() ?? supabase
-    const { data } = await client
+    if (!user) { console.error('[getEmployeeMeta] sin sesión de jefe'); return null }
+    const admin = adminOrNull()
+    if (!admin) console.error('[getEmployeeMeta] SIN service-role (falta SUPABASE_SERVICE_ROLE_KEY): la lectura puede fallar por RLS')
+    const client = admin ?? supabase
+
+    // Propiedad: por profiles.boss_id (directo y fiable) O por list_my_employees.
+    let owned = false
+    try {
+      const { data: prof, error: pErr } = await client.from('profiles').select('boss_id').eq('id', employeeId).maybeSingle()
+      if (pErr) console.error('[getEmployeeMeta] error leyendo profiles.boss_id:', pErr.message)
+      owned = (prof?.boss_id as string | null) === user.id
+    } catch (e) { console.error('[getEmployeeMeta] excepción leyendo profiles:', e instanceof Error ? e.message : e) }
+    if (!owned) {
+      const { data: emps } = await supabase.rpc('list_my_employees')
+      owned = !!(emps as { id: string }[] | null)?.some(e => e.id === employeeId)
+    }
+    if (!owned) { console.error('[getEmployeeMeta] el empleado NO pertenece al jefe:', employeeId); return null }
+
+    const { data, error } = await client
       .from('employee_meta')
       .select('phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url')
       .eq('employee_id', employeeId).maybeSingle()
+    if (error) console.error('[getEmployeeMeta] error leyendo employee_meta (¿migración 024?):', error.message)
+    console.log('[getEmployeeMeta] resultado:', data ? 'CON datos' : 'sin fila (vacío)')
     return (data as EmployeeMeta) ?? null
-  } catch { return null }
+  } catch (e) {
+    console.error('[getEmployeeMeta] EXCEPCIÓN:', e instanceof Error ? e.message : e)
+    return null
+  }
 }
 
 export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeMeta): Promise<ActionResult> {

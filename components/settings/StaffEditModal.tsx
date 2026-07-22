@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check, Upload, KeyRound } from 'lucide-react'
+import { X, Loader2, Save, Trash2, UserRound, ClipboardList, CalendarClock, Check, Upload, KeyRound, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { saveStaffAction, deleteStaffAction, setStaffDayAction, type Staff } from '@/lib/actions/staff'
 import { uploadEmployeePhotoAction, createEmployeeAction } from '@/lib/actions/employees'
@@ -117,7 +117,13 @@ export default function StaffEditModal({ staff, onClose, onSaved }: Props) {
               <p className="text-[11px] text-white/75">{s.position || 'Editar empleado'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => { setS(staff); onSaved(); toast.success('Datos recargados') }} title="Volver a cargar los datos"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/90 bg-white/15 hover:bg-white/25 px-2.5 py-1.5 rounded-full transition-colors">
+              <RefreshCw size={12} /> Forzar recarga
+            </button>
+            <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
+          </div>
         </div>
 
         <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">

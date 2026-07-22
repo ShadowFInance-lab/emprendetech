@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useMemo } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4, Wallet, Copy, Sparkles } from 'lucide-react'
+import { X, Loader2, Save, Trash2, Check, Shield, UserRound, CalendarClock, Upload, Mail, KeyRound, Eye, EyeOff, Lock, Clock4, Wallet, Copy, Sparkles, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { getEmployeeMeta, saveEmployeeMetaAction, deleteEmployeeAction, setEmployeeRoleAction, setEmployeeNameAction, uploadEmployeePhotoAction, getEmployeeLoginAction, setEmployeePasswordAction, type EmployeeMeta } from '@/lib/actions/employees'
 import { getEmployeeWeekAction, setEmployeeDayAction, setEmployeeDayTimesAction, type AttendanceRow, type DayState } from '@/lib/actions/attendance'
@@ -74,26 +74,31 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
     setUploadingPhoto(false)
     e.target.value = ''
   }
-  useEffect(() => {
-    let alive = true
+  // Carga TODOS los datos del empleado. Se llama al abrir y desde "Forzar recarga".
+  async function reload() {
+    console.log('[EmployeeEditModal] Cargando empleado ID:', employeeId)
     setLoaded(false)
-    ;(async () => {
-      try {
-        // Cargas independientes: si una falla, NO deja la otra vacía NI cuelga el
-        // modal en el spinner (antes un rechazo dejaba `loaded` en false = "sin datos").
-        const [m, w] = await Promise.all([
-          getEmployeeMeta(employeeId).catch(() => null),
-          getEmployeeWeekAction(employeeId).catch(() => [] as AttendanceRow[]),
-        ])
-        if (!alive) return
-        if (m) setMeta({ ...EMPTY, ...m })
-        setWeek(w)
-      } finally {
-        if (alive) setLoaded(true) // SIEMPRE se marca cargado
-      }
-    })()
-    getEmployeeLoginAction(employeeId).then(r => { if (alive) setEmail(r.email) }).catch(() => {})
-    return () => { alive = false }
+    // Red de seguridad anti-cuelgue: a los 5s se muestra el formulario pase lo que pase.
+    const safety = setTimeout(() => setLoaded(true), 5000)
+    try {
+      const [m, w] = await Promise.all([
+        getEmployeeMeta(employeeId).catch(e => { console.error('[EmployeeEditModal] getEmployeeMeta falló', e); return null }),
+        getEmployeeWeekAction(employeeId).catch(e => { console.error('[EmployeeEditModal] asistencia falló', e); return [] as AttendanceRow[] }),
+      ])
+      if (m) setMeta({ ...EMPTY, ...m })
+      setWeek(w)
+      console.log('[EmployeeEditModal] datos cargados · meta =', m, '· asistencia =', w?.length ?? 0)
+    } catch (e) {
+      console.error('[EmployeeEditModal] error cargando:', e)
+    } finally {
+      clearTimeout(safety)
+      setLoaded(true)
+    }
+    getEmployeeLoginAction(employeeId).then(r => setEmail(r.email)).catch(() => {})
+  }
+  useEffect(() => {
+    reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId])
 
   // Al elegir un día, precarga sus horas guardadas — así cada día es editable
@@ -196,7 +201,13 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
               <p className="text-[11px] text-white/75">{meta.position || 'Editar empleado'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={reload} title="Volver a cargar los datos"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/90 bg-white/15 hover:bg-white/25 px-2.5 py-1.5 rounded-full transition-colors">
+              <RefreshCw size={12} className={loaded ? '' : 'animate-spin'} /> Forzar recarga
+            </button>
+            <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Cerrar"><X size={18} /></button>
+          </div>
         </div>
 
         {/* Pestañas: ventanas separadas por tema */}
