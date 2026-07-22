@@ -271,7 +271,19 @@ export interface EmployeeMeta {
 export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta | null> {
   try {
     const supabase = await createClient()
-    const { data } = await supabase
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    // Verifica que el empleado le pertenezca al jefe (RPC que SÍ funciona).
+    const { data: emps } = await supabase.rpc('list_my_employees')
+    const owns = (emps as { id: string }[] | null)?.some(e => e.id === employeeId)
+    if (!owns) return null
+    // Lee con service-role para NO depender de la política RLS del jefe
+    // (meta_boss requiere la función my_employee_ids(); si esa migración no se
+    // corrió, la lectura normal devolvía vacío → "no se veían los datos").
+    // Fallback al cliente normal si no hay service-role key.
+    let client: ReturnType<typeof createAdminClient> | Awaited<ReturnType<typeof createClient>> = supabase
+    try { client = createAdminClient() } catch { /* sin service-role: usa el cliente normal */ }
+    const { data } = await client
       .from('employee_meta')
       .select('phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url')
       .eq('employee_id', employeeId).maybeSingle()

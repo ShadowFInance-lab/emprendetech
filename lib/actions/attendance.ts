@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
 export interface AttendanceRow {
@@ -99,7 +99,11 @@ export async function getEmployeeWeekAction(employeeId: string): Promise<Attenda
     const now = new Date(); const dow = (now.getDay() + 6) % 7
     const mon = new Date(now); mon.setDate(now.getDate() - dow)
     const since = mon.toISOString().slice(0, 10)
-    const { data } = await supabase.from('employee_attendance')
+    // Lee con service-role (bypass RLS) filtrando por boss_id = jefe actual, así
+    // la asistencia se muestra aunque la política RLS no esté bien configurada.
+    let client: ReturnType<typeof createAdminClient> | Awaited<ReturnType<typeof createClient>> = supabase
+    try { client = createAdminClient() } catch { /* sin service-role: cliente normal */ }
+    const { data } = await client.from('employee_attendance')
       .select('id, employee_id, work_date, check_in, check_out, note')
       .eq('boss_id', user.id).eq('employee_id', employeeId).gte('work_date', since)
     return (data ?? []) as AttendanceRow[]

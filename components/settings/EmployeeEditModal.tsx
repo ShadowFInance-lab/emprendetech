@@ -282,7 +282,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
                     con ojito para revelar/ocultar y botón para copiar. */}
                 {savedPw && (
                   <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-3 space-y-2">
-                    <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5"><Check size={13} /> Contraseña actualizada — cópiala y pásasela al empleado</p>
+                    <p className="text-[12px] font-bold text-emerald-800 flex items-center gap-1.5"><Check size={14} /> Esta es la nueva contraseña</p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-base font-bold font-mono text-gray-900 tracking-wide break-all select-all">
                         {showSaved ? savedPw : '•'.repeat(Math.min(savedPw.length, 12))}
@@ -295,7 +295,7 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
                         {copied ? <><Check size={15} /> Copiado</> : <><Copy size={15} /> Copiar</>}
                       </button>
                     </div>
-                    <p className="text-[10px] text-emerald-700/80">⚠️ Solo se muestra esta vez. Guárdala o cópiala ahora.</p>
+                    <p className="text-[11px] text-emerald-700/90 font-medium">Compártela con el empleado. No se puede ver después.</p>
                   </div>
                 )}
 
