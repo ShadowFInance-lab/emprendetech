@@ -3,6 +3,12 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
+// Cliente service-role (bypass RLS) si está disponible; si no, null. Para que el
+// jefe lea/escriba la asistencia sin depender de la RLS (se acota por boss_id).
+function adminOrNull(): ReturnType<typeof createAdminClient> | null {
+  try { return createAdminClient() } catch { return null }
+}
+
 export interface AttendanceRow {
   id: string
   employee_id: string
@@ -116,21 +122,22 @@ export async function setEmployeeDayAction(employeeId: string, date: string, sta
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
+    const client = adminOrNull() ?? supabase // bypass RLS; boss_id acota a este jefe
     if (state === 'none') {
-      await supabase.from('employee_attendance').delete().eq('boss_id', user.id).eq('employee_id', employeeId).eq('work_date', date)
+      await client.from('employee_attendance').delete().eq('boss_id', user.id).eq('employee_id', employeeId).eq('work_date', date)
       return { success: true }
     }
     const payload = state === 'present' ? { check_in: `${date}T09:00:00`, note: null }
       : state === 'justified' ? { check_in: null, check_out: null, note: 'Falta justificada' }
       : state === 'unpaid' ? { check_in: null, check_out: null, note: 'Permiso sin goce' }
       : { check_in: null, check_out: null, note: null } // absent
-    const { data: ex } = await supabase.from('employee_attendance')
-      .select('id').eq('employee_id', employeeId).eq('work_date', date).maybeSingle()
+    const { data: ex } = await client.from('employee_attendance')
+      .select('id').eq('employee_id', employeeId).eq('boss_id', user.id).eq('work_date', date).maybeSingle()
     if (!ex) {
-      const { error } = await supabase.from('employee_attendance').insert({ employee_id: employeeId, boss_id: user.id, work_date: date, ...payload })
+      const { error } = await client.from('employee_attendance').insert({ employee_id: employeeId, boss_id: user.id, work_date: date, ...payload })
       if (error) return { success: false, error: 'No se pudo guardar (¿migración 023?)' }
     } else {
-      await supabase.from('employee_attendance').update(payload).eq('id', ex.id).eq('boss_id', user.id)
+      await client.from('employee_attendance').update(payload).eq('id', ex.id).eq('boss_id', user.id)
     }
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
@@ -142,7 +149,8 @@ export async function setEmployeeDayTimesAction(employeeId: string, date: string
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
-    const { error } = await supabase.from('employee_attendance').upsert({
+    const client = adminOrNull() ?? supabase
+    const { error } = await client.from('employee_attendance').upsert({
       employee_id: employeeId, boss_id: user.id, work_date: date,
       check_in: checkIn ? `${date}T${checkIn}:00` : null,
       check_out: checkOut ? `${date}T${checkOut}:00` : null,

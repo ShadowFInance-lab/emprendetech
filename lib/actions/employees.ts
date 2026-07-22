@@ -4,6 +4,19 @@ import { revalidatePath } from 'next/cache'
 import { createClient, createPublicClient, createAdminClient } from '@/lib/supabase/server'
 import type { ActionResult } from './auth'
 
+// Cliente con service-role (bypass RLS) si está disponible; si no, null. Se usa
+// para leer/escribir datos del empleado SIN depender de las políticas RLS de
+// employee_meta (que dependen de la función my_employee_ids() / migración 024):
+// si esa migración no está aplicada, el jefe no podía leer NI guardar la meta.
+function adminOrNull(): ReturnType<typeof createAdminClient> | null {
+  try { return createAdminClient() } catch { return null }
+}
+// ¿El employeeId pertenece al jefe actual? (RPC SECURITY DEFINER que sí funciona)
+async function bossOwnsEmployee(supabase: Awaited<ReturnType<typeof createClient>>, employeeId: string): Promise<boolean> {
+  const { data: emps } = await supabase.rpc('list_my_employees')
+  return !!(emps as { id: string }[] | null)?.some(e => e.id === employeeId)
+}
+
 export interface Employee {
   id: string
   name: string | null
@@ -245,8 +258,10 @@ export async function uploadEmployeePhotoAction(formData: FormData): Promise<{ s
     // Guardar el enlace en la BD de inmediato (persistente, sin pulsar "Guardar").
     if (isStaff) {
       await supabase.from('staff').update({ photo_url: publicUrl }).eq('id', id).eq('boss_id', user.id)
-    } else {
-      await supabase.from('employee_meta').upsert({ employee_id: id, photo_url: publicUrl, updated_at: new Date().toISOString() })
+    } else if (await bossOwnsEmployee(supabase, id)) {
+      // employee_meta con service-role (bypass RLS) tras verificar propiedad.
+      const client = adminOrNull() ?? supabase
+      await client.from('employee_meta').upsert({ employee_id: id, photo_url: publicUrl, updated_at: new Date().toISOString() })
     }
     return { success: true, url: publicUrl }
   } catch (e: unknown) {
@@ -273,16 +288,9 @@ export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
-    // Verifica que el empleado le pertenezca al jefe (RPC que SÍ funciona).
-    const { data: emps } = await supabase.rpc('list_my_employees')
-    const owns = (emps as { id: string }[] | null)?.some(e => e.id === employeeId)
-    if (!owns) return null
-    // Lee con service-role para NO depender de la política RLS del jefe
-    // (meta_boss requiere la función my_employee_ids(); si esa migración no se
-    // corrió, la lectura normal devolvía vacío → "no se veían los datos").
-    // Fallback al cliente normal si no hay service-role key.
-    let client: ReturnType<typeof createAdminClient> | Awaited<ReturnType<typeof createClient>> = supabase
-    try { client = createAdminClient() } catch { /* sin service-role: usa el cliente normal */ }
+    if (!(await bossOwnsEmployee(supabase, employeeId))) return null
+    // Lee con service-role (bypass RLS); fallback al cliente normal si no hay key.
+    const client = adminOrNull() ?? supabase
     const { data } = await client
       .from('employee_meta')
       .select('phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url')
@@ -296,7 +304,11 @@ export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeM
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
-    const { error } = await supabase.from('employee_meta').upsert({
+    if (!(await bossOwnsEmployee(supabase, employeeId))) return { success: false, error: 'Empleado no encontrado o no te pertenece' }
+    // Escribe con service-role (bypass RLS): antes, si la migración 024 no estaba,
+    // el guardado con el cliente del jefe fallaba y por eso los datos no se veían.
+    const client = adminOrNull() ?? supabase
+    const { error } = await client.from('employee_meta').upsert({
       employee_id: employeeId,
       phone: meta.phone || null,
       insurance_no: meta.insurance_no || null,
@@ -309,9 +321,12 @@ export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeM
       photo_url: meta.photo_url || null,
       updated_at: new Date().toISOString(),
     })
-    if (error) return { success: false, error: 'No se pudo guardar (¿migración 024?)' }
+    if (error) {
+      console.error('[employee meta save]', error.message)
+      return { success: false, error: `No se pudo guardar: ${error.message}` }
+    }
     return { success: true }
-  } catch { return { success: false, error: 'Error' } }
+  } catch { return { success: false, error: 'Error al guardar' } }
 }
 
 /** Jefe: cambia el rol de un empleado (empleado / supervisor / gerente). */

@@ -62,6 +62,8 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   // ¿La tienda tiene su cuenta de Stripe conectada? (habilita el QR)
   const [stripeConnected, setStripeConnected] = useState<boolean | null>(null)
+  // Se activa si Stripe rechaza por cuenta inválida → muestra "Ir a Configuración".
+  const [qrIssue, setQrIssue] = useState(false)
   useEffect(() => {
     getStripeConfigStatus().then(r => setStripeConnected(r.connected)).catch(() => setStripeConnected(false))
   }, [])
@@ -88,8 +90,8 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
   // (con items → descuenta stock) cuando el pago se completa.
   // Genera el link de Stripe (con la comisión correcta según el plan). Lo usan
   // tanto Tarjeta (abre el checkout) como QR (muestra el código para escanear).
-  async function generateStripeLink(): Promise<string | null> {
-    if (items.length === 0) { toast.error('Agrega productos al carrito'); return null }
+  async function generateStripeLink(): Promise<{ url?: string; error?: string }> {
+    if (items.length === 0) { toast.error('Agrega productos al carrito'); return {} }
     const res = await createStripePaymentLinkAction({
       amount: total,
       concept: 'Venta en tienda',
@@ -100,33 +102,38 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
         customerPhone: customerPhone || undefined,
       },
     })
-    if (res.success && res.url) return res.url
-    toast.error(res.error ?? 'No se pudo generar el pago con Stripe')
-    return null
+    if (res.success && res.url) return { url: res.url }
+    return { error: res.error ?? 'No se pudo generar el pago con Stripe' }
   }
 
   async function handleStripeCard() {
     setStripeLoading(true)
-    const url = await generateStripeLink()
+    const { url, error } = await generateStripeLink()
     setStripeLoading(false)
     // La venta la registra el webhook al completarse el pago.
     if (url) window.open(url, '_blank', 'noopener')
+    else if (error) toast.error(error)
   }
 
   // QR: genera el link y su imagen QR para que el cliente la escanee y pague.
   async function handleQr() {
-    if (!stripeConnected) { toast.error('Conecta tu cuenta de Stripe en Configuración → Cobros con Stripe'); return }
+    if (!stripeConnected) { setQrIssue(true); return }
     setStripeLoading(true)
-    const url = await generateStripeLink()
+    const { url, error } = await generateStripeLink()
     if (url) {
+      setQrIssue(false)
       try {
         const QRCode = (await import('qrcode')).default
-        const dataUrl = await QRCode.toDataURL(url, { width: 360, margin: 1 })
-        setQrDataUrl(dataUrl)
+        setQrDataUrl(await QRCode.toDataURL(url, { width: 360, margin: 1 }))
       } catch {
         setQrDataUrl(null) // fallback: al menos mostramos el link para copiar
       }
       setQrUrl(url)
+    } else if (error) {
+      // Si Stripe rechazó por la cuenta conectada, mostramos el panel de arreglo
+      // (con "Ir a Configuración") en vez de solo un toast.
+      if (/stripe|cuenta|destination|conecta|reconect|v[aá]lida/i.test(error)) setQrIssue(true)
+      else toast.error(error)
     }
     setStripeLoading(false)
   }
@@ -439,10 +446,14 @@ export default function POSInterface({ presetCustomer }: { presetCustomer?: Pres
                 Cobrar {formatCurrency(total)} con Stripe
               </button>
             ) : paymentMethod === 'qr' ? (
-              stripeConnected === false ? (
+              (stripeConnected === false || qrIssue) ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-center">
-                  <p className="text-sm font-bold text-amber-800">Conecta tu cuenta de Stripe</p>
-                  <p className="text-xs text-amber-700 mt-0.5">Para cobrar con QR, ve a Configuración → Cobros con Stripe.</p>
+                  <p className="text-sm font-bold text-amber-800">{qrIssue ? 'Tu cuenta de Stripe no es válida' : 'Conecta tu cuenta de Stripe'}</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    {qrIssue
+                      ? 'Reconéctala (revisa que sea la misma, live o test) en Configuración → Cobros con Stripe.'
+                      : 'Para cobrar con QR, ve a Configuración → Cobros con Stripe.'}
+                  </p>
                   <a href="/settings" className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-amber-800 underline">Ir a Configuración</a>
                 </div>
               ) : (
