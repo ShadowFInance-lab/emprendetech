@@ -794,4 +794,21 @@ ALTER TABLE stores ADD COLUMN IF NOT EXISTS bg_position TEXT;
 -- ─── 056: Posición manual del fondo del panel admin ─────────────────────────
 ALTER TABLE stores ADD COLUMN IF NOT EXISTS dashboard_bg_position TEXT;
 
+-- ─── 057: Reparación de empleados (siembra meta vacía + vista compat) ────────
+-- Crea una fila de meta VACÍA para cada empleado que no tenga (el modal siempre
+-- carga algo). Requiere employee_meta (arriba, migración 024).
+INSERT INTO employee_meta (employee_id)
+  SELECT id FROM profiles WHERE boss_id IS NOT NULL
+  ON CONFLICT (employee_id) DO NOTHING;
+-- Vista de compatibilidad: resuelve 'relation "employees" does not exist' de
+-- scripts externos. La app NO usa esta tabla (usa profiles + employee_meta).
+CREATE OR REPLACE VIEW employees AS
+  SELECT p.id, p.full_name AS name, p.boss_id, p.role,
+         m.phone, m.rfc, m.position, m.branch, m.hire_date, m.photo_url,
+         m.insurance_no, m.emergency_phone, m.salary, p.created_at
+  FROM profiles p
+  LEFT JOIN employee_meta m ON m.employee_id = p.id
+  WHERE p.boss_id IS NOT NULL;
+GRANT SELECT ON employees TO authenticated;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

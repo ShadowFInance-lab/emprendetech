@@ -11,10 +11,21 @@ import type { ActionResult } from './auth'
 function adminOrNull(): ReturnType<typeof createAdminClient> | null {
   try { return createAdminClient() } catch { return null }
 }
-// ¿El employeeId pertenece al jefe actual? (RPC SECURITY DEFINER que sí funciona)
+// ¿El employeeId pertenece al jefe actual? Usa profiles.boss_id (fiable, con
+// service-role) y, como respaldo, el RPC list_my_employees. NO depende de una
+// tabla "employees" (que la app no usa).
 async function bossOwnsEmployee(supabase: Awaited<ReturnType<typeof createClient>>, employeeId: string): Promise<boolean> {
-  const { data: emps } = await supabase.rpc('list_my_employees')
-  return !!(emps as { id: string }[] | null)?.some(e => e.id === employeeId)
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+    const client = adminOrNull() ?? supabase
+    const { data } = await client.from('profiles').select('boss_id').eq('id', employeeId).maybeSingle()
+    if ((data?.boss_id as string | null) === user.id) return true
+  } catch (e) { console.error('[bossOwnsEmployee] profiles.boss_id falló:', e instanceof Error ? e.message : e) }
+  try {
+    const { data: emps } = await supabase.rpc('list_my_employees')
+    return !!(emps as { id: string }[] | null)?.some(e => e.id === employeeId)
+  } catch (e) { console.error('[bossOwnsEmployee] list_my_employees falló:', e instanceof Error ? e.message : e); return false }
 }
 
 export interface Employee {
@@ -320,6 +331,7 @@ export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta 
 }
 
 export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeMeta): Promise<ActionResult> {
+  console.log('[saveEmployeeMetaAction] Guardando meta del empleado ID:', employeeId)
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
