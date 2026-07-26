@@ -201,6 +201,14 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       {/* Tutorial guiado — primera vez que el dueño entra al panel */}
       <OnboardingTutorial />
+
+      {/* Banner de versión Beta */}
+      <div className="flex items-center gap-2.5 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-violet-50 px-3.5 py-2">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider bg-indigo-600 text-white px-2 py-0.5 rounded-full shrink-0">Beta</span>
+        <p className="text-xs text-indigo-900 font-medium">
+          Mercanta Business · Versión Beta — seguimos mejorando la app cada semana.
+        </p>
+      </div>
       {/* Bienvenida */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>

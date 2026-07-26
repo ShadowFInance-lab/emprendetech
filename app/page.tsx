@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ShoppingBag, BarChart3, MessageCircle, Globe, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react'
+import { ShoppingBag, BarChart3, MessageCircle, Globe, ArrowRight, Sparkles } from 'lucide-react'
 
 const FEATURES = [
   { icon: Globe, title: 'Catálogo web profesional', desc: 'Tu tienda online lista en minutos, con tu marca y colores.' },
@@ -29,30 +29,41 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero — fondo oscuro premium */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950">
-        <div className="pointer-events-none absolute -top-32 -right-24 w-96 h-96 rounded-full bg-indigo-600/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -left-24 w-96 h-96 rounded-full bg-violet-600/20 blur-3xl" />
+      {/* Hero — colorido, con la promo de la prueba gratis al frente */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600">
+        {/* Manchas de color para dar vida al fondo */}
+        <div className="pointer-events-none absolute -top-28 -right-20 w-96 h-96 rounded-full bg-amber-400/30 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 -left-20 w-96 h-96 rounded-full bg-cyan-400/30 blur-3xl" />
+        <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 w-[30rem] h-[30rem] rounded-full bg-white/10 blur-3xl" />
+
         <div className="relative max-w-4xl mx-auto px-4 py-24 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 ring-1 ring-white/15 text-slate-100 text-sm font-medium px-4 py-1.5 rounded-full mb-6 backdrop-blur">
-            <ShieldCheck size={15} className="text-emerald-400" /> Sin comisión por venta · 100% en línea
+          {/* Badge Beta + promo */}
+          <div className="inline-flex items-center gap-2 bg-white/20 ring-1 ring-white/30 text-white text-sm font-bold px-4 py-1.5 rounded-full mb-6 backdrop-blur">
+            <Sparkles size={15} className="text-amber-300" /> Beta · 5 días de prueba gratis
           </div>
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-white leading-[1.05] tracking-tight">
-            Tu negocio en línea{' '}
-            <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent">en minutos</span>
+
+          <h1 className="text-4xl sm:text-6xl font-extrabold text-white leading-[1.05] tracking-tight drop-shadow-sm">
+            Prueba{' '}
+            <span className="bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 bg-clip-text text-transparent">5 días gratis</span>
+            {' '}tu negocio en línea
           </h1>
-          <p className="text-slate-300 text-lg sm:text-xl mt-6 max-w-2xl mx-auto">
-            Crea tu catálogo web, administra tu inventario, registra ventas y conecta con tus clientes por WhatsApp. Todo desde un navegador.
+
+          <p className="text-white/90 text-lg sm:text-xl mt-6 max-w-2xl mx-auto font-medium">
+            Gestiona ventas, inventario, empleados y cobros con QR. Todo desde un navegador.
           </p>
+
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
-            <Link href="/register" className="flex items-center gap-2 bg-white text-slate-900 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-100 transition-all shadow-xl shadow-black/20 hover:-translate-y-0.5">
-              Comenzar gratis <ArrowRight size={20} />
+            <Link href="/register" className="flex items-center gap-2 bg-white text-indigo-700 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-amber-50 transition-all shadow-2xl shadow-black/20 hover:-translate-y-0.5">
+              Comenzar prueba gratis <ArrowRight size={20} />
             </Link>
-            <Link href="/pricing" className="text-slate-300 hover:text-white font-medium text-sm inline-flex items-center gap-1.5">
+            <Link href="/pricing" className="text-white/85 hover:text-white font-semibold text-sm inline-flex items-center gap-1.5">
               <Sparkles size={15} /> Ver planes y precios →
             </Link>
           </div>
-          <p className="text-slate-400 text-xs mt-6">Sin tarjeta para empezar · Datos protegidos · Pagos seguros con Stripe</p>
+
+          <p className="text-white/75 text-xs mt-6">
+            Sin tarjeta para empezar · Hecha para emprendedores en México · Versión Beta
+          </p>
         </div>
       </section>
 
@@ -91,7 +102,7 @@ export default function HomePage() {
           <Link href="/rastreo" className="hover:text-white transition-colors">Rastrear pedido</Link>
           <Link href="/reportar" className="hover:text-white transition-colors">Reportar</Link>
         </div>
-        <p className="mt-3 text-xs text-slate-500">© {new Date().getFullYear()} Mercanta Business · Plataforma tecnológica para negocios.</p>
+        <p className="mt-3 text-xs text-slate-500">© {new Date().getFullYear()} Mercanta Business · Versión Beta · Plataforma tecnológica para negocios.</p>
       </footer>
     </div>
   )

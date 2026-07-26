@@ -86,6 +86,22 @@ export default async function SubscriptionPage({
         <p className="text-gray-500 text-sm mt-1">Plan actual y opciones de mejora</p>
       </div>
 
+      {/* Promo de la prueba de 5 días (siempre visible) */}
+      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 flex items-start gap-3">
+        <span className="text-2xl leading-none">🎁</span>
+        <div>
+          <p className="font-bold text-emerald-900">Prueba gratuita de 5 días</p>
+          <p className="text-sm text-emerald-800/90 mt-0.5">
+            Gestiona ventas, inventario y empleados sin costo.
+          </p>
+          {currentPlan === 'free' && (
+            <p className="text-sm text-emerald-900 font-semibold mt-2 bg-white/70 border border-emerald-200 rounded-lg px-3 py-1.5 inline-block">
+              Estás en prueba Beta. Tienes 5 días para probar todas las funciones.
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Banner grande de Prueba gratis */}
       {showTrialCountdown && (
         <div

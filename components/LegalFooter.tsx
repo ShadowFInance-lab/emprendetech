@@ -11,7 +11,7 @@ export default function LegalFooter() {
         <Link href="/rastreo" className="hover:text-gray-600 transition-colors">Rastrear pedido</Link>
         <Link href="/reportar" className="hover:text-gray-600 transition-colors">Reportar</Link>
       </div>
-      <p className="mt-2.5">© {year} Mercanta Business · Plataforma tecnológica para negocios.</p>
+      <p className="mt-2.5">© {year} Mercanta Business · Versión Beta · Plataforma tecnológica para negocios.</p>
     </footer>
   )
 }
