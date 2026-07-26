@@ -317,13 +317,31 @@ export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta 
     }
     if (!owned) { console.error('[getEmployeeMeta] el empleado NO pertenece al jefe:', employeeId); return null }
 
-    const { data, error } = await client
-      .from('employee_meta')
-      .select('phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url')
-      .eq('employee_id', employeeId).maybeSingle()
-    if (error) console.error('[getEmployeeMeta] error leyendo employee_meta (¿migración 024?):', error.message)
-    console.log('[getEmployeeMeta] resultado:', data ? 'CON datos' : 'sin fila (vacío)')
-    return (data as EmployeeMeta) ?? null
+    const COLS = 'phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url'
+    const VACIO: EmployeeMeta = {
+      phone: null, insurance_no: null, emergency_phone: null, branch: null,
+      salary: null, rfc: null, position: null, hire_date: null, photo_url: null,
+    }
+
+    const first = await client.from('employee_meta').select(COLS).eq('employee_id', employeeId).maybeSingle()
+    let data = first.data
+    const error = first.error
+    if (error) console.error('[getEmployeeMeta] error leyendo employee_meta:', error.message)
+
+    // Si NO existe la fila, se crea vacía (así el guardado posterior siempre
+    // encuentra su registro) y se vuelve a leer.
+    if (!data && !error) {
+      console.log('[getEmployeeMeta] sin fila → creando employee_meta vacía para', employeeId)
+      const { error: insErr } = await client.from('employee_meta')
+        .upsert({ employee_id: employeeId, updated_at: new Date().toISOString() }, { onConflict: 'employee_id' })
+      if (insErr) console.error('[getEmployeeMeta] no se pudo crear la fila:', insErr.message)
+      const re = await client.from('employee_meta').select(COLS).eq('employee_id', employeeId).maybeSingle()
+      data = re.data
+    }
+
+    const meta: EmployeeMeta = { ...VACIO, ...(data as EmployeeMeta | null) }
+    console.log('[getEmployeeMeta] Meta cargada:', meta)
+    return meta // SIEMPRE objeto (nunca null) → el formulario siempre se dibuja
   } catch (e) {
     console.error('[getEmployeeMeta] EXCEPCIÓN:', e instanceof Error ? e.message : e)
     return null
@@ -339,8 +357,10 @@ export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeM
     if (!(await bossOwnsEmployee(supabase, employeeId))) return { success: false, error: 'Empleado no encontrado o no te pertenece' }
     // Escribe con service-role (bypass RLS): antes, si la migración 024 no estaba,
     // el guardado con el cliente del jefe fallaba y por eso los datos no se veían.
-    const client = adminOrNull() ?? supabase
-    const { error } = await client.from('employee_meta').upsert({
+    const admin = adminOrNull()
+    if (!admin) console.error('[saveEmployeeMetaAction] SIN service-role: el guardado depende de RLS y puede fallar')
+    const client = admin ?? supabase
+    const payload = {
       employee_id: employeeId,
       phone: meta.phone || null,
       insurance_no: meta.insurance_no || null,
@@ -352,13 +372,23 @@ export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeM
       hire_date: meta.hire_date || null,
       photo_url: meta.photo_url || null,
       updated_at: new Date().toISOString(),
-    })
+    }
+    // onConflict explícito: si la fila ya existe (sembrada vacía) se ACTUALIZA
+    // en vez de fallar por clave duplicada — esa era la causa de "no persiste".
+    const { error } = await client.from('employee_meta').upsert(payload, { onConflict: 'employee_id' })
     if (error) {
-      console.error('[employee meta save]', error.message)
+      console.error('[saveEmployeeMetaAction] upsert falló:', error.message)
       return { success: false, error: `No se pudo guardar: ${error.message}` }
     }
+    // Verificación real: se lee de vuelta para confirmar que quedó escrito.
+    const { data: check } = await client.from('employee_meta')
+      .select('phone, rfc, position').eq('employee_id', employeeId).maybeSingle()
+    console.log('[saveEmployeeMetaAction] guardado OK · verificación:', check)
     return { success: true }
-  } catch { return { success: false, error: 'Error al guardar' } }
+  } catch (e) {
+    console.error('[saveEmployeeMetaAction] EXCEPCIÓN:', e instanceof Error ? e.message : e)
+    return { success: false, error: 'Error al guardar' }
+  }
 }
 
 /** Jefe: cambia el rol de un empleado (empleado / supervisor / gerente). */

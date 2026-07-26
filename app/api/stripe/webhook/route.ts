@@ -50,7 +50,15 @@ async function registerSaleFromSession(session: StripeSession) {
   // Solo auto-registra ventas de checkouts que traen los items del carrito.
   // Los cobros libres (widget "Cobro rápido con Stripe") NO se auto-registran:
   // el cajero registra la venta con el botón "Cobrar" del POS — así no se duplica.
-  if (!meta.items) { console.log('[stripe webhook] sesión sin items (cobro libre), no se registra venta:', session.id); return }
+  // Las ventas del POS (metadata.source='pos') SIEMPRE se registran, aunque los
+  // items no hayan cabido en la metadata (límite de 500 chars por valor): en ese
+  // caso se registra por el monto cobrado, sin líneas de producto. Antes se
+  // descartaban y por eso "la venta con tarjeta no siempre aparecía".
+  if (!meta.items && meta.source !== 'pos') {
+    console.log('[stripe webhook] sesión sin items ni source=pos, no se registra venta:', session.id)
+    return
+  }
+  if (!meta.items) console.warn('[stripe webhook] venta POS sin items en metadata: se registra por monto (sin descontar stock)', session.id)
 
   const admin = createAdminClient()
 

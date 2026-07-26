@@ -112,24 +112,27 @@ export async function createStripePaymentLinkAction(
     const accountId = cfg?.stripe_account_id as string | undefined
     if (!accountId) return { success: false, error: 'Conecta tu cuenta de Stripe primero en Configuración → Cobros con Stripe.' }
 
-    // Verifica que la cuenta conectada EXISTA y pueda cobrar en el modo actual de
-    // Stripe (live/test). Así se evita el error "No such destination: acct_..."
-    // que aparece cuando el id quedó de otro modo o la cuenta no completó el alta.
+    // Comprobación SUAVE de la cuenta conectada: si no es usable, NO se bloquea
+    // el cobro — se cobra a la cuenta de la PLATAFORMA (destinationOk = false).
+    // Antes esto devolvía error y no dejaba cobrar ("cuenta no es válida").
+    let destinationOk = true
     try {
       const acctRes = await fetch(`https://api.stripe.com/v1/accounts/${accountId}`, {
         headers: { Authorization: `Bearer ${secret}` },
       })
       if (!acctRes.ok) {
-        console.error('[stripe] cuenta destino inválida:', acctRes.status, accountId)
-        return { success: false, error: 'Tu cuenta de Stripe conectada no es válida en este modo (revisa que sea la misma, live o test). Reconéctala en Configuración → Cobros con Stripe.' }
-      }
-      const acct = await acctRes.json() as { charges_enabled?: boolean }
-      if (!acct?.charges_enabled) {
-        return { success: false, error: 'Tu cuenta de Stripe aún no está lista para cobrar. Completa la verificación de tu cuenta en Stripe y vuelve a intentar.' }
+        destinationOk = false
+        console.error('[stripe] cuenta conectada no usable (', acctRes.status, ') → se cobra a la plataforma:', accountId)
+      } else {
+        const acct = await acctRes.json() as { charges_enabled?: boolean }
+        if (!acct?.charges_enabled) {
+          destinationOk = false
+          console.error('[stripe] cuenta conectada sin charges_enabled → se cobra a la plataforma')
+        }
       }
     } catch (e) {
-      console.error('[stripe] error verificando la cuenta destino:', e instanceof Error ? e.message : e)
-      return { success: false, error: 'No se pudo verificar tu cuenta de Stripe. Intenta de nuevo en un momento.' }
+      destinationOk = false
+      console.error('[stripe] no se pudo verificar la cuenta; se cobra a la plataforma:', e instanceof Error ? e.message : e)
     }
 
     const appUrl = getAppUrl()
@@ -156,14 +159,16 @@ export async function createStripePaymentLinkAction(
       'line_items[0][price_data][product_data][name]': concept,
       'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
       'line_items[0][quantity]': '1',
-      // Destination charge: los fondos van a la cuenta conectada del comercio,
-      // menos la comisión de la plataforma (application_fee_amount → tu cuenta).
-      'payment_intent_data[transfer_data][destination]': accountId,
       success_url: `${appUrl}/settings?stripe=ok`,
       cancel_url: `${appUrl}/settings?stripe=cancel`,
     })
-    // La comisión se agrega solo si aplica (Stripe rechaza 0 en application_fee_amount).
-    if (feeCents > 0) body.set('payment_intent_data[application_fee_amount]', String(feeCents))
+    // Destination charge SOLO si la cuenta conectada es usable; si no, el cobro
+    // entra a la plataforma y la venta se realiza igual.
+    if (destinationOk) {
+      body.set('payment_intent_data[transfer_data][destination]', accountId)
+      // La comisión solo aplica con destino (Stripe rechaza 0 y fee sin destino).
+      if (feeCents > 0) body.set('payment_intent_data[application_fee_amount]', String(feeCents))
+    }
 
     // Metadata para que /api/stripe/webhook registre la venta cuando el pago se complete.
     body.set('metadata[source]', 'pos')
@@ -178,17 +183,28 @@ export async function createStripePaymentLinkAction(
       if (itemsJson.length <= 480) body.set('metadata[items]', itemsJson)
     }
 
-    const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    const post = (b: URLSearchParams) => fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
+      body: b,
     })
+    let res = await post(body)
     if (!res.ok) {
       const txt = await res.text()
       let stripeMsg = ''
       try { stripeMsg = (JSON.parse(txt)?.error?.message as string) || '' } catch { /* no json */ }
       console.error('[stripe] checkout session failed', res.status, txt.slice(0, 400))
-      return { success: false, error: `Stripe rechazó el cobro (HTTP ${res.status})${stripeMsg ? ': ' + stripeMsg : ''}` }
+      // REINTENTO: si falló por la cuenta conectada (destino inválido), se cobra
+      // a la plataforma para que la venta NO se quede bloqueada.
+      if (/destination|account|transfer_data|application_fee/i.test(txt)) {
+        console.warn('[stripe] reintentando SIN destino (cobro a la plataforma)')
+        body.delete('payment_intent_data[transfer_data][destination]')
+        body.delete('payment_intent_data[application_fee_amount]')
+        res = await post(body)
+      }
+      if (!res.ok) {
+        return { success: false, error: `Stripe rechazó el cobro (HTTP ${res.status})${stripeMsg ? ': ' + stripeMsg : ''}` }
+      }
     }
     const session = await res.json()
     if (!session?.url) return { success: false, error: 'Stripe no devolvió un link de pago.' }
