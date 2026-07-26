@@ -328,9 +328,20 @@ export async function getEmployeeMeta(employeeId: string): Promise<(EmployeeMeta
       salary: null, rfc: null, position: null, hire_date: null, photo_url: null,
     }
 
+    const BASE = 'phone, insurance_no, emergency_phone, branch, salary'
+    const missingCol = (m?: string) => /column|does not exist|schema cache/i.test(m ?? '')
+
     const first = await client.from('employee_meta').select(COLS).eq('employee_id', employeeId).maybeSingle()
     let data = first.data
-    const error = first.error
+    let error = first.error
+    // Si faltan columnas (migraciones 033/057 no aplicadas), el SELECT COMPLETO
+    // falla y antes se perdían TODOS los datos. Reintento solo con las básicas.
+    if (error && missingCol(error.message)) {
+      console.warn('[getEmployeeMeta] faltan columnas extra; reintentando con básicas:', error.message)
+      const retry = await client.from('employee_meta').select(BASE).eq('employee_id', employeeId).maybeSingle()
+      data = retry.data as typeof data
+      error = retry.error
+    }
     if (error) console.error('[getEmployeeMeta] error leyendo employee_meta:', error.message)
 
     // Si NO existe la fila, se crea vacía (así el guardado posterior siempre
@@ -396,7 +407,23 @@ export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeM
     console.log('[saveEmployeeMetaAction] payload:', payload)
     // onConflict explícito: si la fila ya existe (sembrada vacía) se ACTUALIZA
     // en vez de fallar por clave duplicada — esa era la causa de "no persiste".
-    const { error } = await client.from('employee_meta').upsert(payload, { onConflict: 'employee_id' })
+    let { error } = await client.from('employee_meta').upsert(payload, { onConflict: 'employee_id' })
+    // Si faltan las columnas extra (rfc/position/hire_date/photo_url), el upsert
+    // COMPLETO falla y no se guardaba NADA. Reintento con las columnas básicas.
+    if (error && /column|does not exist|schema cache/i.test(error.message)) {
+      console.warn('[saveEmployeeMetaAction] faltan columnas extra; guardando solo básicas:', error.message)
+      const basico = {
+        employee_id: employeeId,
+        phone: payload.phone, insurance_no: payload.insurance_no,
+        emergency_phone: payload.emergency_phone, branch: payload.branch,
+        salary: payload.salary, updated_at: payload.updated_at,
+      }
+      const r2 = await client.from('employee_meta').upsert(basico, { onConflict: 'employee_id' })
+      error = r2.error
+      if (!error) {
+        return { success: true, error: undefined }
+      }
+    }
     if (error) {
       console.error('[saveEmployeeMetaAction] upsert falló:', error.message)
       return { success: false, error: `No se pudo guardar: ${error.message}` }

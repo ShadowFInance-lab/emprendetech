@@ -53,22 +53,20 @@ export default async function AdminLayout({
     backgroundRepeat: 'no-repeat',
   } : (dashBgColor ? { backgroundColor: dashBgColor } : {})
 
-  // Auto text color for clear visibility on fondo
-  const textColor = dashBgColor && dashBgColor.startsWith('#') ? (() => {
-    const h = dashBgColor.slice(1)
-    const r = parseInt(h.slice(0,2)||'0',16)
-    const g = parseInt(h.slice(2,4)||'0',16)
-    const b = parseInt(h.slice(4,6)||'0',16)
-    const lum = (0.299*r + 0.587*g + 0.114*b)/255
-    return lum > 0.6 ? '#111827' : '#f8fafc'
-  })() : undefined
+  // NOTA (v7.139): antes se forzaba un color de texto claro (#f8fafc) en TODO el
+  // contenido cuando el fondo del panel era oscuro. Como las tarjetas, inputs y
+  // botones son blancos, el texto quedaba BLANCO SOBRE BLANCO = invisible
+  // (inventario, formularios, botones "Editar"/"Guardar"). Ya no se hereda color:
+  // el contenido va siempre sobre una superficie clara y con su color normal.
 
   return (
     <div className={`min-h-screen flex mb-theme ${hasBg ? 'bg-transparent' : 'bg-gray-50'}`} style={themeVars}>
       <Sidebar store={store} profile={profile} />
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64" style={{...contentStyle, ...(textColor ? {color: textColor} : {}) }}>
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64 text-gray-900" style={contentStyle}>
         <Header store={store} hasBg={hasBg} />
-        <main className={`flex-1 p-4 lg:p-6 overflow-auto ${hasBg ? 'bg-transparent' : 'bg-white/90'}`} style={textColor ? {color: textColor} : undefined}>
+        {/* Superficie clara SIEMPRE (semitransparente si hay fondo) para que el
+            texto oscuro se lea sobre cualquier imagen o color de fondo. */}
+        <main className={`flex-1 p-4 lg:p-6 overflow-auto text-gray-900 ${hasBg ? 'bg-white/80 backdrop-blur-sm' : 'bg-white/90'}`}>
           {children}
         </main>
       </div>
