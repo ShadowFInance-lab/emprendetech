@@ -85,7 +85,12 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
         getEmployeeMeta(employeeId).catch(e => { console.error('[EmployeeEditModal] getEmployeeMeta falló', e); return null }),
         getEmployeeWeekAction(employeeId).catch(e => { console.error('[EmployeeEditModal] asistencia falló', e); return [] as AttendanceRow[] }),
       ])
-      if (m) setMeta({ ...EMPTY, ...m })
+      if (m) {
+        // _diag es solo diagnóstico: se registra y NO se guarda en el estado.
+        const { _diag, ...clean } = m as typeof m & { _diag?: string }
+        console.log('%c[Empleado] DIAGNÓSTICO: ' + (_diag ?? 'sin diag'), 'font-weight:bold;color:#4f46e5')
+        setMeta({ ...EMPTY, ...clean })
+      }
       setWeek(w)
       console.log('[EmployeeEditModal] datos cargados · meta =', m, '· asistencia =', w?.length ?? 0)
     } catch (e) {

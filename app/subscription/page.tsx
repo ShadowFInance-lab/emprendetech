@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAN_LIMITS } from '@/lib/constants/plans'
 import { confirmCheckoutReturn, activateFreeModeAction, ensurePlanCurrentAction } from '@/lib/actions/subscriptions'
 import UpgradeButton from '@/components/subscription/UpgradeButton'
+import ReportProblemButton from '@/components/subscription/ReportProblemButton'
 import type { Plan } from '@/lib/types'
 
 const PLAN_FEATURES: Record<Plan, string[]> = {
@@ -320,6 +321,11 @@ export default async function SubscriptionPage({
           legislación aplicable en materia de protección de datos (LFPDPPP en México) y se usan
           únicamente para operar la plataforma.
         </p>
+      </div>
+
+      {/* Reportar un fallo de la app */}
+      <div className="flex justify-center">
+        <ReportProblemButton email={user.email} />
       </div>
 
       {/* Enlaces legales (estilo footer: texto pequeño con separadores) */}

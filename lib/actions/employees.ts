@@ -294,7 +294,7 @@ export interface EmployeeMeta {
   photo_url: string | null
 }
 
-export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta | null> {
+export async function getEmployeeMeta(employeeId: string): Promise<(EmployeeMeta & { _diag?: string }) | null> {
   console.log('[getEmployeeMeta] Cargando empleado ID:', employeeId)
   try {
     const supabase = await createClient()
@@ -315,7 +315,12 @@ export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta 
       const { data: emps } = await supabase.rpc('list_my_employees')
       owned = !!(emps as { id: string }[] | null)?.some(e => e.id === employeeId)
     }
-    if (!owned) { console.error('[getEmployeeMeta] el empleado NO pertenece al jefe:', employeeId); return null }
+    if (!owned) {
+      console.error('[getEmployeeMeta] el empleado NO pertenece al jefe:', employeeId)
+      return { phone: null, insurance_no: null, emergency_phone: null, branch: null, salary: null,
+        rfc: null, position: null, hire_date: null, photo_url: null,
+        _diag: 'NO-ES-TU-EMPLEADO (profiles.boss_id no coincide)' }
+    }
 
     const COLS = 'phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url'
     const VACIO: EmployeeMeta = {
@@ -339,7 +344,14 @@ export async function getEmployeeMeta(employeeId: string): Promise<EmployeeMeta 
       data = re.data
     }
 
-    const meta: EmployeeMeta = { ...VACIO, ...(data as EmployeeMeta | null) }
+    const meta: EmployeeMeta & { _diag?: string } = { ...VACIO, ...(data as EmployeeMeta | null) }
+    // Diagnóstico visible en la consola DEL NAVEGADOR (los console.log de este
+    // archivo solo salen en los logs de Vercel, que no siempre se revisan).
+    meta._diag = error ? `ERROR-LECTURA: ${error.message}`
+      : !data ? 'SIN-FILA (no se pudo crear/leer employee_meta)'
+      : (data.phone || data.rfc || data.position) ? 'OK-CON-DATOS'
+      : 'FILA-VACIA (aún no se ha guardado nada)'
+    meta._diag += admin ? ' · admin:si' : ' · admin:NO'
     console.log('[getEmployeeMeta] Meta cargada:', meta)
     return meta // SIEMPRE objeto (nunca null) → el formulario siempre se dibuja
   } catch (e) {
@@ -360,19 +372,28 @@ export async function saveEmployeeMetaAction(employeeId: string, meta: EmployeeM
     const admin = adminOrNull()
     if (!admin) console.error('[saveEmployeeMetaAction] SIN service-role: el guardado depende de RLS y puede fallar')
     const client = admin ?? supabase
+    // Saneado: los "" de los inputs vacíos rompen columnas NUMERIC (salary) y
+    // DATE (hire_date) → Postgres rechazaba TODO el upsert y no se guardaba nada.
+    const txt = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+    const numOrNull = (v: unknown) => {
+      if (v === null || v === undefined || String(v).trim() === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
     const payload = {
       employee_id: employeeId,
-      phone: meta.phone || null,
-      insurance_no: meta.insurance_no || null,
-      emergency_phone: meta.emergency_phone || null,
-      branch: meta.branch || null,
-      salary: meta.salary ?? null,
-      rfc: meta.rfc || null,
-      position: meta.position || null,
-      hire_date: meta.hire_date || null,
-      photo_url: meta.photo_url || null,
+      phone: txt(meta.phone),
+      insurance_no: txt(meta.insurance_no),
+      emergency_phone: txt(meta.emergency_phone),
+      branch: txt(meta.branch),
+      salary: numOrNull(meta.salary),
+      rfc: txt(meta.rfc),
+      position: txt(meta.position),
+      hire_date: txt(meta.hire_date), // '' → null (DATE inválida)
+      photo_url: txt(meta.photo_url),
       updated_at: new Date().toISOString(),
     }
+    console.log('[saveEmployeeMetaAction] payload:', payload)
     // onConflict explícito: si la fila ya existe (sembrada vacía) se ACTUALIZA
     // en vez de fallar por clave duplicada — esa era la causa de "no persiste".
     const { error } = await client.from('employee_meta').upsert(payload, { onConflict: 'employee_id' })

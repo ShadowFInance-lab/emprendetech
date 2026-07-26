@@ -80,7 +80,7 @@ export default function InventoryTable({ products, lowStockThreshold }: { produc
                 <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Categoría</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Precio</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-600">Stock</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Estado</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-600">Estado</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -118,23 +118,32 @@ export default function InventoryTable({ products, lowStockThreshold }: { produc
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell text-gray-500">{product.categories?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-right font-medium">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       {onOffer ? (
-                        <div>
-                          <span className="text-gray-400 line-through text-xs mr-1">{formatCurrency(product.compare_at_price!)}</span>
-                          <span className="text-red-600">{formatCurrency(product.sale_price)}</span>
+                        <div className="leading-tight">
+                          <span className="block text-gray-400 line-through text-[11px]">{formatCurrency(product.compare_at_price!)}</span>
+                          <span className="block font-bold text-red-600">{formatCurrency(product.sale_price)}</span>
                         </div>
-                      ) : formatCurrency(product.sale_price)}
+                      ) : (
+                        <span className="font-bold text-gray-900">{formatCurrency(product.sale_price)}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Badge className={`font-mono ${isOut ? 'bg-red-100 text-red-700' : isLowStock ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
                         {product.stock}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-center hidden sm:table-cell">
-                      <Badge variant={product.is_active ? 'default' : 'secondary'} className="text-xs">
-                        {product.is_active ? 'Activo' : 'Inactivo'}
-                      </Badge>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      {/* Colores explícitos: antes usaba variant="default", que toma
+                          el color del tema (oscuro) y se leía mal. */}
+                      <span className={`inline-block text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                        isOut ? 'bg-red-50 text-red-700 border-red-200'
+                        : !product.is_active ? 'bg-gray-100 text-gray-600 border-gray-200'
+                        : isLowStock ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}>
+                        {isOut ? 'Agotado' : !product.is_active ? 'Inactivo' : isLowStock ? 'Stock bajo' : 'Activo'}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <Link href={`/inventory/${product.id}`}>
