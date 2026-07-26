@@ -95,17 +95,31 @@ export async function createOnlineOrderAction(input: OnlineOrderInput): Promise<
   } catch { return { success: false, error: 'Error' } }
 }
 
-/** Lista los pedidos online de la tienda del dueño (solo los suyos por RLS). */
+/** Tienda efectiva: la propia (dueño) o la del jefe (empleado receptor de pedidos). */
+async function resolveStoreForOrders(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<string | null> {
+  const { data: own } = await supabase.from('stores').select('id').eq('owner_id', userId).maybeSingle()
+  if (own) return own.id as string
+  const { data: prof } = await supabase.from('profiles').select('boss_id').eq('id', userId).maybeSingle()
+  if (!prof?.boss_id) return null
+  const admin = createAdminClient()
+  const { data: bossStore } = await admin.from('stores').select('id').eq('owner_id', prof.boss_id).maybeSingle()
+  return (bossStore?.id as string) ?? null
+}
+
+/** Lista los pedidos online de la tienda (dueño o empleado que los atiende). */
 export async function listOnlineOrdersAction(): Promise<OnlineOrder[]> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
-    const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).single()
-    if (!store) return []
-    const { data, error } = await supabase.from('online_orders').select('*')
-      .eq('store_id', store.id).order('created_at', { ascending: false })
-    if (error) return []
+    const storeId = await resolveStoreForOrders(supabase, user.id)
+    if (!storeId) return []
+    // Service-role: el empleado no tiene permiso RLS sobre los pedidos del jefe,
+    // pero sí debe verlos para prepararlos y entregarlos.
+    const client = createAdminClient()
+    const { data, error } = await client.from('online_orders').select('*')
+      .eq('store_id', storeId).order('created_at', { ascending: false })
+    if (error) { console.error('[listOnlineOrdersAction]', error.message); return [] }
     return (data ?? []).map(o => ({
       id: o.id as string,
       order_no: (o.order_no as string) ?? null,
@@ -147,11 +161,14 @@ export async function updateOnlineOrderStatusAction(
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'No autenticado' }
-    const { data: store } = await supabase.from('stores').select('id, name').eq('owner_id', user.id).single()
+    const storeId = await resolveStoreForOrders(supabase, user.id)
+    if (!storeId) return { success: false, error: 'Sin tienda' }
+    const admin = createAdminClient()
+    const { data: store } = await admin.from('stores').select('id, name').eq('id', storeId).maybeSingle()
     if (!store) return { success: false, error: 'Sin tienda' }
 
     // Pedido actual (para historial + correo + WhatsApp).
-    const { data: order } = await supabase.from('online_orders')
+    const { data: order } = await admin.from('online_orders')
       .select('*').eq('id', id).eq('store_id', store.id).maybeSingle()
     if (!order) return { success: false, error: 'Pedido no encontrado' }
 
@@ -169,10 +186,10 @@ export async function updateOnlineOrderStatusAction(
     }
     update.status_history = [...history, entry]
 
-    let upd = await supabase.from('online_orders').update(update).eq('id', id).eq('store_id', store.id)
+    let upd = await admin.from('online_orders').update(update).eq('id', id).eq('store_id', store.id)
     // Resiliencia si la migración 054 no se corrió: reintenta solo con el estado.
     if (upd.error && /tracking_number|shipping_carrier|shipped_at|status_history|column|schema cache/i.test(upd.error.message || '')) {
-      upd = await supabase.from('online_orders').update({ status }).eq('id', id).eq('store_id', store.id)
+      upd = await admin.from('online_orders').update({ status }).eq('id', id).eq('store_id', store.id)
     }
     if (upd.error) return { success: false, error: 'No se pudo actualizar' }
     revalidatePath('/orders')

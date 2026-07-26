@@ -102,8 +102,11 @@ export async function middleware(request: NextRequest) {
     // - gerente: casi todo el panel (NO Configuración ni Suscripción)
     const r = profile?.role
     if (r === 'employee' || r === 'supervisor' || r === 'gerente') {
+      // Empleados y supervisores: POS, mensajes y Pedidos Online (los atienden).
       let allowed = pathname.startsWith('/sales') || pathname.startsWith('/mensajes')
-      if (r === 'supervisor' || r === 'gerente') allowed = allowed || pathname.startsWith('/employees')
+        || pathname.startsWith('/orders')
+      // "Empleados" SOLO para gerente (y el dueño, que no entra por aquí).
+      if (r === 'gerente') allowed = allowed || pathname.startsWith('/employees')
       if (r === 'gerente') allowed = allowed
         || pathname.startsWith('/dashboard') || pathname.startsWith('/inventory')
         || pathname.startsWith('/orders') || pathname.startsWith('/customers')

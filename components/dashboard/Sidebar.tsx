@@ -42,11 +42,11 @@ export default function Sidebar({ store, profile }: SidebarProps) {
     { href: '/sales', label: 'Historial', icon: History },
     { href: '/mensajes', label: 'Mensajes', icon: MessageCircle },
   ]
-  const navItems = isEmployee
-    ? staffNav
-    : isSupervisor
-      ? [...staffNav, { href: '/employees', label: 'Empleados', icon: UserCog }]
-      : isGerente
+  // Empleados y supervisores: NUNCA ven la sección "Empleados" (solo dueño/gerente).
+  // Sí ven "Pedidos Online" para atender los pedidos que reciben.
+  const navItems = (isEmployee || isSupervisor)
+    ? [...staffNav, { href: '/orders', label: 'Pedidos Online', icon: Inbox }]
+    : isGerente
         ? NAV_ITEMS.filter(i => i.href !== '/subscription' && i.href !== '/settings')
         : NAV_ITEMS
 

@@ -180,6 +180,12 @@ export async function setEmployeePasswordAction(employeeId: string, password: st
     }
 
     const { error } = await admin.auth.admin.updateUserById(employeeId, { password })
+    if (!error) {
+      // Copia legible para que el jefe pueda consultarla después (migración 058).
+      const { error: pErr } = await admin.from('employee_meta')
+        .upsert({ employee_id: employeeId, login_password: password, updated_at: new Date().toISOString() }, { onConflict: 'employee_id' })
+      if (pErr) console.error('[password] no se pudo guardar la copia legible (¿migración 058?):', pErr.message)
+    }
     if (error) {
       // Antes se devolvía un mensaje fijo que ocultaba la causa real. Ahora se
       // muestra el error EXACTO de Supabase para poder diagnosticar de verdad.
@@ -292,6 +298,8 @@ export interface EmployeeMeta {
   position: string | null
   hire_date: string | null
   photo_url: string | null
+  /** Copia legible de la contraseña del POS (migración 058). Solo la ve el jefe. */
+  login_password?: string | null
 }
 
 export async function getEmployeeMeta(employeeId: string): Promise<(EmployeeMeta & { _diag?: string }) | null> {
@@ -322,10 +330,10 @@ export async function getEmployeeMeta(employeeId: string): Promise<(EmployeeMeta
         _diag: 'NO-ES-TU-EMPLEADO (profiles.boss_id no coincide)' }
     }
 
-    const COLS = 'phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url'
+    const COLS = 'phone, insurance_no, emergency_phone, branch, salary, rfc, position, hire_date, photo_url, login_password'
     const VACIO: EmployeeMeta = {
       phone: null, insurance_no: null, emergency_phone: null, branch: null,
-      salary: null, rfc: null, position: null, hire_date: null, photo_url: null,
+      salary: null, rfc: null, position: null, hire_date: null, photo_url: null, login_password: null,
     }
 
     const BASE = 'phone, insurance_no, emergency_phone, branch, salary'

@@ -56,7 +56,10 @@ export async function setReceptionAction(type: 'employee' | 'branch' | 'multi', 
     const { error } = await supabase.from('stores')
       .update({ online_reception_type: type, online_reception_id: id, online_reception_value: value })
       .eq('id', store.id)
-    if (error) return { success: false, error: 'No se pudo guardar (¿corriste la migración 039?)' }
+    if (error) {
+      console.error('[setReceptionAction]', error.message)
+      return { success: false, error: `No se pudo guardar: ${error.message} (¿migración 039?)` }
+    }
     return { success: true }
   } catch { return { success: false, error: 'Error' } }
 }

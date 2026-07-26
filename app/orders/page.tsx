@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Inbox } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import OrdersPanel from '@/components/orders/OrdersPanel'
 
 export default async function OrdersPage() {
@@ -9,16 +9,22 @@ export default async function OrdersPage() {
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase
-    .from('profiles').select('role, plan').eq('id', user.id).maybeSingle()
+    .from('profiles').select('role, plan, boss_id').eq('id', user.id).maybeSingle()
 
-  // Solo el dueño gestiona pedidos
-  if (profile?.role === 'employee' || profile?.role === 'supervisor') redirect('/sales/new')
-
-  const { data: store } = await supabase.from('stores').select('name').eq('owner_id', user.id).maybeSingle()
+  // El empleado que atiende los pedidos también entra: se usan la tienda y el
+  // plan del JEFE (el empleado no tiene tienda ni plan propios).
+  let store = (await supabase.from('stores').select('name').eq('owner_id', user.id).maybeSingle()).data
+  let planSource = (profile?.plan as string) ?? 'free'
+  if (!store && profile?.boss_id) {
+    const admin = createAdminClient()
+    store = (await admin.from('stores').select('name').eq('owner_id', profile.boss_id).maybeSingle()).data
+    const { data: bossProfile } = await admin.from('profiles').select('plan').eq('id', profile.boss_id).maybeSingle()
+    planSource = (bossProfile?.plan as string) ?? 'free'
+  }
   const storeName = (store?.name as string) || 'la tienda'
 
   const paidPlans = ['emprendedor', 'negocio', 'vip_plus']
-  const isPaid = paidPlans.includes((profile?.plan as string) ?? 'free')
+  const isPaid = paidPlans.includes(planSource)
 
   if (!isPaid) {
     return (

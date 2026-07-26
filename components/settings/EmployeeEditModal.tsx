@@ -52,7 +52,8 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
   const [newPw, setNewPw] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [savedPw, setSavedPw] = useState<string | null>(null) // se muestra 1 sola vez tras guardar
-  const [showSaved, setShowSaved] = useState(true) // ojito del recuadro de resultado
+  const [showSaved, setShowSaved] = useState(false)
+  const [showPwForm, setShowPwForm] = useState(false) // form solo al pulsar "Actualizar" // ojito del recuadro de resultado
   const [copied, setCopied] = useState(false)
   const [tab, setTab] = useState<TabId>('perfil')
 
@@ -155,8 +156,9 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
       const r = await setEmployeePasswordAction(employeeId, newPw)
       if (r.success) {
         setSavedPw(r.password || newPw) // se muestra grande para copiar (solo esta vez)
-        setNewPw(''); setShowPw(false); setCopied(false)
-        toast.success('Contraseña actualizada')
+        setNewPw(''); setShowPw(false); setCopied(false); setShowPwForm(false)
+        setMeta(m => ({ ...m, login_password: r.password || newPw })) // queda guardada
+        toast.success('Contraseña guardada')
       } else {
         toast.error(r.error ?? 'Error', { duration: 8000 })
       }
@@ -280,8 +282,35 @@ export default function EmployeeEditModal({ employeeId, employeeName, onClose, o
                     <span className="truncate">{email || '—'}</span>
                   </div>
                 </div>
-                <div>
-                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">Nueva contraseña</label>
+                {/* Contraseña YA GUARDADA: se muestra oculta con ojito. No se
+                    obliga a generar una nueva cada vez que se abre el modal. */}
+                {meta.login_password && !showPwForm && (
+                  <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+                    <p className="text-[11px] font-bold text-gray-600 flex items-center gap-1.5"><KeyRound size={12} /> Contraseña guardada</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold font-mono text-gray-900 tracking-wide break-all">
+                        {showSaved ? meta.login_password : '•'.repeat(Math.min((meta.login_password || '').length, 12))}
+                      </code>
+                      <button type="button" onClick={() => setShowSaved(v => !v)} title={showSaved ? 'Ocultar' : 'Revelar'}
+                        className="h-9 w-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 inline-flex items-center justify-center shrink-0">
+                        {showSaved ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                      <button type="button" onClick={() => copyPw(meta.login_password!)}
+                        className="h-9 px-3 rounded-lg bg-gray-900 text-white text-xs font-bold hover:bg-gray-800 inline-flex items-center gap-1.5 shrink-0">
+                        {copied ? <><Check size={14} /> Copiado</> : <><Copy size={14} /> Copiar</>}
+                      </button>
+                    </div>
+                    <button type="button" onClick={() => { setShowPwForm(true); setNewPw('') }}
+                      className="w-full h-9 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-bold hover:bg-indigo-50">
+                      Actualizar contraseña
+                    </button>
+                  </div>
+                )}
+
+                <div className={meta.login_password && !showPwForm ? 'hidden' : ''}>
+                  <label className="text-[11px] font-medium text-gray-500 mb-1 block">
+                    {meta.login_password ? 'Nueva contraseña' : 'Crear contraseña'}
+                  </label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Input type={showPw ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Mín. 6 caracteres" className="h-9 text-sm pr-9" />

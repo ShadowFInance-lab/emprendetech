@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { Plus, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -43,9 +43,17 @@ export default async function SalesPage() {
   if (!store) redirect('/onboarding')
 
   // Exportar Excel/PDF: solo planes pagos (el plan Gratis ve el candado).
-  const { data: prof } = await supabase.from('profiles').select('plan').eq('id', user.id).single()
+  // Para un EMPLEADO se usa el plan del JEFE (el empleado no tiene plan propio),
+  // así el personal de planes pagos puede descargar su corte del día.
+  const { data: prof } = await supabase.from('profiles').select('plan, role, boss_id').eq('id', user.id).single()
   const paidPlans = ['emprendedor', 'negocio', 'vip_plus']
-  const isPaid = paidPlans.includes((prof?.plan as string) ?? 'free')
+  const esEmpleado = prof?.role === 'employee' || prof?.role === 'supervisor'
+  let planEfectivo = (prof?.plan as string) ?? 'free'
+  if (esEmpleado && prof?.boss_id) {
+    const { data: bp } = await createAdminClient().from('profiles').select('plan').eq('id', prof.boss_id).maybeSingle()
+    planEfectivo = (bp?.plan as string) ?? 'free'
+  }
+  const isPaid = paidPlans.includes(planEfectivo)
 
   // Ventas con cliente
   const { data: sales } = await supabase
@@ -82,7 +90,11 @@ export default async function SalesPage() {
           <ExportSalesButtons
             storeName={store.name}
             isPaid={isPaid}
-            sales={(sales ?? []).map((s: {
+            /* Empleados: SOLO el corte del DÍA (no semana ni mes). */
+            sales={(esEmpleado
+              ? (sales ?? []).filter((r: { created_at: string }) => new Date(r.created_at) >= todayStart)
+              : (sales ?? [])
+            ).map((s: {
               folio: string; created_at: string; total: number; profit: number
               status: string; payment_method: string; customers: { name: string } | null
             }) => ({

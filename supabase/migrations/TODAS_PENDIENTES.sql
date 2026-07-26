@@ -811,4 +811,8 @@ CREATE OR REPLACE VIEW employees AS
   WHERE p.boss_id IS NOT NULL;
 GRANT SELECT ON employees TO authenticated;
 
+-- ─── 058: Contraseña de acceso del empleado (copia legible para el jefe) ─────
+-- ⚠️ Texto plano: solo para el acceso al POS; la lee únicamente el jefe.
+ALTER TABLE employee_meta ADD COLUMN IF NOT EXISTS login_password TEXT;
+
 -- ✅ LISTO. Todas las funciones nuevas quedan activas.

@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/utils/app-url'
 import type { ActionResult } from './auth'
 
@@ -21,9 +21,17 @@ export async function getStripeConfigStatus(): Promise<{ connected: boolean; acc
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { connected: false, accountId: null }
-    const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
+    // Empleado: se consulta la tienda del JEFE (para que el POS no le muestre
+    // "conecta tu cuenta" cuando el negocio sí la tiene conectada).
+    let store = (await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()).data
+    if (!store) {
+      const { data: p } = await supabase.from('profiles').select('boss_id').eq('id', user.id).maybeSingle()
+      if (p?.boss_id) {
+        store = (await createAdminClient().from('stores').select('id').eq('owner_id', p.boss_id).maybeSingle()).data
+      }
+    }
     if (!store) return { connected: false, accountId: null }
-    const { data, error } = await supabase
+    const { data, error } = await createAdminClient()
       .from('store_payment_config').select('stripe_account_id').eq('store_id', store.id).maybeSingle()
     if (error && isMissingCol(error)) return { connected: false, accountId: null }
     const accountId = (data?.stripe_account_id as string) ?? null
@@ -80,7 +88,18 @@ export async function createStripePaymentLinkAction(
     const secret = process.env.STRIPE_SECRET_KEY
     if (!secret) return { success: false, error: 'Falta STRIPE_SECRET_KEY en el entorno (Vercel).' }
 
-    const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
+    // Tienda efectiva: la propia (dueño) o la del JEFE si quien cobra es un
+    // empleado. El dinero SIEMPRE va a la cuenta de Stripe del dueño.
+    let store = (await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()).data
+    let ownerId = user.id
+    if (!store) {
+      const { data: prof0 } = await supabase.from('profiles').select('boss_id').eq('id', user.id).maybeSingle()
+      if (prof0?.boss_id) {
+        const admin0 = createAdminClient()
+        store = (await admin0.from('stores').select('id').eq('owner_id', prof0.boss_id).maybeSingle()).data
+        ownerId = prof0.boss_id as string
+      }
+    }
     if (!store) return { success: false, error: 'No autorizado' }
 
     // Comisión de la plataforma por venta con tarjeta, según el plan:
@@ -91,7 +110,9 @@ export async function createStripePaymentLinkAction(
     //                           (conteo REAL total de ventas, no mensual).
     // application_fee_amount va en centavos y Stripe la deposita en la cuenta
     // de la PLATAFORMA.
-    const { data: prof } = await supabase.from('profiles').select('plan').eq('id', user.id).maybeSingle()
+    // El plan (y su comisión) es SIEMPRE el del dueño de la tienda.
+    const adminP = createAdminClient()
+    const { data: prof } = await adminP.from('profiles').select('plan').eq('id', ownerId).maybeSingle()
     const plan = (prof?.plan as string) ?? 'free'
     let feePct: number
     if (plan === 'emprendedor' || plan === 'negocio' || plan === 'lifetime') {
@@ -106,11 +127,13 @@ export async function createStripePaymentLinkAction(
     }
     const feeCents = Math.round(amount * 100 * feePct)
 
-    const { data: cfg, error: cfgErr } = await supabase.from('store_payment_config')
+    // Cuenta de Stripe de la TIENDA (la del dueño). Se lee con service-role para
+    // que un empleado también pueda cobrar sin ver la configuración del jefe.
+    const { data: cfg, error: cfgErr } = await adminP.from('store_payment_config')
       .select('stripe_account_id').eq('store_id', store.id).maybeSingle()
-    if (cfgErr && isMissingCol(cfgErr)) return { success: false, error: 'Conecta tu cuenta de Stripe primero en Configuración → Cobros con Stripe.' }
+    if (cfgErr && isMissingCol(cfgErr)) return { success: false, error: 'El negocio aún no tiene Stripe conectado (Configuración → Cobros con Stripe).' }
     const accountId = cfg?.stripe_account_id as string | undefined
-    if (!accountId) return { success: false, error: 'Conecta tu cuenta de Stripe primero en Configuración → Cobros con Stripe.' }
+    if (!accountId) return { success: false, error: 'El negocio aún no tiene Stripe conectado (Configuración → Cobros con Stripe).' }
 
     // Comprobación SUAVE de la cuenta conectada: si no es usable, NO se bloquea
     // el cobro — se cobra a la cuenta de la PLATAFORMA (destinationOk = false).
