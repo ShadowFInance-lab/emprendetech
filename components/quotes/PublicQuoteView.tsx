@@ -194,7 +194,27 @@ export default function PublicQuoteView({ data, token }: { data: PublicQuote; to
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-gray-400 pb-5">Cotización generada con Mercanta Business</p>
+        {/* Emisor responsable = la TIENDA. Mercanta solo como mención secundaria. */}
+        <div className="text-center pb-5 pt-1 space-y-1">
+          <p className="text-sm text-gray-700">
+            Cotización emitida por <strong className="text-gray-900">{store.name}</strong>
+          </p>
+          {(store.phone || store.email) && (
+            <p className="text-xs text-gray-500">
+              Dudas o cambios, contacta directamente:{' '}
+              {store.phone && (
+                <a href={`https://wa.me/${store.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-700 hover:underline">
+                  {store.phone}
+                </a>
+              )}
+              {store.phone && store.email && ' · '}
+              {store.email && (
+                <a href={`mailto:${store.email}`} className="font-medium text-gray-700 hover:underline">{store.email}</a>
+              )}
+            </p>
+          )}
+          <p className="text-[10px] text-gray-300 pt-1.5">Generada con Mercanta Business</p>
+        </div>
       </div>
     </div>
   )

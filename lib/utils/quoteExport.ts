@@ -223,12 +223,17 @@ async function buildQuotePDF(quote: ExportQuote, store: QuoteExportStore, public
     } catch { /* firma opcional */ }
   }
 
-  // Pie
-  doc.setFontSize(8); doc.setTextColor(160)
+  // Pie — la TIENDA es la emisora responsable; Mercanta solo como mención chica.
+  const footY = doc.internal.pageSize.getHeight()
+  doc.setFontSize(8); doc.setTextColor(110)
+  doc.text(`Cotización emitida por ${store.name}`, pageW / 2, footY - 16, { align: 'center' })
+  doc.setFontSize(7.5); doc.setTextColor(150)
   doc.text(
     'Esta cotización no representa un comprobante fiscal. Precios sujetos a cambio sin previo aviso.',
-    pageW / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' }
+    pageW / 2, footY - 11, { align: 'center' }
   )
+  doc.setFontSize(7); doc.setTextColor(190)
+  doc.text('Generada con Mercanta Business', pageW / 2, footY - 6.5, { align: 'center' })
   return doc
 }
 

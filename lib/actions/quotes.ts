@@ -255,8 +255,14 @@ export async function getPublicQuote(token: string): Promise<PublicQuote | null>
   const admin = createAdminClient()
   const { data: q } = await admin.from('quotes').select('*').eq('public_token', token).maybeSingle()
   if (!q) return null
-  const { data: store } = await admin
-    .from('stores').select('name, logo_url, phone, email, currency').eq('id', q.store_id).maybeSingle()
+  // OJO: la tabla `stores` tiene `whatsapp`, NO `phone`/`email`. Pedir columnas
+  // inexistentes hacía fallar el select entero → store quedaba null y la
+  // cotización se mostraba a nombre de "Mercanta Business" en vez de la tienda.
+  // select('*') es tolerante a que falte cualquier columna opcional.
+  const { data: store, error: storeErr } = await admin
+    .from('stores').select('*').eq('id', q.store_id).maybeSingle()
+  if (storeErr) console.error('[getPublicQuote] no se pudo leer la tienda:', storeErr.message)
+  const st = (store ?? {}) as Record<string, string | null | undefined>
 
   const quote = q as Quote
   // No exponer el costo al cliente
@@ -268,11 +274,12 @@ export async function getPublicQuote(token: string): Promise<PublicQuote | null>
   return {
     quote: { ...quote, items: safeItems },
     store: {
-      name: store?.name ?? 'Mercanta Business',
-      logo_url: store?.logo_url ?? null,
-      phone: store?.phone ?? null,
-      email: store?.email ?? null,
-      currency: store?.currency ?? 'MXN',
+      // La TIENDA es la emisora de la cotización (no la plataforma).
+      name: st.name || 'Tienda',
+      logo_url: st.logo_url ?? null,
+      phone: st.whatsapp ?? st.phone ?? null,
+      email: st.email ?? null,
+      currency: st.currency ?? 'MXN',
     },
   }
 }
