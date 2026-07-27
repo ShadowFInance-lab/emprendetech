@@ -6,6 +6,7 @@ import { Store as StoreIcon, Users, Gift, CreditCard, Search, RefreshCw, Ban, Ch
 import {
   listStoresAdminAction, listUsersAdminAction, setUserPlanAdminAction, setTrialAdminAction,
   endTrialAdminAction, setStoreActiveAdminAction, getStoreDetailAction,
+  getAdminOverviewAction, markStoreSalesTestAction,
   type AdminOverview, type AdminStore, type AdminUser, type AdminPlan, type AdminStoreDetail,
 } from '@/lib/actions/admin'
 import { formatCurrency } from '@/lib/utils/format'
@@ -29,12 +30,14 @@ type TabId = typeof TABS[number]['id']
 
 const fmtDate = (s?: string | null) => s ? new Date(s).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
-export default function AdminConsole({ overview, initialStores, initialUsers }: {
+export default function AdminConsole({ overview: initialOverview, initialStores, initialUsers }: {
   overview: AdminOverview | null
   initialStores: AdminStore[]
   initialUsers: AdminUser[]
 }) {
   const [tab, setTab] = useState<TabId>('resumen')
+  const [overview, setOverview] = useState(initialOverview)
+  const [includeTest, setIncludeTest] = useState(false)
   const [stores, setStores] = useState(initialStores)
   const [users, setUsers] = useState(initialUsers)
   const [qStore, setQStore] = useState('')
@@ -45,6 +48,23 @@ export default function AdminConsole({ overview, initialStores, initialUsers }: 
   const [qUser, setQUser] = useState('')
   const [pending, start] = useTransition()
 
+  function toggleTest(v: boolean) {
+    setIncludeTest(v)
+    start(async () => setOverview(await getAdminOverviewAction(v)))
+  }
+  function markTest(storeId: string, isTest: boolean) {
+    const msg = isTest
+      ? '¿Marcar TODAS las ventas de esta tienda como de prueba? No se borra nada: solo dejan de contar en el resumen.'
+      : '¿Volver a contar las ventas de esta tienda como reales?'
+    if (!confirm(msg)) return
+    start(async () => {
+      const r = await markStoreSalesTestAction(storeId, isTest)
+      if (r.success) {
+        toast.success(`${r.updated ?? 0} ventas ${isTest ? 'marcadas como prueba' : 'restauradas'}`)
+        setOverview(await getAdminOverviewAction(includeTest))
+      } else toast.error(r.error ?? 'Error')
+    })
+  }
   function reloadStores() { start(async () => setStores(await listStoresAdminAction(qStore))) }
   function reloadUsers() { start(async () => setUsers(await listUsersAdminAction(qUser))) }
 
@@ -140,10 +160,28 @@ export default function AdminConsole({ overview, initialStores, initialUsers }: 
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-3">
-                  Ventas con tarjeta este mes: <strong className="text-gray-600">{formatCurrency(overview.cardSalesMonth)}</strong>.
-                  La comisión es una estimación (Gratis y VIP 2.5% · Emprendedor y Negocio 0%); el cobro real lo liquida Stripe.
-                </p>
+                <div className="mt-3 space-y-1.5">
+                  <p className="text-[11px] text-gray-500">
+                    Ventas con tarjeta este mes: <strong className="text-gray-700">{formatCurrency(overview.cardSalesMonth)}</strong>
+                    {' · '}cifra <strong>{overview.includedTest ? 'CON ventas de prueba' : 'filtrada (solo ventas reales)'}</strong>.
+                  </p>
+                  {overview.testCount > 0 && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 inline-block">
+                      Se detectaron <strong>{overview.testCount}</strong> ventas de prueba por {formatCurrency(overview.testExcluded)}
+                      {overview.includedTest ? ' (incluidas ahora)' : ' (excluidas del total)'}.
+                    </p>
+                  )}
+                  <label className="flex items-center gap-2 text-[11px] text-gray-500 cursor-pointer">
+                    <input type="checkbox" checked={includeTest} onChange={e => toggleTest(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-gray-300" />
+                    Incluir ventas de prueba en el total
+                  </label>
+                  <p className="text-[11px] text-gray-400">
+                    Se consideran de prueba las cobradas con Stripe en modo test (id de sesión <code>cs_test_…</code>)
+                    y las marcadas a mano desde el detalle del negocio. La comisión es una <strong>estimación</strong>
+                    (Gratis y VIP 2.5% · Emprendedor y Negocio 0%); el cobro real lo liquida Stripe.
+                  </p>
+                </div>
               </div>
             </>
           )}
@@ -342,6 +380,17 @@ export default function AdminConsole({ overview, initialStores, initialUsers }: 
                 className={`w-full h-9 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5 ${detailStore.isActive ? 'border border-red-200 text-red-600 hover:bg-red-50' : 'border border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}>
                 {detailStore.isActive ? <><Ban size={13} /> Suspender tienda</> : <><CheckCircle2 size={13} /> Activar tienda</>}
               </button>
+              <div className="flex gap-2 pt-1">
+                <button type="button" disabled={pending} onClick={() => markTest(detailStore.id, true)}
+                  className="flex-1 h-9 rounded-lg border border-amber-200 text-amber-700 text-[11px] font-bold hover:bg-amber-50">
+                  Marcar ventas como prueba
+                </button>
+                <button type="button" disabled={pending} onClick={() => markTest(detailStore.id, false)}
+                  className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-600 text-[11px] font-bold hover:bg-gray-50">
+                  Contar como reales
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400 text-center">No borra ventas: solo las excluye del resumen.</p>
             </div>
           </div>
         </div>

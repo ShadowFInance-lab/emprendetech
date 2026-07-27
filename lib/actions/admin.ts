@@ -50,9 +50,13 @@ export interface AdminOverview {
   trials: number
   cardSalesMonth: number
   estimatedCommission: number
+  /** Importe de ventas con tarjeta EXCLUIDAS por ser de prueba. */
+  testExcluded: number
+  testCount: number
+  includedTest: boolean
 }
 
-export async function getAdminOverviewAction(): Promise<AdminOverview | null> {
+export async function getAdminOverviewAction(includeTest = false): Promise<AdminOverview | null> {
   if (!(await adminGuard()).ok) return null
   try {
     const admin = createAdminClient()
@@ -62,7 +66,7 @@ export async function getAdminOverviewAction(): Promise<AdminOverview | null> {
       admin.from('stores').select('*', { count: 'exact', head: true }),
       admin.from('profiles').select('id, plan, plan_status, plan_expires_at, role'),
       admin.from('stores').select('id, owner_id'),
-      admin.from('sales').select('store_id, total, payment_method')
+      admin.from('sales').select('*')
         .eq('status', 'completed').gte('created_at', monthStart),
     ])
 
@@ -82,9 +86,23 @@ export async function getAdminOverviewAction(): Promise<AdminOverview | null> {
     const ownerByStore = new Map(((storesRows.data ?? []) as { id: string; owner_id: string }[]).map(s => [s.id, s.owner_id]))
     let cardSalesMonth = 0
     let estimatedCommission = 0
-    for (const s of (sales.data ?? []) as { store_id: string; total: number; payment_method: string }[]) {
+    let testExcluded = 0
+    let testCount = 0
+    type SaleRow = { store_id: string; total: number; payment_method: string; is_test?: boolean | null; stripe_session_id?: string | null; notes?: string | null }
+    for (const s of (sales.data ?? []) as SaleRow[]) {
       if (s.payment_method !== 'card') continue
       const total = Number(s.total) || 0
+      // VENTA DE PRUEBA si: la marcaron manualmente (is_test) o Stripe la cobro
+      // en MODO TEST — los ids de Checkout Session llevan prefijo cs_test_
+      // (prueba) vs cs_live_ (real). Es la senal fiable para separarlas.
+      const isTest = s.is_test === true
+        || (s.stripe_session_id ?? '').startsWith('cs_test_')
+        || (s.notes ?? '').includes('cs_test_')
+      if (isTest) {
+        testExcluded += total
+        testCount++
+        if (!includeTest) continue
+      }
       cardSalesMonth += total
       const plan = planByOwner.get(ownerByStore.get(s.store_id) ?? '') ?? 'free'
       const rate = plan === 'emprendedor' || plan === 'negocio' || plan === 'lifetime' ? 0 : 0.025
@@ -98,6 +116,9 @@ export async function getAdminOverviewAction(): Promise<AdminOverview | null> {
       trials,
       cardSalesMonth,
       estimatedCommission,
+      testExcluded,
+      testCount,
+      includedTest: includeTest,
     }
   } catch (e) {
     console.error('[admin] overview:', e instanceof Error ? e.message : e)
@@ -225,6 +246,26 @@ export async function getStoreDetailAction(storeId: string, ownerId: string): Pr
     console.error('[admin] storeDetail:', e instanceof Error ? e.message : e)
     return null
   }
+}
+
+/**
+ * Marca (o desmarca) TODAS las ventas de una tienda como "de prueba" para que no
+ * cuenten en el resumen. NO borra nada: solo cambia la bandera is_test.
+ */
+export async function markStoreSalesTestAction(storeId: string, isTest: boolean): Promise<ActionResult & { updated?: number }> {
+  if (!(await adminGuard()).ok) return { success: false, error: 'No autorizado' }
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin.from('sales').update({ is_test: isTest }).eq('store_id', storeId).select('id')
+    if (error) {
+      if (/column|does not exist|schema cache/i.test(error.message)) {
+        return { success: false, error: 'Falta la migración 060 (sales.is_test) en Supabase.' }
+      }
+      return { success: false, error: error.message }
+    }
+    revalidatePath('/admin')
+    return { success: true, updated: data?.length ?? 0 }
+  } catch { return { success: false, error: 'Error' } }
 }
 
 // ─── Usuarios ───────────────────────────────────────────────────────────────
