@@ -119,6 +119,9 @@ export interface AdminStore {
   planExpiresAt: string | null
   trialDaysLeft: number | null
   isActive: boolean
+  logoUrl: string | null
+  stripeConnected: boolean
+  lastSaleAt: string | null
 }
 
 /** Correos de auth.users (id → email). */
@@ -142,6 +145,25 @@ export async function listStoresAdminAction(search = ''): Promise<AdminStore[]> 
     const profMap = new Map((profs ?? []).map(p => [p.id as string, p]))
     const emails = await emailMap(admin)
 
+    // Stripe conectado por tienda (tolerante si falta la tabla/columna).
+    const stripeSet = new Set<string>()
+    try {
+      const { data: cfgs } = await admin.from('store_payment_config').select('store_id, stripe_account_id')
+      for (const c of (cfgs ?? []) as { store_id: string; stripe_account_id: string | null }[]) {
+        if (c.stripe_account_id) stripeSet.add(c.store_id)
+      }
+    } catch (e) { console.error('[admin] store_payment_config:', e instanceof Error ? e.message : e) }
+
+    // Última venta por tienda (dato real; no se inventa "último login").
+    const lastSale = new Map<string, string>()
+    try {
+      const { data: ss } = await admin.from('sales').select('store_id, created_at')
+        .eq('status', 'completed').order('created_at', { ascending: false }).limit(3000)
+      for (const r of (ss ?? []) as { store_id: string; created_at: string }[]) {
+        if (!lastSale.has(r.store_id)) lastSale.set(r.store_id, r.created_at)
+      }
+    } catch (e) { console.error('[admin] last sales:', e instanceof Error ? e.message : e) }
+
     const q = search.trim().toLowerCase()
     return (stores ?? []).map(s => {
       const p = profMap.get(s.owner_id as string)
@@ -160,11 +182,48 @@ export async function listStoresAdminAction(search = ''): Promise<AdminStore[]> 
         planExpiresAt: exp,
         trialDaysLeft: p?.plan_status === 'trial' && days !== null ? Math.max(0, days) : null,
         isActive: (s as { is_active?: boolean }).is_active !== false,
+        logoUrl: (s.logo_url as string) ?? null,
+        stripeConnected: stripeSet.has(s.id as string),
+        lastSaleAt: lastSale.get(s.id as string) ?? null,
       }
     }).filter(s => !q || s.name.toLowerCase().includes(q) || (s.ownerEmail ?? '').toLowerCase().includes(q))
   } catch (e) {
     console.error('[admin] listStores:', e instanceof Error ? e.message : e)
     return []
+  }
+}
+
+/** Detalle de un negocio para el panel lateral de la consola. */
+export interface AdminStoreDetail {
+  employees: number
+  products: number
+  salesMonthCount: number
+  salesMonthTotal: number
+  ordersMonth: number
+}
+
+export async function getStoreDetailAction(storeId: string, ownerId: string): Promise<AdminStoreDetail | null> {
+  if (!(await adminGuard()).ok) return null
+  try {
+    const admin = createAdminClient()
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const [emp, prod, sales, orders] = await Promise.all([
+      admin.from('profiles').select('*', { count: 'exact', head: true }).eq('boss_id', ownerId),
+      admin.from('products').select('*', { count: 'exact', head: true }).eq('store_id', storeId),
+      admin.from('sales').select('total').eq('store_id', storeId).eq('status', 'completed').gte('created_at', monthStart),
+      admin.from('online_orders').select('*', { count: 'exact', head: true }).eq('store_id', storeId).gte('created_at', monthStart),
+    ])
+    const rows = (sales.data ?? []) as { total: number }[]
+    return {
+      employees: emp.count ?? 0,
+      products: prod.count ?? 0,
+      salesMonthCount: rows.length,
+      salesMonthTotal: rows.reduce((a, r) => a + (Number(r.total) || 0), 0),
+      ordersMonth: orders.count ?? 0,
+    }
+  } catch (e) {
+    console.error('[admin] storeDetail:', e instanceof Error ? e.message : e)
+    return null
   }
 }
 
