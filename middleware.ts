@@ -69,6 +69,7 @@ export async function middleware(request: NextRequest) {
     '/employees',
     '/orders',
     '/mensajes',
+    '/admin', // Consola de plataforma (el layout valida que sea súper-admin)
   ]
 
   const isProtected = protectedPrefixes.some(prefix =>
