@@ -245,8 +245,8 @@ export async function createStripePaymentLinkAction(
 // (metadata.type = 'plan'). Reemplaza el flujo que antes hacía Mercado Pago.
 // Mantener precios en sync con PLAN_PRICES de lib/actions/subscriptions.ts.
 const PLAN_CHECKOUT: Record<string, { amount: number; title: string }> = {
-  emprendedor: { amount: 199, title: 'Mercanta Business — Plan Emprendedor (1 mes)' },
-  negocio: { amount: 399, title: 'Mercanta Business — Plan Negocio (1 mes)' },
+  emprendedor: { amount: 99, title: 'Mercanta Business — Plan Emprendedor (1 mes)' },
+  negocio: { amount: 199, title: 'Mercanta Business — Plan Negocio (1 mes)' },
   vip_plus: { amount: 1599, title: 'Mercanta Business — VIP Plus (pago único)' },
 }
 

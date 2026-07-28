@@ -60,7 +60,7 @@ export default function PricingPage() {
             <span className="font-bold text-gray-900 text-lg">Mercanta Business</span>
           </Link>
           <Link href="/register" className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-            Crear cuenta gratis
+            Empezar 7 días gratis
           </Link>
         </div>
       </header>
@@ -101,7 +101,15 @@ export default function PricingPage() {
                 )}
                 <h3 className={`font-bold text-lg ${isVip ? 'text-white' : 'text-gray-900'}`}>{plan.label}</h3>
                 <div className="mt-2 mb-1">
+                  {plan.price_before && (
+                    <span className={`mr-2 text-lg line-through ${isVip ? 'text-white/60' : 'text-gray-400'}`}>{plan.price_before}</span>
+                  )}
                   <span className={`text-3xl font-extrabold ${isVip ? 'text-white' : 'text-gray-900'}`}>{plan.price_label}</span>
+                  {plan.price_before && (
+                    <span className={`ml-2 align-middle text-[10px] font-extrabold px-2 py-1 rounded-full ${isVip ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}`}>
+                      Promo lanzamiento
+                    </span>
+                  )}
                 </div>
                 <ul className="space-y-3 mt-6 mb-8 flex-1">
                   {PLAN_FEATURES[planId].map((feature, i) => (
@@ -121,7 +129,7 @@ export default function PricingPage() {
                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
-                  {planId === 'free' ? 'Comenzar gratis' : isVip ? 'Obtener VIP Plus' : 'Elegir plan'}
+                  {planId === 'free' ? 'Comenzar gratis' : isVip ? 'Obtener VIP Plus' : 'Empezar 7 días gratis'}
                 </Link>
               </div>
             )

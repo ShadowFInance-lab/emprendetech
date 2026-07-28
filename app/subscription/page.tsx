@@ -90,13 +90,13 @@ export default async function SubscriptionPage({
       <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 flex items-start gap-3">
         <span className="text-2xl leading-none">🎁</span>
         <div>
-          <p className="font-bold text-emerald-900">Prueba gratuita de 5 días</p>
+          <p className="font-bold text-emerald-900">Prueba gratuita de 7 días</p>
           <p className="text-sm text-emerald-800/90 mt-0.5">
             Gestiona ventas, inventario y empleados sin costo.
           </p>
           {currentPlan === 'free' && (
             <p className="text-sm text-emerald-900 font-semibold mt-2 bg-white/70 border border-emerald-200 rounded-lg px-3 py-1.5 inline-block">
-              Estás en prueba Beta. Tienes 5 días para probar todas las funciones.
+              Estás en prueba Beta. Tienes 7 días para probar todas las funciones.
             </p>
           )}
         </div>
@@ -265,7 +265,13 @@ export default async function SubscriptionPage({
                 </div>
 
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">{plan.label}</p>
-                <p className="text-4xl font-black mt-1.5 tracking-tight leading-[1.05] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]">{plan.price_label}</p>
+                <p className="text-4xl font-black mt-1.5 tracking-tight leading-[1.05] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
+                  {plan.price_before && <span className="mr-2 text-lg font-bold line-through text-white/50">{plan.price_before}</span>}
+                  {plan.price_label}
+                </p>
+                {plan.price_before && (
+                  <span className="inline-block mt-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-white/25 text-white">Promo lanzamiento</span>
+                )}
                 <p className="text-xs font-medium mt-2 text-white/80">
                   {planId === 'vip_plus' ? 'Pago único · de por vida'
                     : 'Facturación mensual'}

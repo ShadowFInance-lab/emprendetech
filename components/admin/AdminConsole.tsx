@@ -271,8 +271,8 @@ export default function AdminConsole({ overview: initialOverview, initialStores,
                           className="h-8 text-xs border border-gray-200 rounded-lg px-1.5 bg-white text-gray-900">
                           {PLANS.map(p => <option key={p} value={p}>{PLAN_LABEL[p]}</option>)}
                         </select>
-                        <button type="button" disabled={pending} onClick={() => giveTrial(s.ownerId, 5)}
-                          className="h-8 px-2.5 rounded-lg border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-50">+5 días</button>
+                        <button type="button" disabled={pending} onClick={() => giveTrial(s.ownerId, 7)}
+                          className="h-8 px-2.5 rounded-lg border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-50">+7 días</button>
                         <button type="button" disabled={pending} onClick={() => endTrial(s.ownerId)}
                           className="h-8 px-2.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50">Terminar</button>
                         <button type="button" disabled={pending} onClick={() => toggleStore(s.id, !s.isActive)}
@@ -371,8 +371,8 @@ export default function AdminConsole({ overview: initialOverview, initialStores,
                 {PLANS.map(p => <option key={p} value={p}>{PLAN_LABEL[p]}</option>)}
               </select>
               <div className="flex gap-2">
-                <button type="button" disabled={pending} onClick={() => giveTrial(detailStore.ownerId, 5)}
-                  className="flex-1 h-9 rounded-lg border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-50">+5 días de prueba</button>
+                <button type="button" disabled={pending} onClick={() => giveTrial(detailStore.ownerId, 7)}
+                  className="flex-1 h-9 rounded-lg border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-50">+7 días de prueba</button>
                 <button type="button" disabled={pending} onClick={() => endTrial(detailStore.ownerId)}
                   className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-50">Terminar prueba</button>
               </div>

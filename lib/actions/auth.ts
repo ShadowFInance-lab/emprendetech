@@ -69,7 +69,7 @@ export async function registerAction(formData: FormData): Promise<ActionResult> 
   return { success: true, data: { email: parsed.data.email } }
 }
 
-const TRIAL_DAYS = 5
+const TRIAL_DAYS = 7
 
 /**
  * v7.108 — Forzar trial 5 días Emprendedor para cuentas nuevas o que

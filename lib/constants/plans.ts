@@ -11,6 +11,8 @@ export const PLAN_LIMITS: Record<Plan, {
   label: string
   price_monthly: number | null
   price_label: string
+  /** Precio oficial (se muestra tachado en la promo de lanzamiento). */
+  price_before?: string
   // VIP Plus: cobro medido por venta con Mercado Pago
   included_sales_per_month?: number   // ventas MP incluidas/mes
   extra_sale_fee?: number             // costo por venta adicional (MXN)
@@ -36,8 +38,9 @@ export const PLAN_LIMITS: Record<Plan, {
     can_export_excel: true,
     show_ads: false,
     label: 'Emprendedor',
-    price_monthly: 199,
-    price_label: '$199 MXN/mes',
+    price_monthly: 99,
+    price_label: '$99 MXN/mes',
+    price_before: '$149',
   },
   negocio: {
     max_products: Infinity,
@@ -48,8 +51,9 @@ export const PLAN_LIMITS: Record<Plan, {
     can_export_excel: true,
     show_ads: false,
     label: 'Negocio',
-    price_monthly: 399,
-    price_label: '$399 MXN/mes',
+    price_monthly: 199,
+    price_label: '$199 MXN/mes',
+    price_before: '$299',
   },
   vip_plus: {
     max_products: Infinity,

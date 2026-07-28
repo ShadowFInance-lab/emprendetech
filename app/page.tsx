@@ -39,22 +39,22 @@ export default function HomePage() {
         <div className="relative max-w-4xl mx-auto px-4 py-24 text-center">
           {/* Badge Beta + promo */}
           <div className="inline-flex items-center gap-2 bg-white/20 ring-1 ring-white/30 text-white text-sm font-bold px-4 py-1.5 rounded-full mb-6 backdrop-blur">
-            <Sparkles size={15} className="text-amber-300" /> Beta · 5 días de prueba gratis
+            <Sparkles size={15} className="text-amber-300" /> Beta · 7 días de prueba gratis
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-extrabold text-white leading-[1.05] tracking-tight drop-shadow-sm">
             Prueba{' '}
-            <span className="bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 bg-clip-text text-transparent">5 días gratis</span>
+            <span className="bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 bg-clip-text text-transparent">7 días gratis</span>
             {' '}tu negocio en línea
           </h1>
 
           <p className="text-white/90 text-lg sm:text-xl mt-6 max-w-2xl mx-auto font-medium">
-            Gestiona ventas, inventario, empleados y cobros con QR. Todo desde un navegador.
+            No solo punto de venta: empleados, cotizaciones y ventas online. Todo desde un navegador.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
             <Link href="/register" className="flex items-center gap-2 bg-white text-indigo-700 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-amber-50 transition-all shadow-2xl shadow-black/20 hover:-translate-y-0.5">
-              Comenzar prueba gratis <ArrowRight size={20} />
+              Empezar 7 días gratis <ArrowRight size={20} />
             </Link>
             <Link href="/pricing" className="text-white/85 hover:text-white font-semibold text-sm inline-flex items-center gap-1.5">
               <Sparkles size={15} /> Ver planes y precios →

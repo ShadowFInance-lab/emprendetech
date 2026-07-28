@@ -10,8 +10,8 @@ import { grantTrialIfNewProfile } from './auth'
 import { getAppUrl } from '@/lib/utils/app-url'
 
 const PLAN_PRICES: Record<string, { amount: number; title: string; recurring: boolean }> = {
-  emprendedor: { amount: 199, title: 'Mercanta Business — Plan Emprendedor (mensual)', recurring: true },
-  negocio: { amount: 399, title: 'Mercanta Business — Plan Negocio (mensual)', recurring: true },
+  emprendedor: { amount: 99, title: 'Mercanta Business — Plan Emprendedor (mensual)', recurring: true },
+  negocio: { amount: 199, title: 'Mercanta Business — Plan Negocio (mensual)', recurring: true },
   vip_plus: { amount: 1599, title: 'Mercanta Business — VIP Plus (pago único)', recurring: false },
 }
 
@@ -65,7 +65,7 @@ export async function ensurePlanCurrentAction(): Promise<void> {
       p.role !== 'employee' &&
       neverUsed
     ) {
-      const ends = new Date(Date.now() + 5 * 86400000).toISOString()
+      const ends = new Date(Date.now() + 7 * 86400000).toISOString()
       const usedAt = new Date().toISOString()
       const payload = hasTrialUsedCol
         ? { plan: 'emprendedor', plan_status: 'trial', plan_expires_at: ends, trial_used_at: usedAt }
