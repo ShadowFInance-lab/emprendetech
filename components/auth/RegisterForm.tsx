@@ -11,6 +11,8 @@ import {
   CardFooter, CardHeader, CardTitle,
 } from '@/components/ui/card'
 import { registerAction } from '@/lib/actions/auth'
+import { trackSignupLeadAction, markSignupCompletedAction } from '@/lib/actions/tracking'
+import { getSessionId } from '@/components/VisitTracker'
 import SocialAuthButtons from './SocialAuthButtons'
 
 export default function RegisterForm() {
@@ -37,6 +39,8 @@ export default function RegisterForm() {
     startTransition(async () => {
       const result = await registerAction(formData)
       if (result.success) {
+        // El registro se completó: el lead deja de contar como incompleto.
+        markSignupCompletedAction(getSessionId(), emailValue).catch(() => {})
         setEmail(emailValue)
         setSuccess(true)
       } else {
@@ -113,6 +117,10 @@ export default function RegisterForm() {
               required
               disabled={isPending}
               autoComplete="email"
+              onBlur={e => {
+                const v = e.target.value.trim()
+                if (v.includes('@')) trackSignupLeadAction(getSessionId(), v, 'email').catch(() => {})
+              }}
             />
           </div>
 

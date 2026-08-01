@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import VisitTracker from '@/components/VisitTracker'
 import { ShoppingBag, BarChart3, MessageCircle, Globe, ArrowRight, Sparkles } from 'lucide-react'
 
 const FEATURES = [
@@ -11,6 +12,7 @@ const FEATURES = [
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
+      <VisitTracker page="landing" />
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-gray-100 px-4 py-3.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">

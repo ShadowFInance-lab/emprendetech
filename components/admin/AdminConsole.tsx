@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Store as StoreIcon, Users, Gift, CreditCard, Search, RefreshCw, Ban, CheckCircle2, Loader2, LayoutDashboard, Eye, X, Package, ShoppingBag, Inbox } from 'lucide-react'
+import { Store as StoreIcon, Users, Gift, CreditCard, Search, RefreshCw, Ban, CheckCircle2, Loader2, LayoutDashboard, Eye, X, Package, ShoppingBag, Inbox, TrendingUp, UserPlus, MousePointerClick } from 'lucide-react'
 import {
   listStoresAdminAction, listUsersAdminAction, setUserPlanAdminAction, setTrialAdminAction,
   endTrialAdminAction, setStoreActiveAdminAction, getStoreDetailAction,
-  getAdminOverviewAction, markStoreSalesTestAction,
-  type AdminOverview, type AdminStore, type AdminUser, type AdminPlan, type AdminStoreDetail,
+  getAdminOverviewAction, markStoreSalesTestAction, getMarketingStatsAction,
+  type AdminOverview, type AdminStore, type AdminUser, type AdminPlan, type AdminStoreDetail, type AdminMarketing,
 } from '@/lib/actions/admin'
 import { formatCurrency } from '@/lib/utils/format'
 
@@ -25,6 +25,7 @@ const TABS = [
   { id: 'resumen', label: 'Resumen', icon: LayoutDashboard },
   { id: 'negocios', label: 'Negocios', icon: StoreIcon },
   { id: 'usuarios', label: 'Usuarios', icon: Users },
+  { id: 'interes', label: 'Interés', icon: TrendingUp },
 ] as const
 type TabId = typeof TABS[number]['id']
 
@@ -46,8 +47,10 @@ export default function AdminConsole({ overview: initialOverview, initialStores,
   const [detailStore, setDetailStore] = useState<AdminStore | null>(null)
   const [detail, setDetail] = useState<AdminStoreDetail | null>(null)
   const [qUser, setQUser] = useState('')
+  const [mkt, setMkt] = useState<AdminMarketing | null>(null)
   const [pending, start] = useTransition()
 
+  function loadMkt() { start(async () => setMkt(await getMarketingStatsAction())) }
   function toggleTest(v: boolean) {
     setIncludeTest(v)
     start(async () => setOverview(await getAdminOverviewAction(v)))
@@ -123,7 +126,7 @@ export default function AdminConsole({ overview: initialOverview, initialStores,
       {/* Pestañas */}
       <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
         {TABS.map(t => (
-          <button key={t.id} type="button" onClick={() => setTab(t.id)}
+          <button key={t.id} type="button" onClick={() => { setTab(t.id); if (t.id === 'interes' && !mkt) loadMkt() }}
             className={`inline-flex items-center gap-1.5 h-10 px-4 rounded-xl text-sm font-semibold transition-colors ${tab === t.id ? 'bg-slate-900 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
             <t.icon size={16} /> {t.label}
           </button>
@@ -393,6 +396,69 @@ export default function AdminConsole({ overview: initialOverview, initialStores,
               <p className="text-[10px] text-gray-400 text-center">No borra ventas: solo las excluye del resumen.</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── INTERÉS / CONVERSIONES ── */}
+      {tab === 'interes' && (
+        <div className="space-y-4">
+          {!mkt ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400 py-10 justify-center">
+              <Loader2 size={16} className="animate-spin" /> Cargando…
+            </div>
+          ) : mkt.tablesMissing ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              Falta correr la migración <strong>062_marketing_interes.sql</strong> en Supabase para empezar a medir el interés.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { l: 'Visitas hoy', v: String(mkt.visitsToday), i: MousePointerClick, c: 'from-cyan-500 to-sky-600' },
+                  { l: 'Visitas (7 días)', v: String(mkt.visitsWeek), i: TrendingUp, c: 'from-indigo-500 to-violet-600' },
+                  { l: 'Registros a medias', v: String(mkt.leadsIncomplete), i: UserPlus, c: 'from-amber-500 to-orange-600' },
+                  { l: 'Registros completados', v: String(mkt.signupsCompleted), i: CheckCircle2, c: 'from-emerald-500 to-green-600' },
+                ].map(k => (
+                  <div key={k.l} className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4">
+                    <span className={`w-9 h-9 rounded-xl bg-gradient-to-br ${k.c} flex items-center justify-center mb-2`}><k.i size={17} className="text-white" /></span>
+                    <p className="text-[11px] text-gray-400 font-medium">{k.l}</p>
+                    <p className="text-xl font-bold text-gray-900 leading-tight">{k.v}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-gray-400">
+                  Visitas totales: <strong className="text-gray-600">{mkt.visitsTotal}</strong>. No se cuentan tus visitas
+                  ni las de usuarios con sesión iniciada. No se guarda IP; solo un id anónimo del navegador.
+                </p>
+                <button type="button" onClick={loadMkt} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800">
+                  <RefreshCw size={13} /> Actualizar
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+                <p className="text-sm font-bold text-gray-800 px-4 py-3 border-b border-gray-100">
+                  Últimos registros a medias (para dar seguimiento)
+                </p>
+                {mkt.recentLeads.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-sm text-gray-400">Nadie ha dejado el registro a medias todavía.</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {mkt.recentLeads.map((l, i) => (
+                        <tr key={i} className="border-t border-gray-100">
+                          <td className="px-4 py-2.5 text-gray-900 break-all">{l.email ?? '(sin correo)'}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-400">paso: {l.step ?? '—'}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500 text-right whitespace-nowrap">{fmtDate(l.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

@@ -1,5 +1,11 @@
 import RegisterForm from '@/components/auth/RegisterForm'
+import VisitTracker from '@/components/VisitTracker'
 
 export default function RegisterPage() {
-  return <RegisterForm />
+  return (
+    <>
+      <VisitTracker page="register" />
+      <RegisterForm />
+    </>
+  )
 }

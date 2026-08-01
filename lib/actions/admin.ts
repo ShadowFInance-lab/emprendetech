@@ -268,6 +268,60 @@ export async function markStoreSalesTestAction(storeId: string, isTest: boolean)
   } catch { return { success: false, error: 'Error' } }
 }
 
+// ─── Interés / Conversiones ─────────────────────────────────────────────────
+export interface AdminMarketing {
+  visitsToday: number
+  visitsWeek: number
+  visitsTotal: number
+  leadsIncomplete: number
+  signupsCompleted: number
+  recentLeads: { email: string | null; step: string | null; createdAt: string }[]
+  tablesMissing: boolean
+}
+
+export async function getMarketingStatsAction(): Promise<AdminMarketing | null> {
+  if (!(await adminGuard()).ok) return null
+  const empty: AdminMarketing = {
+    visitsToday: 0, visitsWeek: 0, visitsTotal: 0,
+    leadsIncomplete: 0, signupsCompleted: 0, recentLeads: [], tablesMissing: false,
+  }
+  try {
+    const admin = createAdminClient()
+    const now = new Date()
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    const weekStart = new Date(now.getTime() - 7 * 86400000).toISOString()
+
+    const [today, week, total, leads, done, recent] = await Promise.all([
+      admin.from('page_visits').select('*', { count: 'exact', head: true }).gte('created_at', dayStart),
+      admin.from('page_visits').select('*', { count: 'exact', head: true }).gte('created_at', weekStart),
+      admin.from('page_visits').select('*', { count: 'exact', head: true }),
+      admin.from('signup_leads').select('*', { count: 'exact', head: true }).eq('completed', false),
+      admin.from('signup_leads').select('*', { count: 'exact', head: true }).eq('completed', true),
+      admin.from('signup_leads').select('email, step, created_at').eq('completed', false)
+        .order('created_at', { ascending: false }).limit(10),
+    ])
+
+    // Si faltan las tablas (migración 062 sin correr) se avisa en la UI.
+    if (total.error && /does not exist|schema cache/i.test(total.error.message)) {
+      return { ...empty, tablesMissing: true }
+    }
+
+    return {
+      visitsToday: today.count ?? 0,
+      visitsWeek: week.count ?? 0,
+      visitsTotal: total.count ?? 0,
+      leadsIncomplete: leads.count ?? 0,
+      signupsCompleted: done.count ?? 0,
+      recentLeads: ((recent.data ?? []) as { email: string | null; step: string | null; created_at: string }[])
+        .map(l => ({ email: l.email, step: l.step, createdAt: l.created_at })),
+      tablesMissing: false,
+    }
+  } catch (e) {
+    console.error('[admin] marketing:', e instanceof Error ? e.message : e)
+    return empty
+  }
+}
+
 // ─── Usuarios ───────────────────────────────────────────────────────────────
 export interface AdminUser {
   id: string
